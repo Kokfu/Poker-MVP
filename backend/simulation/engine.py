@@ -9,14 +9,35 @@ from poker_analyzer import EVALUATOR
 
 class HandEngine:
     """Authoritative local heads-up engine. Actions use target round commitment."""
-    def __init__(self, bot_a, bot_b, stack=10000, bb=100, seed=None, hand_id="hand-0", button="a", dataset=None, simulation_id="local", hand_number=1, simulation_seed=None):
-        self.bots={"a":bot_a,"b":bot_b}; self.bb=bb; self.sb=bb//2; self.deck=Deck(seed); self.holes={"a":self.deck.deal(2),"b":self.deck.deal(2)}; self.dataset=dataset or JsonlDataset()
-        self.state=GameState(hand_id,button,button,stacks={"a":stack,"b":stack},current_bets={"a":0,"b":0},minimum_raise=bb,current_highest_bet=bb,last_full_raise_size=bb,pending_players={button},acted_since_full_raise={"a":False,"b":False},raising_reopened={"a":True,"b":True}); self.total=stack*2; self.starting_stacks={"a":stack,"b":stack}; self.folded=None; self.illegal=0; self.illegal_diagnostics=[]; self.simulation_id=simulation_id; self.simulation_seed=simulation_seed; self.hand_number=hand_number; self._records=[]; self.showdown_count=0; self.settlement_count=0
-        self._commit(button,self.sb,"blind"); self._commit(self.other(button),self.bb,"blind"); self.state.amount_to_call=self.bb-self.sb
+    def __init__(self, bot_a, bot_b, stack=10000, bb=100, seed=None, hand_id="hand-0", button="a", dataset=None, simulation_id="local", hand_number=1, simulation_seed=None, starting_stacks=None, small_blind=None):
+        initial_stacks={"a":stack,"b":stack} if starting_stacks is None else dict(starting_stacks)
+        if set(initial_stacks)!={"a","b"} or any(type(value) is not int or value<0 for value in initial_stacks.values()):
+            raise ValueError("starting_stacks must contain non-negative integer stacks for a and b")
+        if type(bb) is not int or bb<=0: raise ValueError("bb must be a positive integer")
+        sb=bb//2 if small_blind is None else small_blind
+        if type(sb) is not int or sb<=0 or sb>bb: raise ValueError("small_blind must be a positive integer no greater than bb")
+        self.bots={"a":bot_a,"b":bot_b}; self.bb=bb; self.sb=sb; self.deck=Deck(seed); self.holes={"a":self.deck.deal(2),"b":self.deck.deal(2)}; self.dataset=dataset or JsonlDataset()
+        self.state=GameState(hand_id,button,button,stacks=dict(initial_stacks),current_bets={"a":0,"b":0},minimum_raise=bb,current_highest_bet=0,last_full_raise_size=bb,pending_players=set(),acted_since_full_raise={"a":False,"b":False},raising_reopened={"a":True,"b":True}); self.total=sum(initial_stacks.values()); self.starting_stacks=dict(initial_stacks); self.folded=None; self.illegal=0; self.illegal_diagnostics=[]; self.simulation_id=simulation_id; self.simulation_seed=simulation_seed; self.hand_number=hand_number; self._records=[]; self.showdown_count=0; self.settlement_count=0
+        self._commit(button,self.sb,"blind"); self._commit(self.other(button),self.bb,"blind")
+        self.state.current_highest_bet=max(self.state.current_bets.values())
+        opponent=self.other(button)
+        if self.state.stacks[button]>0 and (self.state.stacks[opponent]>0 or self.state.current_bets[button]<self.state.current_highest_bet):
+            self.state.pending_players={button}
+        self.state.amount_to_call=self.state.current_highest_bet-self.state.current_bets[button]
+        if not self.state.pending_players and any(stack==0 for stack in self.state.stacks.values()):
+            self._return_unmatched_excess()
     def other(self,p): return "b" if p=="a" else "a"
     def _commit(self,p,amount,kind):
         amount=min(amount,self.state.stacks[p]); self.state.stacks[p]-=amount; self.state.current_bets[p]+=amount; self.state.pot+=amount
         if kind!="blind": self.state.action_history.append({"player":p,"type":kind,"amount":amount})
+    def _return_unmatched_excess(self):
+        a,b=self.state.current_bets["a"],self.state.current_bets["b"]
+        if a==b: return
+        covering,short=("a","b") if a>b else ("b","a")
+        if self.state.stacks[short]!=0: return
+        excess=self.state.current_bets[covering]-self.state.current_bets[short]
+        self.state.current_bets[covering]-=excess; self.state.stacks[covering]+=excess; self.state.pot-=excess
+        self.state.current_highest_bet=max(self.state.current_bets.values())
     def legal(self,p):
         call=self.state.current_highest_bet-self.state.current_bets[p]; stack=self.state.stacks[p]
         if call==0:
@@ -51,7 +72,7 @@ class HandEngine:
             self._commit(p,call,"call"); self.state.pending_players.discard(p); self.state.acted_since_full_raise[p]=True
             # A completed limp is not a closed preflop round: the BB retains its option.
             other=self.other(p)
-            if self.state.street=="preflop" and p==self.state.button_player and not self.state.acted_since_full_raise[other]: self.state.pending_players.add(other)
+            if self.state.street=="preflop" and p==self.state.button_player and self.state.stacks[other]>0 and not self.state.acted_since_full_raise[other]: self.state.pending_players.add(other)
             return typ
         if typ=="all_in":
             target=self.state.current_bets[p]+self.state.stacks[p]
@@ -116,7 +137,7 @@ class HandEngine:
         return acted
     def _next_street(self):
         for p in self.state.current_bets: self.state.current_bets[p]=0
-        self.state.current_highest_bet=0; self.state.last_full_raise_size=self.bb; self.state.pending_players={"a","b"}; self.state.acted_since_full_raise={"a":False,"b":False}; self.state.raising_reopened={"a":True,"b":True}; self.state.acting_player=self.other(self.state.button_player)
+        self.state.current_highest_bet=0; self.state.last_full_raise_size=self.bb; self.state.pending_players={"a","b"} if all(self.state.stacks.values()) else set(); self.state.acted_since_full_raise={"a":False,"b":False}; self.state.raising_reopened={"a":True,"b":True}; self.state.acting_player=self.other(self.state.button_player)
         if self.state.street=="preflop": self.state.street="flop"; self.state.community_cards+=self.deck.deal(3)
         elif self.state.street=="flop": self.state.street="turn"; self.state.community_cards+=self.deck.deal(1)
         elif self.state.street=="turn": self.state.street="river"; self.state.community_cards+=self.deck.deal(1)
@@ -125,7 +146,7 @@ class HandEngine:
         for street in ("preflop","flop","turn","river"):
             if self.folded is not None: break
             if street!="preflop": self._next_street()
-            if self.state.stacks["a"]==0 or self.state.stacks["b"]==0: continue
+            if not self.state.pending_players: continue
             decisions += self._round(self.state.button_player if street=="preflop" else self.other(self.state.button_player))
         if self.folded is not None: winner=self.other(self.folded); showdown=False
         else:

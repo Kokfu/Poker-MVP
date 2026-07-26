@@ -31,6 +31,7 @@ FastAPI validates card notation, uniqueness, board length, opponent count, and n
 ## Simulation components
 
 - `simulation.engine.HandEngine` owns cards, stacks, betting state, legal-action validation, street progression, runout, and settlement.
+- `simulation.match.PersistentMatchRunner` is the Phase 3A1 orchestration layer. It creates one clean `HandEngine` per hand and carries only settled stacks into the next hand.
 - `simulation.bots` contains `RandomBot`, `TightBot`, `AggressiveBot`, and `EquityBot`.
 - `Observation` is the bot-facing information boundary. It exposes the acting player's cards, public board, stacks, commitments, legal actions, and target bounds, but not hidden opponent cards, future board cards, deck order, or RNG state.
 - `simulation.statistics` aggregates wins, ties, losses, net chips, net BB, BB/100, showdowns, folds, action counts, and illegal actions.
@@ -83,6 +84,19 @@ General cumulative multiway reopening rules are outside this heads-up engine's s
 ## Runout and settlement
 
 When no further betting is possible, the engine automatically deals the remaining community cards. A hand has exactly one fold settlement or one showdown and exactly one settlement. Settlement returns unmatched excess, awards the matched pot, clears the pot and street commitments, clears `pending_players`, marks the hand complete, and asserts chip conservation. Aggregate results remain zero-sum.
+
+## Phase 3A1 persistent match boundary
+
+Persistent match mode is Phase 3 work in progress and remains separate from `SimulationRunner`:
+
+- `SimulationRunner` retains Phase 2 independent-hand semantics and starts every hand with fresh equal stacks.
+- `PersistentMatchRunner` accepts per-player starting stacks, small and big blinds, a deterministic seed, and a maximum hand count.
+- The match alternates the button each hand, passes settled stacks into a new `HandEngine`, and stops on elimination or the hand limit.
+- The hand engine still owns betting, legal actions, all-ins, runout, unmatched-excess return, and settlement; the match layer does not duplicate poker rules.
+- A capped blind post never exceeds the player's available stack. If a blind is all-in, only a live opponent who owes chips receives a decision; otherwise unmatched excess is returned and the board runs out.
+- Every hand must finish with exactly one settlement, zero pot, zero current commitments, and no pending players before its stacks are accepted by the match.
+
+Phase 3A1 has no frontend, API, CLI, or dataset integration. Dataset schema 2.0 and retained Phase 2 evidence remain unchanged.
 
 ## Deployment
 

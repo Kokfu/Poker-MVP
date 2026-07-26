@@ -92,3 +92,21 @@ EquityBot at 500 iterations is intentionally slower than the rule-based bots. Lo
 ## Evidence invalidation rule
 
 Regenerate stress, pairwise, and benchmark artifacts whenever engine, bot, settlement, statistics, or equity logic changes. Documentation-only and presentation-only changes do not invalidate deterministic runtime evidence.
+
+## Phase 3A1 persistent match tests
+
+Persistent match mode currently has no permanent CLI or API surface. Run its focused backend suite directly:
+
+```powershell
+cd C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend
+.\.venv\Scripts\python.exe -m pytest -q -p no:cacheprovider test_simulation_match.py
+```
+
+Run the complete backend regression after any match or shared `HandEngine` change:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q -p no:cacheprovider
+.\.venv\Scripts\python.exe -m pip check
+```
+
+Phase 3A1 reuses the shared hand engine, so changes to blind posting, legal actions, runout, or settlement require both the focused match suite and the full Phase 2-compatible regression suite. Do not overwrite retained Phase 2 benchmark artifacts during match development.

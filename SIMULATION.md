@@ -135,3 +135,24 @@ The API accepts at most 10,000 hands per request. The React Simulator tab expose
 Dataset generation is optional and writes one JSON decision record per line. Records include the acting bot's observation, chosen action and target, classification, terminal winner, net chips, reward in BB, and hand ending. The strict validator checks schema, types, target semantics, legal-action consistency, per-hand terminal consistency, privacy boundaries, and that a file contains only one simulation ID.
 
 Schema 1.0 migration and a separate dataset manifest are not supported.
+
+## Phase 3A1 persistent match foundation — work in progress
+
+Persistent match mode is a separate backend-only orchestration mode. It does not change Phase 2 independent simulations.
+
+`MatchConfig` supplies per-player starting stacks, small and big blinds, a maximum hand count, and a deterministic seed. For each hand, `PersistentMatchRunner`:
+
+1. alternates the button, with the button posting the small blind;
+2. creates a fresh `HandEngine` using the carried stacks;
+3. lets the existing engine perform betting, all-in handling, automatic runout, and settlement;
+4. requires exactly one settlement and clean terminal hand state;
+5. records a per-hand summary;
+6. carries the settled ending stacks into the next hand.
+
+The match ends immediately when a player reaches zero chips. Otherwise it ends when `max_hands` is reached. The final winner is Bot A or Bot B according to final stacks; equal stacks at the hand limit produce `tied`. Total match chips remain constant and Bot A/B net results are exact opposites.
+
+Blind posts are capped by available chips. A short-stacked big blind can leave the button with an exact call decision. A short or all-in blind that requires no response triggers unmatched-excess return where needed and automatic board runout. No negative stack or multiway side pot can be created.
+
+The result contains the match ID, seed, bot names, starting and final stacks, hand count, winner, termination reason, net chips, showdown/fold totals, illegal/fallback counts, and per-hand summaries. Each summary records positions, starting/ending stacks, winner, nets, ending type, board, diagnostics, and settlement completion.
+
+There is currently no permanent match CLI command, API endpoint, dataset output, or frontend. Those are outside Phase 3A1.

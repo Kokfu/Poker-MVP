@@ -70,6 +70,19 @@ Retained artifacts:
 
 Phase 2 remains heads-up only. It has no multiway pots, tournament structure, general side-pot model, or persistent bankroll. Dataset schema 1.0 migration and separate manifests are unsupported, and each dataset file accepts one simulation ID. EquityBot and Monte Carlo calculations can be expensive and remain approximate. The built-in bots are research baselines, not optimal poker strategies. The Analyzer frontend has no loading/disabled submission state. Browser verification is local only. There is no real-money integration, external poker-site automation, OCR, screen scraping, hidden-card extraction, or AI-training pipeline.
 
-## Future Phase 3 — not started
+## Phase 3 — in progress
 
-Any future Phase 3 work requires a separate scope and explicit authorization. No Phase 3 implementation is included in this acceptance pass.
+### Phase 3A1: Persistent match engine foundation
+
+The backend foundation now includes:
+
+- persistent per-player stacks across hands;
+- configurable starting stacks and blinds;
+- deterministic hand seeds;
+- alternating button and blind positions;
+- elimination and hand-limit termination;
+- short/all-in blind handling;
+- chip-conserving per-hand summaries and aggregate match results;
+- strict separation from Phase 2 independent-hand simulations.
+
+Phase 3 as a whole is not complete. Phase 3A1 intentionally does not include a frontend, API endpoint, permanent CLI command, dataset changes, AI training, multiway poker, tournaments, or external integrations. Any subsequent Phase 3 work requires a separate scope and explicit authorization.
