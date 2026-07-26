@@ -85,7 +85,7 @@ General cumulative multiway reopening rules are outside this heads-up engine's s
 
 When no further betting is possible, the engine automatically deals the remaining community cards. A hand has exactly one fold settlement or one showdown and exactly one settlement. Settlement returns unmatched excess, awards the matched pot, clears the pot and street commitments, clears `pending_players`, marks the hand complete, and asserts chip conservation. Aggregate results remain zero-sum.
 
-## Phase 3A1 persistent match boundary
+## Phase 3 persistent match boundary
 
 Persistent match mode is Phase 3 work in progress and remains separate from `SimulationRunner`:
 
@@ -96,7 +96,9 @@ Persistent match mode is Phase 3 work in progress and remains separate from `Sim
 - A capped blind post never exceeds the player's available stack. If a blind is all-in, only a live opponent who owes chips receives a decision; otherwise unmatched excess is returned and the board runs out.
 - Every hand must finish with exactly one settlement, zero pot, zero current commitments, and no pending players before its stacks are accepted by the match.
 
-Phase 3A1 has no frontend, API, CLI, or dataset integration. Dataset schema 2.0 and retained Phase 2 evidence remain unchanged.
+Phase 3A2 exposes this orchestration through `simulation.match_service.run_builtin_match`. That adapter normalizes and validates public parameters, constructs seeded built-in bots, invokes `run_match`, flattens the internal dataclasses into the public snake_case response, and checks aggregate invariants. Both `POST /api/matches/simulate` and `simulation.cli match` call this same adapter.
+
+The match API/CLI layer has no poker-rule implementation. There is still no match frontend, dataset integration, or database persistence. Dataset schema 2.0 and retained Phase 2 evidence remain unchanged.
 
 ## Deployment
 

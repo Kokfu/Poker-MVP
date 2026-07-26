@@ -136,7 +136,7 @@ Dataset generation is optional and writes one JSON decision record per line. Rec
 
 Schema 1.0 migration and a separate dataset manifest are not supported.
 
-## Phase 3A1 persistent match foundation — work in progress
+## Phase 3 persistent match mode — work in progress
 
 Persistent match mode is a separate backend-only orchestration mode. It does not change Phase 2 independent simulations.
 
@@ -155,4 +155,20 @@ Blind posts are capped by available chips. A short-stacked big blind can leave t
 
 The result contains the match ID, seed, bot names, starting and final stacks, hand count, winner, termination reason, net chips, showdown/fold totals, illegal/fallback counts, and per-hand summaries. Each summary records positions, starting/ending stacks, winner, nets, ending type, board, diagnostics, and settlement completion.
 
-There is currently no permanent match CLI command, API endpoint, dataset output, or frontend. Those are outside Phase 3A1.
+Phase 3A2 exposes the same orchestration through:
+
+```text
+POST /api/matches/simulate
+```
+
+and:
+
+```powershell
+.\.venv\Scripts\python.exe -m simulation.cli match --bot-a tight --bot-b aggressive --starting-stack 10000 --small-blind 50 --big-blind 100 --max-hands 100 --seed 42 --equity-iterations 500
+```
+
+Both interfaces use `run_builtin_match`; neither duplicates match rules. Defaults are random/random bots, a 10,000-unit stack per player, 50/100 blinds, 100 maximum hands, seed 0, and 1,000 equity iterations.
+
+Public validation requires supported case-normalized bot names; positive integer stack and blinds; small blind no greater than big blind; 1–10,000 hands; integer seed; and 500, 1,000, or 2,000 equity iterations. Boolean values are not accepted as integers.
+
+The public response omits private hole cards and returns flattened configuration, outcome, aggregate statistics, and per-hand settlement summaries. Persistent match mode still has no frontend, dataset output, database persistence, replay UI, or multiway support.

@@ -93,13 +93,22 @@ EquityBot at 500 iterations is intentionally slower than the rule-based bots. Lo
 
 Regenerate stress, pairwise, and benchmark artifacts whenever engine, bot, settlement, statistics, or equity logic changes. Documentation-only and presentation-only changes do not invalidate deterministic runtime evidence.
 
-## Phase 3A1 persistent match tests
+## Phase 3 persistent match API and CLI
 
-Persistent match mode currently has no permanent CLI or API surface. Run its focused backend suite directly:
+Run a persistent match:
+
+```powershell
+cd C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend
+.\.venv\Scripts\python.exe -m simulation.cli match --bot-a tight --bot-b aggressive --starting-stack 10000 --small-blind 50 --big-blind 100 --max-hands 25 --seed 42 --equity-iterations 500
+```
+
+Run the focused foundation, API, and CLI suites directly:
 
 ```powershell
 cd C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend
 .\.venv\Scripts\python.exe -m pytest -q -p no:cacheprovider test_simulation_match.py
+.\.venv\Scripts\python.exe -m pytest -q -p no:cacheprovider test_simulation_match_api.py
+.\.venv\Scripts\python.exe -m pytest -q -p no:cacheprovider test_simulation_match_cli.py
 ```
 
 Run the complete backend regression after any match or shared `HandEngine` change:
@@ -109,4 +118,4 @@ Run the complete backend regression after any match or shared `HandEngine` chang
 .\.venv\Scripts\python.exe -m pip check
 ```
 
-Phase 3A1 reuses the shared hand engine, so changes to blind posting, legal actions, runout, or settlement require both the focused match suite and the full Phase 2-compatible regression suite. Do not overwrite retained Phase 2 benchmark artifacts during match development.
+Persistent mode reuses the shared hand engine, so changes to blind posting, legal actions, runout, settlement, or the public adapter require the focused match suites and the full Phase 2-compatible regression suite. Do not overwrite retained Phase 2 benchmark artifacts during match development.

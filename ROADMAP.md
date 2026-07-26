@@ -85,4 +85,14 @@ The backend foundation now includes:
 - chip-conserving per-hand summaries and aggregate match results;
 - strict separation from Phase 2 independent-hand simulations.
 
-Phase 3 as a whole is not complete. Phase 3A1 intentionally does not include a frontend, API endpoint, permanent CLI command, dataset changes, AI training, multiway poker, tournaments, or external integrations. Any subsequent Phase 3 work requires a separate scope and explicit authorization.
+### Phase 3A2: Persistent match API and CLI
+
+The backend now exposes the same match orchestration through:
+
+- validated `POST /api/matches/simulate`;
+- `python -m simulation.cli match`;
+- shared public response serialization and invariant checks;
+- deterministic API/CLI equivalence;
+- focused positive, negative, compatibility, and Docker acceptance coverage.
+
+Phase 3 as a whole is not complete. There is no persistent-match frontend, dataset output, database persistence, replay UI, AI training, multiway poker, tournament model, or external integration. Any subsequent Phase 3 work requires a separate scope and explicit authorization.

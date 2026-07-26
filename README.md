@@ -44,6 +44,8 @@ bb_per_100 = net_bb / hands_played * 100
 
 Each hand begins from a fresh configured stack, normally 100 BB. Results are not a persistent bankroll.
 
+Phase 3 adds a separate persistent match mode: settled stacks carry between hands, positions alternate, and the match stops on elimination or a configured hand limit. Independent simulation mode still resets both stacks every hand.
+
 ## Requirements
 
 - Python 3.11; the accepted Windows environment uses Python 3.11.9.
@@ -88,6 +90,7 @@ The configured ports bind to localhost. The frontend proxies `/api` requests to 
 - `GET /api/health`
 - `POST /api/analyze`
 - `POST /api/simulations/run`
+- `POST /api/matches/simulate`
 
 The simulation API accepts 1 through 10,000 hands per request. Representative Analyzer request:
 
@@ -102,6 +105,33 @@ $body = @{
   iterations = 10000
 } | ConvertTo-Json
 Invoke-RestMethod http://127.0.0.1:8000/api/analyze -Method Post -ContentType application/json -Body $body
+```
+
+Persistent match request:
+
+```powershell
+$match = @{
+  bot_a = "tight"
+  bot_b = "aggressive"
+  starting_stack = 10000
+  small_blind = 50
+  big_blind = 100
+  max_hands = 100
+  seed = 42
+  equity_iterations = 500
+} | ConvertTo-Json
+Invoke-RestMethod http://127.0.0.1:8000/api/matches/simulate -Method Post -ContentType application/json -Body $match
+```
+
+Match defaults are `random` versus `random`, 10,000-unit stacks, 50/100 blinds, 100 hands, seed 0, and 1,000 EquityBot iterations. Stack and blinds must be positive integers, the small blind cannot exceed the big blind, `max_hands` is 1–10,000, and EquityBot iterations are 500, 1,000, or 2,000. Bot names are case-normalized.
+
+The response contains match configuration, final stacks, winner, termination reason, net chips, showdown/fold totals, diagnostics, and settled per-hand summaries without private hole cards.
+
+The equivalent CLI command is:
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe -m simulation.cli match --bot-a tight --bot-b aggressive --starting-stack 10000 --small-blind 50 --big-blind 100 --max-hands 100 --seed 42 --equity-iterations 500
 ```
 
 ## Dataset schema 2.0
@@ -136,6 +166,7 @@ The final Phase 2 backend suite contains 275 passing tests. Retained runtime evi
 - EquityBot is computationally expensive, especially in long runs.
 - Monte Carlo analysis is approximate and varies unless seeded.
 - The frontend Analyzer has no loading or disabled submission state.
+- Persistent matches currently have no frontend screen, dataset output, or database persistence.
 - Browser verification covers only the local application.
 - No real-money integration, external poker-site automation, automatic clicking, OCR, screen scraping, screenshot card extraction, or hidden-card extraction.
 
