@@ -1,0 +1,1 @@
+export type Analysis={street:string;hand_label:string;made_hand:string|null;draws:{type:string;outs_ranks:string[]}[];win_rate:number;tie_rate:number;loss_rate:number;equity:number;required_equity:number;final_pot_if_call:number;calculation_method:string;iterations:number;elapsed_ms:number;recommendation:string;explanation:string;disclaimer:string};

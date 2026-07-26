@@ -1,0 +1,137 @@
+# Phase 2 local simulator
+
+The simulator is a deterministic, local-only, heads-up No-Limit Texas Hold'em research environment. It is educational software, not a real-money poker client.
+
+## Hand model
+
+- Exactly two players participate; multiway pots are not supported.
+- Every hand independently resets both players to the configured starting stack, normally 100 BB.
+- One big blind is 100 integer internal chip units; the default small blind is 50 units.
+- The button posts the small blind and acts first preflop.
+- The non-button posts the big blind and acts first on the flop, turn, and river.
+- The button alternates between players across a simulation.
+- There is no rake, ante, tournament structure, ICM, persistent bankroll, or general side-pot model.
+
+The engine owns deck order, hole cards, community cards, stacks, commitments, the pot, legal actions, street progression, and settlement.
+
+## Actions and target totals
+
+The action vocabulary is:
+
+- `Fold`: surrender the matched pot.
+- `Check`: pass when the amount to call is zero.
+- `Call`: reach the exact current highest commitment when the player can cover it.
+- `Bet`: create the first wager on a street.
+- `Raise`: increase an existing wager.
+- `AllIn`: commit the player's complete remaining stack.
+
+Bet and Raise amounts are total target commitments for the current betting round, not incremental chip additions. Call has an exact target equal to `current_highest_bet`; AllIn has an exact target equal to the player's current street commitment plus remaining stack.
+
+The engine exposes `minimum_target_to`, `maximum_target_to`, and `all_in_target_to`. A normal Raise is legal only when:
+
+```text
+minimum_target_to <= maximum_target_to
+```
+
+## Full-raise calculation
+
+For a full Raise:
+
+```text
+new_full_raise_size = new_target_to - prior_current_highest_bet
+next_minimum_raise_to = current_highest_bet + last_full_raise_size
+```
+
+Verified target-total example:
+
+```text
+wager to 100
+Raise to 300: increment 200, next minimum 500
+Raise to 700: increment 400, next minimum 1100
+```
+
+## All-in classifications
+
+- Short all-in Call: the all-in target remains below `current_highest_bet`.
+- Exact all-in Call: the all-in target equals `current_highest_bet`.
+- Short all-in Raise: the target exceeds `current_highest_bet` but the increment is smaller than `last_full_raise_size`.
+- Full all-in Raise: the increment meets or exceeds `last_full_raise_size`.
+- Opening all-in Bet: an all-in creates the first wager on a street.
+
+An unmatched amount above the shorter player's matched commitment is returned before settlement.
+
+## Reopening
+
+A full Raise resets the full-raise baseline and reopens action. A short all-in Raise increases the wager but does not count as a full Raise and does not reopen raising rights for a player who has already acted. An increasing AllIn cannot bypass closed raising rights. Exact and short all-in Calls can remain legal even when further raising is closed.
+
+These rules cover the engine's heads-up states. General cumulative multiway reopening rules are outside scope.
+
+## Automatic runout and settlement
+
+When one or both players are all-in and no decision remains, the engine automatically deals the remaining board. Each hand reaches exactly one fold ending or one showdown and exactly one settlement.
+
+Settlement:
+
+- returns unmatched excess;
+- awards the matched pot;
+- splits a tied pot in integer units, with a deterministic odd-chip rule;
+- clears the pot;
+- clears both current-street commitments;
+- clears `pending_players`;
+- marks the street complete;
+- verifies total-chip conservation.
+
+The two players' per-hand and aggregate net results sum to zero.
+
+## Bot contract
+
+Bots consume engine-authoritative `Observation` objects. An observation contains the acting bot's private cards, public board, visible stacks and commitments, legal actions, and exact target bounds. It never contains opponent hole cards, future board cards, deck order, remaining deck contents, or RNG state.
+
+Built-in bots must return actions consistent with the observation:
+
+- `RandomBot`
+- `TightBot`
+- `AggressiveBot`
+- `EquityBot`
+
+The engine validates every submitted action. A fallback exists only as a state-safety guard for malformed custom bots: Check is used when legal, otherwise Fold. Final built-in runtime evidence contains zero illegal actions and zero fallback diagnostics.
+
+EquityBot estimates equity against a random unknown opponent. Its result is heuristic and its configurable Monte Carlo iterations trade runtime for precision.
+
+## Statistics
+
+For each player:
+
+```text
+net_chips = final_stack - starting_stack
+net_bb = net_chips / big_blind_units
+bb_per_100 = net_bb / hands_played * 100
+```
+
+Final stacks are not accumulated as profit. Each hand starts from a fresh stack baseline, while `net_chips` is accumulated across hands.
+
+BB/100 can be numerically extreme because every hand resets to a fresh 100-BB stack and baseline bots may use high-variance all-in strategies. It is a mechanically correct rate for the sampled independent hands, not a claim of sustainable poker performance.
+
+## Interfaces
+
+CLI:
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe -m simulation.cli list-bots
+.\.venv\Scripts\python.exe -m simulation.cli run --bot-a random --bot-b aggressive --hands 1000 --seed 42
+```
+
+API:
+
+```text
+POST /api/simulations/run
+```
+
+The API accepts at most 10,000 hands per request. The React Simulator tab exposes bot, hand-count, seed, starting-stack, and EquityBot iteration controls.
+
+## Dataset schema 2.0
+
+Dataset generation is optional and writes one JSON decision record per line. Records include the acting bot's observation, chosen action and target, classification, terminal winner, net chips, reward in BB, and hand ending. The strict validator checks schema, types, target semantics, legal-action consistency, per-hand terminal consistency, privacy boundaries, and that a file contains only one simulation ID.
+
+Schema 1.0 migration and a separate dataset manifest are not supported.
