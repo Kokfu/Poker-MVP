@@ -176,3 +176,17 @@ The public response omits private hole cards and returns flattened configuration
 Phase 3A3 adds a **Match** tab to the React frontend. Its form exposes both bots, starting stack, blinds, maximum hands, seed, and EquityBot iterations. The result view shows the winner and termination reason, final stacks, nets, showdown/fold totals, illegal/fallback counts, explicit chip-conservation and zero-sum indicators, and every public per-hand summary. The wide hand table scrolls inside its own container on narrow viewports.
 
 The frontend does not change engine or API semantics. Match results are session-only: there is still no match dataset output, database persistence, saved-match browser, replay UI, or multiway support.
+
+## Phase 3B1 action-level history foundation
+
+Every completed `HandEngine` result now provides an internal `HandHistory` using history schema `1.0`. Persistent-match summaries retain the corresponding history internally while their public API representation remains unchanged.
+
+The event stream records hand start, each blind post, every requested/applied action, street starts, incremental public-board reveals, unmatched-excess returns, automatic-runout start, showdown, pot award, and final settlement. Indexes start at zero and are contiguous. Every event carries connected before/after chip and betting snapshots.
+
+Action amounts retain total-target semantics. For example, a raise to 1,200 is recorded as target 1,200 and the amount paid is separately recorded as the difference from the actor's prior street commitment. Short and exact all-in calls, short/full all-in raises, reopening state, legal target bounds, and fallback application are explicit.
+
+Blind history stores both assigned and posted amounts, so a player with 30 chips assigned a 50-chip small blind records a 30-chip all-in post without implying a negative stack. During automatic runout, flop, turn, and river remain separate reveal events rather than appearing as an immediate five-card board.
+
+At showdown, both legitimately revealed hole-card pairs may appear only on the showdown event. Fold-ended histories reveal no hole cards. No event contains future board cards, deck order, remaining-deck contents, or burn cards.
+
+`validate_hand_history` is an internal replay-validation foundation. It checks continuity, conservation, board growth, action evidence, privacy, exactly-once settlement, cleanup, and agreement with the authoritative result. Phase 3B1 does not add a history API, CLI command, file export, persistence, or replay interface.

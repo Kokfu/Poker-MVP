@@ -7,6 +7,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Literal
 
 from .engine import HandEngine
+from .history import HandHistory
 
 
 Player = Literal["a", "b"]
@@ -67,6 +68,7 @@ class MatchHandSummary:
     fallback_diagnostics: list[dict]
     settlement_count: int
     settlement_complete: bool
+    history: HandHistory | None = field(default=None, repr=False, compare=False)
 
 
 @dataclass(frozen=True)
@@ -134,6 +136,7 @@ class PersistentMatchRunner:
         illegal_actions = 0
         fallback_diagnostics = 0
         termination_reason: TerminationReason = "hand_limit"
+        match_id = self._match_id()
 
         for index in range(config.max_hands):
             if 0 in state.stacks.values():
@@ -155,6 +158,7 @@ class PersistentMatchRunner:
                 simulation_seed=config.seed,
                 starting_stacks=hand_start,
                 small_blind=config.small_blind,
+                match_id=match_id,
             )
             result = engine.play()
             hand_end = dict(result["stacks"])
@@ -201,6 +205,7 @@ class PersistentMatchRunner:
                     fallback_diagnostics=diagnostics,
                     settlement_count=engine.settlement_count,
                     settlement_complete=settlement_complete,
+                    history=result["history"],
                 )
             )
 
@@ -222,7 +227,7 @@ class PersistentMatchRunner:
         assert total_showdowns + total_fold_ended == state.hands_played
 
         return MatchResult(
-            match_id=self._match_id(),
+            match_id=match_id,
             seed=config.seed,
             bot_a=type(self.bot_a).__name__,
             bot_b=type(self.bot_b).__name__,

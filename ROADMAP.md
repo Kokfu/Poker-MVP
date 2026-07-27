@@ -107,4 +107,18 @@ The frontend now includes:
 - all returned hand summaries, including positions, stack transitions, outcomes, board, diagnostics, and settlement status;
 - responsive form, summary, and contained horizontally scrollable table layouts.
 
-Phase 3 as a whole is not complete. Persistent matches still have no dataset output, database persistence, saved-match browser, replay controls, AI training, multiway poker, tournament model, or external integration. Any subsequent Phase 3 work requires a separate scope and explicit authorization.
+### Phase 3B1: Action-level hand-history foundation
+
+The backend foundation now includes:
+
+- typed internal history schema 1.0, separate from dataset schema 2.0;
+- deterministic zero-based event streams emitted by `HandEngine`;
+- blind, action, street, incremental board-reveal, automatic-runout, unmatched-return, showdown, pot-award, and settlement events;
+- total-target and exact-payment action evidence;
+- short-stack blind and all-in classification evidence;
+- connected pot, stack, commitment, reopening, and pending-player snapshots;
+- showdown-only hole-card disclosure with fold and future-card privacy;
+- an internal validator for continuity, chip conservation, cards, action evidence, cleanup, privacy, and authoritative-result agreement;
+- internal history retention on persistent-match hand summaries without public response changes.
+
+Phase 3B as a whole is not complete. There is no history API or CLI, export format, database persistence, saved-history browser, action replay UI, replay navigation, dataset integration, AI training, multiway poker, tournament model, or external integration. Any subsequent Phase 3 work requires a separate scope and explicit authorization.

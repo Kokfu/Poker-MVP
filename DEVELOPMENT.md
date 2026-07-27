@@ -129,3 +129,18 @@ Run the complete backend regression after any match or shared `HandEngine` chang
 Persistent mode reuses the shared hand engine, so changes to blind posting, legal actions, runout, settlement, or the public adapter require the focused match suites and the full Phase 2-compatible regression suite. Do not overwrite retained Phase 2 benchmark artifacts during match development.
 
 For a frontend smoke test, start both services, open `http://127.0.0.1:5173`, choose **Match**, and submit the defaults or the deterministic `tight` versus `aggressive`, seed 42 configuration shown above. Confirm the summary invariants pass and the hand table remains contained when the viewport is narrow.
+
+## Phase 3B1 hand-history development
+
+History schema `1.0` is implemented in `backend/simulation/history.py` and is intentionally unrelated to dataset schema 2.0. `HandEngine` emits typed events at the authoritative mutation points; do not reconstruct events from final statistics or duplicate poker rules in the validator.
+
+Run the focused history suites:
+
+```powershell
+cd C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend
+.\.venv\Scripts\python.exe -m pytest -q -p no:cacheprovider test_simulation_history.py test_simulation_history_validation.py test_simulation_history_privacy.py
+```
+
+Then run the complete backend regression and dependency check. Changes to history instrumentation must preserve the public Analyzer, independent-simulation, and persistent-match response shapes and dataset schema 2.0.
+
+Completed histories are available internally as `result["history"]`. Persistent `MatchHandSummary` objects retain the history in an internal field. There is no history endpoint, validation CLI command, export file, persistence layer, or replay UI in Phase 3B1.

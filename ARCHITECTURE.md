@@ -88,6 +88,29 @@ General cumulative multiway reopening rules are outside this heads-up engine's s
 
 When no further betting is possible, the engine automatically deals the remaining community cards. A hand has exactly one fold settlement or one showdown and exactly one settlement. Settlement returns unmatched excess, awards the matched pot, clears the pot and street commitments, clears `pending_players`, marks the hand complete, and asserts chip conservation. Aggregate results remain zero-sum.
 
+## Internal hand-history boundary
+
+Phase 3B1 adds `simulation.history` as a typed observation layer around the authoritative `HandEngine`. The engine appends events while each transition occurs; the history module does not calculate legal actions, betting, cards, winners, or settlement independently.
+
+History schema `1.0` is separate from dataset schema 2.0. A `HandHistory` records deterministic hand identity/configuration, blinds, initial and final stacks, public board, result, diagnostics, and a contiguous event stream. Its event types are:
+
+- `hand_started`
+- `blind_posted`
+- `action_taken`
+- `street_started`
+- `board_revealed`
+- `unmatched_excess_returned`
+- `automatic_runout_started`
+- `showdown`
+- `pot_awarded`
+- `hand_settled`
+
+Every event carries before/after pot, stack, street-commitment, and current-highest-bet evidence. Action events preserve requested and applied actions, engine fallback details, exact amount paid, total target, legal bounds, reopening state, last-full-raise state, pending players, and all-in classification. Thus a raise to 1,200 is stored as target 1,200, consistent with the engine contract.
+
+Blind events distinguish assigned and actually posted amounts, including capped short-stack all-ins. Street and board events reveal the flop, turn, and river separately. Automatic runout records its start and still produces each intermediate public reveal. Settlement is split into showdown when applicable, pot award, and exactly one final cleanup event.
+
+`validate_hand_history` verifies schema support, indexes, event cardinality, state continuity, chip conservation, non-negative values, board progression, card uniqueness, action targets, cleanup, final-result agreement, and privacy. It returns a structured list of useful errors. Histories are internal objects on hand results and persistent-match hand summaries; they are not exposed by the API, CLI, frontend, dataset writer, or an export endpoint.
+
 ## Phase 3 persistent match boundary
 
 Persistent match mode is Phase 3 work in progress and remains separate from `SimulationRunner`:
