@@ -4,6 +4,13 @@ import json
 from .bots import BOT_TYPES
 from .dataset import validate_dataset
 from .engine import SimulationRunner
+from .history_service import (
+    json_document_text,
+    load_and_validate_history,
+    run_builtin_hand_history,
+    run_builtin_match_history,
+    write_json_document,
+)
 from .match_service import (
     DEFAULT_BIG_BLIND,
     DEFAULT_EQUITY_ITERATIONS,
@@ -77,6 +84,76 @@ def build_parser():
         type=int,
         default=DEFAULT_EQUITY_ITERATIONS,
     )
+
+    history_hand = subparsers.add_parser("history-hand")
+    add_bot_arguments(history_hand)
+    history_hand.add_argument(
+        "--starting-stack-a",
+        type=int,
+        default=DEFAULT_STARTING_STACK,
+    )
+    history_hand.add_argument(
+        "--starting-stack-b",
+        type=int,
+        default=DEFAULT_STARTING_STACK,
+    )
+    history_hand.add_argument(
+        "--small-blind",
+        type=int,
+        default=DEFAULT_SMALL_BLIND,
+    )
+    history_hand.add_argument(
+        "--big-blind",
+        type=int,
+        default=DEFAULT_BIG_BLIND,
+    )
+    history_hand.add_argument(
+        "--button-player",
+        choices=("a", "b"),
+        default="a",
+    )
+    history_hand.add_argument("--seed", type=int, default=DEFAULT_MATCH_SEED)
+    history_hand.add_argument(
+        "--equity-iterations",
+        type=int,
+        default=DEFAULT_EQUITY_ITERATIONS,
+    )
+    history_hand.add_argument("--output")
+    history_hand.add_argument("--overwrite", action="store_true")
+
+    history_match = subparsers.add_parser("history-match")
+    add_bot_arguments(history_match)
+    history_match.add_argument(
+        "--starting-stack",
+        type=int,
+        default=DEFAULT_STARTING_STACK,
+    )
+    history_match.add_argument(
+        "--small-blind",
+        type=int,
+        default=DEFAULT_SMALL_BLIND,
+    )
+    history_match.add_argument(
+        "--big-blind",
+        type=int,
+        default=DEFAULT_BIG_BLIND,
+    )
+    history_match.add_argument(
+        "--max-hands",
+        type=int,
+        default=DEFAULT_MAX_HANDS,
+    )
+    history_match.add_argument("--seed", type=int, default=DEFAULT_MATCH_SEED)
+    history_match.add_argument(
+        "--equity-iterations",
+        type=int,
+        default=DEFAULT_EQUITY_ITERATIONS,
+    )
+    history_match.add_argument("--output")
+    history_match.add_argument("--overwrite", action="store_true")
+
+    validate_history = subparsers.add_parser("validate-history")
+    validate_history.add_argument("path")
     return parser
 
 
@@ -90,6 +167,55 @@ def main():
         result = validate_dataset(args.path)
         print(json.dumps(result, indent=2))
         raise SystemExit(1 if result["invalid_records"] else 0)
+    if args.command == "validate-history":
+        result = load_and_validate_history(args.path)
+        print(json.dumps(result, indent=2, sort_keys=True))
+        raise SystemExit(0 if result["valid"] else 1)
+    if args.command == "history-hand":
+        try:
+            result = run_builtin_hand_history(
+                bot_a=args.bot_a,
+                bot_b=args.bot_b,
+                starting_stack_a=args.starting_stack_a,
+                starting_stack_b=args.starting_stack_b,
+                small_blind=args.small_blind,
+                big_blind=args.big_blind,
+                button_player=args.button_player,
+                seed=args.seed,
+                equity_iterations=args.equity_iterations,
+            )
+            if args.output:
+                write_json_document(
+                    result,
+                    args.output,
+                    overwrite=args.overwrite,
+                )
+        except ValueError as error:
+            parser.error(str(error))
+        print(json_document_text(result))
+        return
+    if args.command == "history-match":
+        try:
+            result = run_builtin_match_history(
+                bot_a=args.bot_a,
+                bot_b=args.bot_b,
+                starting_stack=args.starting_stack,
+                small_blind=args.small_blind,
+                big_blind=args.big_blind,
+                max_hands=args.max_hands,
+                seed=args.seed,
+                equity_iterations=args.equity_iterations,
+            )
+            if args.output:
+                write_json_document(
+                    result,
+                    args.output,
+                    overwrite=args.overwrite,
+                )
+        except ValueError as error:
+            parser.error(str(error))
+        print(json_document_text(result))
+        return
     if args.command == "match":
         try:
             result = run_builtin_match(

@@ -190,3 +190,31 @@ Blind history stores both assigned and posted amounts, so a player with 30 chips
 At showdown, both legitimately revealed hole-card pairs may appear only on the showdown event. Fold-ended histories reveal no hole cards. No event contains future board cards, deck order, remaining-deck contents, or burn cards.
 
 `validate_hand_history` is an internal replay-validation foundation. It checks continuity, conservation, board growth, action evidence, privacy, exactly-once settlement, cleanup, and agreement with the authoritative result. Phase 3B1 does not add a history API, CLI command, file export, persistence, or replay interface.
+
+## Phase 3B2 history interfaces and export
+
+Dedicated interfaces now expose validated histories without changing existing simulation or match responses:
+
+```text
+POST /api/histories/hand
+POST /api/histories/match
+```
+
+The single-hand endpoint accepts built-in bots, independent starting stacks, blinds, button, seed, and EquityBot iterations. The match-history endpoint accepts the same configuration as the existing persistent-match endpoint and returns its public result summary plus one history per completed hand.
+
+The CLI provides:
+
+```text
+history-hand
+history-match
+validate-history <path>
+```
+
+Both generation commands print deterministic JSON and optionally accept `--output` and `--overwrite`. `validate-history` accepts either a `hand_history` document or a `match_history` document, validates every typed history, and returns structured counts, errors, warnings, and schema versions. It exits nonzero for malformed or invalid documents.
+
+Files are ordinary UTF-8 JSON:
+
+- `hand_history`: schema identifier, one history, and its validation summary.
+- `match_history`: schema identifier, unchanged match summary, ordered histories, counts, and aggregate validation.
+
+History schema 1.0 remains distinct from dataset schema 2.0. This foundation can support future replay work, but it does not include event navigation, visualization, server storage, or match resumption.

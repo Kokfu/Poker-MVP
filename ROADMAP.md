@@ -121,4 +121,17 @@ The backend foundation now includes:
 - an internal validator for continuity, chip conservation, cards, action evidence, cleanup, privacy, and authoritative-result agreement;
 - internal history retention on persistent-match hand summaries without public response changes.
 
-Phase 3B as a whole is not complete. There is no history API or CLI, export format, database persistence, saved-history browser, action replay UI, replay navigation, dataset integration, AI training, multiway poker, tournament model, or external integration. Any subsequent Phase 3 work requires a separate scope and explicit authorization.
+### Phase 3B2: History API, CLI, and JSON export
+
+The history foundation now has:
+
+- validated `POST /api/histories/hand` and `POST /api/histories/match` interfaces;
+- `history-hand` and `history-match` CLI generation commands;
+- optional UTF-8 JSON output with explicit overwrite protection;
+- `hand_history` and `match_history` document types using history schema 1.0;
+- a `validate-history` CLI command for both document types;
+- structured validation counts, errors, warnings, and discovered schema versions;
+- recursive privacy enforcement and existing-response compatibility tests;
+- no changes to dataset schema 2.0 or existing Analyzer, Simulator, and Match response shapes.
+
+Phase 3B as a whole is not complete. There is no database persistence, stored-history lookup, cross-process match resumption, saved-history browser, action replay UI, replay navigation, dataset integration, AI training, multiway poker, tournament model, or external integration. Any subsequent Phase 3 work requires a separate scope and explicit authorization.

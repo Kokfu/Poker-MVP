@@ -24,7 +24,11 @@ The simulation engine owns hole cards, future cards, deck order, and RNG state. 
 
 Internal hand-history schema 1.0 follows the same boundary. Action, blind, street, board, runout, and settlement events contain only the public board available at that event. They never contain opponent hole cards, future board cards, deck order, remaining-deck contents, burn cards, or RNG state. At a normal showdown only, the showdown event may contain both legitimately revealed hole-card pairs. A fold-ended history reveals neither player's private cards.
 
-The history validator rejects hole-card disclosure outside showdown, disclosure in fold-ended histories, invalid board progression, duplicate public or revealed cards, and final-state inconsistencies. Full histories remain internal in Phase 3B1 and are not returned through existing APIs, CLI output, frontend responses, dataset schema 2.0, or an export endpoint.
+The history validator rejects hole-card disclosure outside showdown, disclosure in fold-ended histories, invalid board progression, duplicate public or revealed cards, and final-state inconsistencies.
+
+Phase 3B2 exposes histories only through dedicated history API routes and CLI commands. The public serializer validates each typed history before serialization and recursively rejects deck, future-card, remaining-deck, and burn-card keys. Existing Analyzer, Simulator, Match, frontend, and dataset responses do not gain histories or hole cards.
+
+History exports are explicit local UTF-8 JSON files. Existing files require `--overwrite`; there is no automatic export, server-side history database, history lookup endpoint, upload, or external transmission.
 
 Dataset schema 2.0 rejects privacy-leaking keys anywhere in a record, including:
 

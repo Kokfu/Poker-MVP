@@ -161,6 +161,30 @@ def run_builtin_match(
     seed: int = DEFAULT_MATCH_SEED,
     equity_iterations: int = DEFAULT_EQUITY_ITERATIONS,
 ) -> dict:
+    result, config = run_builtin_match_result(
+        bot_a=bot_a,
+        bot_b=bot_b,
+        starting_stack=starting_stack,
+        small_blind=small_blind,
+        big_blind=big_blind,
+        max_hands=max_hands,
+        seed=seed,
+        equity_iterations=equity_iterations,
+    )
+    return match_result_to_public_dict(result, config)
+
+
+def run_builtin_match_result(
+    *,
+    bot_a: str = "random",
+    bot_b: str = "random",
+    starting_stack: int = DEFAULT_STARTING_STACK,
+    small_blind: int = DEFAULT_SMALL_BLIND,
+    big_blind: int = DEFAULT_BIG_BLIND,
+    max_hands: int = DEFAULT_MAX_HANDS,
+    seed: int = DEFAULT_MATCH_SEED,
+    equity_iterations: int = DEFAULT_EQUITY_ITERATIONS,
+) -> tuple[MatchResult, MatchConfig]:
     bot_a, bot_b = validate_match_parameters(
         bot_a,
         bot_b,
@@ -187,4 +211,4 @@ def run_builtin_match(
         seed=seed + 1,
         equity_iterations=equity_iterations,
     )
-    return match_result_to_public_dict(run_match(first, second, config), config)
+    return run_match(first, second, config), config

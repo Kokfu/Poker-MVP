@@ -5,6 +5,10 @@ from pydantic import BaseModel, Field, StrictInt, field_validator, model_validat
 from poker_analyzer import RANKS, SUITS, analyze
 from simulation.bots import BOT_TYPES
 from simulation.engine import SimulationRunner
+from simulation.history_service import (
+    run_builtin_hand_history,
+    run_builtin_match_history,
+)
 from simulation.match_service import (
     DEFAULT_BIG_BLIND,
     DEFAULT_EQUITY_ITERATIONS,
@@ -144,3 +148,43 @@ class MatchSimulationResponse(BaseModel):
 @app.post("/api/matches/simulate", response_model=MatchSimulationResponse)
 def simulate_match(request: MatchSimulationRequest):
     return run_builtin_match(**request.model_dump())
+
+
+class HandHistoryRequest(BaseModel):
+    bot_a: Literal["random", "tight", "aggressive", "equity"] = "random"
+    bot_b: Literal["random", "tight", "aggressive", "equity"] = "random"
+    starting_stack_a: StrictInt = Field(default=DEFAULT_STARTING_STACK, gt=0)
+    starting_stack_b: StrictInt = Field(default=DEFAULT_STARTING_STACK, gt=0)
+    small_blind: StrictInt = Field(default=DEFAULT_SMALL_BLIND, gt=0)
+    big_blind: StrictInt = Field(default=DEFAULT_BIG_BLIND, gt=0)
+    button_player: Literal["a", "b"] = "a"
+    seed: StrictInt = DEFAULT_MATCH_SEED
+    equity_iterations: StrictInt = DEFAULT_EQUITY_ITERATIONS
+
+    @field_validator("bot_a", "bot_b", mode="before")
+    @classmethod
+    def normalize_bot_names(cls, value):
+        return value.lower() if isinstance(value, str) else value
+
+    @field_validator("equity_iterations")
+    @classmethod
+    def supported_equity_iterations(cls, value):
+        if value not in (500, 1000, 2000):
+            raise ValueError("Equity iterations must be 500, 1000, or 2000.")
+        return value
+
+    @model_validator(mode="after")
+    def valid_blind_relationship(self):
+        if self.small_blind > self.big_blind:
+            raise ValueError("Small blind cannot exceed big blind.")
+        return self
+
+
+@app.post("/api/histories/hand")
+def simulate_hand_history(request: HandHistoryRequest):
+    return run_builtin_hand_history(**request.model_dump())
+
+
+@app.post("/api/histories/match")
+def simulate_match_history(request: MatchSimulationRequest):
+    return run_builtin_match_history(**request.model_dump())

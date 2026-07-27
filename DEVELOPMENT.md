@@ -144,3 +144,24 @@ cd C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend
 Then run the complete backend regression and dependency check. Changes to history instrumentation must preserve the public Analyzer, independent-simulation, and persistent-match response shapes and dataset schema 2.0.
 
 Completed histories are available internally as `result["history"]`. Persistent `MatchHandSummary` objects retain the history in an internal field. There is no history endpoint, validation CLI command, export file, persistence layer, or replay UI in Phase 3B1.
+
+## Phase 3B2 history API and CLI
+
+Run the history interface tests:
+
+```powershell
+cd C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend
+.\.venv\Scripts\python.exe -m pytest -q -p no:cacheprovider test_simulation_history_service.py test_simulation_history_api.py test_simulation_history_cli.py
+```
+
+Generate and validate temporary history JSON:
+
+```powershell
+.\.venv\Scripts\python.exe -m simulation.cli history-hand --seed 42 --output ..\history-output\hand.json
+.\.venv\Scripts\python.exe -m simulation.cli history-match --seed 42 --max-hands 10 --output ..\history-output\match.json
+.\.venv\Scripts\python.exe -m simulation.cli validate-history ..\history-output\hand.json
+```
+
+Generation refuses an existing path unless `--overwrite` is passed. Use project-local scratch or operating-system temporary directories, not retained benchmark directories.
+
+The API routes are `POST /api/histories/hand` and `POST /api/histories/match`. They use the same service as the CLI. Existing `/api/matches/simulate` output intentionally omits histories and private cards.

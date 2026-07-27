@@ -91,6 +91,8 @@ The configured ports bind to localhost. The frontend proxies `/api` requests to 
 - `POST /api/analyze`
 - `POST /api/simulations/run`
 - `POST /api/matches/simulate`
+- `POST /api/histories/hand`
+- `POST /api/histories/match`
 
 The simulation API accepts 1 through 10,000 hands per request. Representative Analyzer request:
 
@@ -134,6 +136,34 @@ cd backend
 .\.venv\Scripts\python.exe -m simulation.cli match --bot-a tight --bot-b aggressive --starting-stack 10000 --small-blind 50 --big-blind 100 --max-hands 100 --seed 42 --equity-iterations 500
 ```
 
+## Action-level history JSON
+
+History schema `1.0` is separate from dataset schema 2.0. Dedicated history interfaces validate the engine-generated event stream before returning or writing it; existing Analyzer, Simulator, and Match response shapes remain unchanged.
+
+Run or export one deterministic hand:
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe -m simulation.cli history-hand --bot-a tight --bot-b aggressive --seed 42 --equity-iterations 500
+.\.venv\Scripts\python.exe -m simulation.cli history-hand --seed 42 --output ..\history-output\hand-seed42.json --overwrite
+```
+
+Run or export a persistent match with every completed hand history:
+
+```powershell
+.\.venv\Scripts\python.exe -m simulation.cli history-match --bot-a tight --bot-b aggressive --max-hands 25 --seed 42 --equity-iterations 500 --output ..\history-output\match-seed42.json
+```
+
+Validate either JSON document type:
+
+```powershell
+.\.venv\Scripts\python.exe -m simulation.cli validate-history ..\history-output\hand-seed42.json
+```
+
+Exports use UTF-8 JSON. An existing output is refused unless `--overwrite` is supplied. `hand_history` documents contain one validated history; `match_history` documents contain the unchanged public match summary plus one validated history per completed hand and aggregate validation evidence.
+
+Fold histories contain no private cards. Showdown events may contain only legitimately revealed hole cards. Histories never contain future board cards, deck order, remaining-deck contents, or burn cards.
+
 ## Dataset schema 2.0
 
 Generate and validate a dataset:
@@ -167,6 +197,7 @@ The final Phase 2 backend suite contains 275 passing tests. Retained runtime evi
 - Monte Carlo analysis is approximate and varies unless seeded.
 - The frontend Analyzer has no loading or disabled submission state.
 - Persistent matches have no dataset output, database persistence, saved-match browser, or replay controls; results exist only in the current frontend session or API/CLI response.
+- History JSON can be returned or written explicitly, but there is no server-side history store, lookup endpoint, cross-process resumption, or replay frontend.
 - Browser verification covers only the local application.
 - No real-money integration, external poker-site automation, automatic clicking, OCR, screen scraping, screenshot card extraction, or hidden-card extraction.
 

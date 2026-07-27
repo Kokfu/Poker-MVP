@@ -109,7 +109,13 @@ Every event carries before/after pot, stack, street-commitment, and current-high
 
 Blind events distinguish assigned and actually posted amounts, including capped short-stack all-ins. Street and board events reveal the flop, turn, and river separately. Automatic runout records its start and still produces each intermediate public reveal. Settlement is split into showdown when applicable, pot award, and exactly one final cleanup event.
 
-`validate_hand_history` verifies schema support, indexes, event cardinality, state continuity, chip conservation, non-negative values, board progression, card uniqueness, action targets, cleanup, final-result agreement, and privacy. It returns a structured list of useful errors. Histories are internal objects on hand results and persistent-match hand summaries; they are not exposed by the API, CLI, frontend, dataset writer, or an export endpoint.
+`validate_hand_history` verifies schema support, indexes, event cardinality, state continuity, chip conservation, non-negative values, board progression, card uniqueness, action targets, cleanup, final-result agreement, and privacy. It returns a structured list of useful errors.
+
+Phase 3B2 adds `simulation.history_service` as the only public serialization boundary. It converts typed histories to ordinary JSON-safe dictionaries only after validation, scans forbidden internal keys, constructs deterministic single-hand and persistent-match documents, parses exported documents back into typed models, and coordinates UTF-8 file output with explicit overwrite protection.
+
+`POST /api/histories/hand`, `POST /api/histories/match`, and the `history-hand`, `history-match`, and `validate-history` CLI commands all call this service. The existing match summary endpoint still calls its original serializer and does not gain history fields. Dataset schema 2.0 remains a separate decision-record system.
+
+History JSON is request/command output, not server-side persistence. There is no history database, lookup ID endpoint, process-resumption mechanism, or replay frontend.
 
 ## Phase 3 persistent match boundary
 

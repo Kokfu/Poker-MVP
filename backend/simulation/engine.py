@@ -447,6 +447,10 @@ class HandEngine:
                     not self.state.acted_since_full_raise[other]
                 )
 
+        if applied_action == "call":
+            # A capped or zero-stack call records the actual resulting
+            # commitment, never the unreachable theoretical wager.
+            target = self.state.current_bets[player]
         amount_paid = (
             before[f"stack_{player}"] - self.state.stacks[player]
         )
