@@ -44,7 +44,7 @@ bb_per_100 = net_bb / hands_played * 100
 
 Each hand begins from a fresh configured stack, normally 100 BB. Results are not a persistent bankroll.
 
-Phase 3 adds a separate persistent match mode: settled stacks carry between hands, positions alternate, and the match stops on elimination or a configured hand limit. Independent simulation mode still resets both stacks every hand.
+Phase 3 adds a separate persistent match mode: settled stacks carry between hands, positions alternate, and the match stops on elimination or a configured hand limit. Independent simulation mode still resets both stacks every hand. Open the **Match** tab in the local frontend to configure and run this mode.
 
 ## Requirements
 
@@ -125,7 +125,7 @@ Invoke-RestMethod http://127.0.0.1:8000/api/matches/simulate -Method Post -Conte
 
 Match defaults are `random` versus `random`, 10,000-unit stacks, 50/100 blinds, 100 hands, seed 0, and 1,000 EquityBot iterations. Stack and blinds must be positive integers, the small blind cannot exceed the big blind, `max_hands` is 1–10,000, and EquityBot iterations are 500, 1,000, or 2,000. Bot names are case-normalized.
 
-The response contains match configuration, final stacks, winner, termination reason, net chips, showdown/fold totals, diagnostics, and settled per-hand summaries without private hole cards.
+The response contains match configuration, final stacks, winner, termination reason, net chips, showdown/fold totals, diagnostics, and settled per-hand summaries without private hole cards. The Match tab renders these aggregate results, explicit chip-conservation and zero-sum checks, and every returned hand summary in a horizontally scrollable table.
 
 The equivalent CLI command is:
 
@@ -166,7 +166,7 @@ The final Phase 2 backend suite contains 275 passing tests. Retained runtime evi
 - EquityBot is computationally expensive, especially in long runs.
 - Monte Carlo analysis is approximate and varies unless seeded.
 - The frontend Analyzer has no loading or disabled submission state.
-- Persistent matches currently have no frontend screen, dataset output, or database persistence.
+- Persistent matches have no dataset output, database persistence, saved-match browser, or replay controls; results exist only in the current frontend session or API/CLI response.
 - Browser verification covers only the local application.
 - No real-money integration, external poker-site automation, automatic clicking, OCR, screen scraping, screenshot card extraction, or hidden-card extraction.
 

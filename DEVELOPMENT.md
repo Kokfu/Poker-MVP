@@ -39,6 +39,14 @@ npm.cmd run build
 
 Use `npm.cmd` on Windows when PowerShell execution policy blocks `npm.ps1`.
 
+The local frontend has three tabs:
+
+- **Analyzer** submits manually entered hand states to `POST /api/analyze`.
+- **Simulator** runs independent hands through `POST /api/simulations/run`; both stacks reset before each hand.
+- **Match** runs stack-persistent matches through `POST /api/matches/simulate`; stacks carry forward until elimination or the configured hand limit.
+
+The Match form validates whole-number inputs in the browser before submission. Its result view includes aggregate outcome data, invariant indicators, and every public per-hand settlement summary. Match results are not saved or replayable after the page is refreshed.
+
 ## Docker Compose
 
 ```powershell
@@ -93,7 +101,7 @@ EquityBot at 500 iterations is intentionally slower than the rule-based bots. Lo
 
 Regenerate stress, pairwise, and benchmark artifacts whenever engine, bot, settlement, statistics, or equity logic changes. Documentation-only and presentation-only changes do not invalidate deterministic runtime evidence.
 
-## Phase 3 persistent match API and CLI
+## Phase 3 persistent match frontend, API, and CLI
 
 Run a persistent match:
 
@@ -119,3 +127,5 @@ Run the complete backend regression after any match or shared `HandEngine` chang
 ```
 
 Persistent mode reuses the shared hand engine, so changes to blind posting, legal actions, runout, settlement, or the public adapter require the focused match suites and the full Phase 2-compatible regression suite. Do not overwrite retained Phase 2 benchmark artifacts during match development.
+
+For a frontend smoke test, start both services, open `http://127.0.0.1:5173`, choose **Match**, and submit the defaults or the deterministic `tight` versus `aggressive`, seed 42 configuration shown above. Confirm the summary invariants pass and the hand table remains contained when the viewport is narrow.

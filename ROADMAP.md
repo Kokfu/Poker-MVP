@@ -95,4 +95,16 @@ The backend now exposes the same match orchestration through:
 - deterministic API/CLI equivalence;
 - focused positive, negative, compatibility, and Docker acceptance coverage.
 
-Phase 3 as a whole is not complete. There is no persistent-match frontend, dataset output, database persistence, replay UI, AI training, multiway poker, tournament model, or external integration. Any subsequent Phase 3 work requires a separate scope and explicit authorization.
+### Phase 3A3: Persistent match frontend
+
+The frontend now includes:
+
+- a distinct Match tab backed by `POST /api/matches/simulate`;
+- strict whole-number client validation and duplicate-submission protection;
+- persistent-match defaults for bots, stacks, blinds, hand limit, seed, and equity iterations;
+- aggregate winner, termination, stack, net, showdown/fold, illegal-action, and fallback output;
+- visible chip-conservation and zero-sum invariant indicators;
+- all returned hand summaries, including positions, stack transitions, outcomes, board, diagnostics, and settlement status;
+- responsive form, summary, and contained horizontally scrollable table layouts.
+
+Phase 3 as a whole is not complete. Persistent matches still have no dataset output, database persistence, saved-match browser, replay controls, AI training, multiway poker, tournament model, or external integration. Any subsequent Phase 3 work requires a separate scope and explicit authorization.

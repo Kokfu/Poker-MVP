@@ -136,9 +136,9 @@ Dataset generation is optional and writes one JSON decision record per line. Rec
 
 Schema 1.0 migration and a separate dataset manifest are not supported.
 
-## Phase 3 persistent match mode — work in progress
+## Phase 3 persistent match mode
 
-Persistent match mode is a separate backend-only orchestration mode. It does not change Phase 2 independent simulations.
+Persistent match mode is a separate orchestration mode. It does not change Phase 2 independent simulations.
 
 `MatchConfig` supplies per-player starting stacks, small and big blinds, a maximum hand count, and a deterministic seed. For each hand, `PersistentMatchRunner`:
 
@@ -171,4 +171,8 @@ Both interfaces use `run_builtin_match`; neither duplicates match rules. Default
 
 Public validation requires supported case-normalized bot names; positive integer stack and blinds; small blind no greater than big blind; 1–10,000 hands; integer seed; and 500, 1,000, or 2,000 equity iterations. Boolean values are not accepted as integers.
 
-The public response omits private hole cards and returns flattened configuration, outcome, aggregate statistics, and per-hand settlement summaries. Persistent match mode still has no frontend, dataset output, database persistence, replay UI, or multiway support.
+The public response omits private hole cards and returns flattened configuration, outcome, aggregate statistics, and per-hand settlement summaries.
+
+Phase 3A3 adds a **Match** tab to the React frontend. Its form exposes both bots, starting stack, blinds, maximum hands, seed, and EquityBot iterations. The result view shows the winner and termination reason, final stacks, nets, showdown/fold totals, illegal/fallback counts, explicit chip-conservation and zero-sum indicators, and every public per-hand summary. The wide hand table scrolls inside its own container on narrow viewports.
+
+The frontend does not change engine or API semantics. Match results are session-only: there is still no match dataset output, database persistence, saved-match browser, replay UI, or multiway support.

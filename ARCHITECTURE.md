@@ -6,6 +6,9 @@ The application is local and stateless:
 
 ```text
 React/Vite frontend
+        +-- Analyzer tab
+        +-- independent Simulator tab
+        +-- persistent Match tab
         |
         | JSON over localhost /api
         v
@@ -98,7 +101,7 @@ Persistent match mode is Phase 3 work in progress and remains separate from `Sim
 
 Phase 3A2 exposes this orchestration through `simulation.match_service.run_builtin_match`. That adapter normalizes and validates public parameters, constructs seeded built-in bots, invokes `run_match`, flattens the internal dataclasses into the public snake_case response, and checks aggregate invariants. Both `POST /api/matches/simulate` and `simulation.cli match` call this same adapter.
 
-The match API/CLI layer has no poker-rule implementation. There is still no match frontend, dataset integration, or database persistence. Dataset schema 2.0 and retained Phase 2 evidence remain unchanged.
+The match API/CLI layer has no poker-rule implementation. Phase 3A3 adds a presentation-only React Match tab that calls the existing endpoint, performs strict client input checks, and renders aggregate and per-hand public output. It does not calculate poker state, persist matches, or alter the independent Simulator. There is still no match dataset integration, database persistence, saved-match browser, or replay system. Dataset schema 2.0 and retained Phase 2 evidence remain unchanged.
 
 ## Deployment
 
