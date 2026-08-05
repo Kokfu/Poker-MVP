@@ -55,3 +55,8 @@ The validator also rejects unknown fields, malformed values, unsupported schema 
 - CORS permits only configured local frontend origins.
 
 The application has no credential store or external-site secrets. Explicitly generated dataset and benchmark files remain on the user's local filesystem and should be handled according to the user's own privacy requirements.
+
+## Single-hand Replay
+
+`Replay` is a single-hand-only frontend for deterministic local histories: generate through `/api/histories/hand`, navigate events, inspect the selected snapshot and timeline, and observe validation/conservation indicators. Persistent-match replay remains future work.
+

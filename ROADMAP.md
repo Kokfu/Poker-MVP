@@ -135,3 +135,8 @@ The history foundation now has:
 - no changes to dataset schema 2.0 or existing Analyzer, Simulator, and Match response shapes.
 
 Phase 3B as a whole is not complete. There is no database persistence, stored-history lookup, cross-process match resumption, saved-history browser, action replay UI, replay navigation, dataset integration, AI training, multiway poker, tournament model, or external integration. Any subsequent Phase 3 work requires a separate scope and explicit authorization.
+
+## Single-hand Replay
+
+`Replay` is a single-hand-only frontend for deterministic local histories: generate through `/api/histories/hand`, navigate events, inspect the selected snapshot and timeline, and observe validation/conservation indicators. Persistent-match replay remains future work.
+

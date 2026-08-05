@@ -135,3 +135,8 @@ The match API/CLI layer has no poker-rule implementation. Phase 3A3 adds a prese
 ## Deployment
 
 Docker Compose provides the reproducible local deployment. The frontend uses its `/api` proxy to reach `http://backend:8000` inside the Compose network. Host access remains on `http://127.0.0.1:5173` and `http://127.0.0.1:8000`.
+
+## Single-hand Replay
+
+`Replay` is a single-hand-only frontend for deterministic local histories: generate through `/api/histories/hand`, navigate events, inspect the selected snapshot and timeline, and observe validation/conservation indicators. Persistent-match replay remains future work.
+

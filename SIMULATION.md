@@ -218,3 +218,8 @@ Files are ordinary UTF-8 JSON:
 - `match_history`: schema identifier, unchanged match summary, ordered histories, counts, and aggregate validation.
 
 History schema 1.0 remains distinct from dataset schema 2.0. This foundation can support future replay work, but it does not include event navigation, visualization, server storage, or match resumption.
+
+## Single-hand Replay
+
+`Replay` is a single-hand-only frontend for deterministic local histories: generate through `/api/histories/hand`, navigate events, inspect the selected snapshot and timeline, and observe validation/conservation indicators. Persistent-match replay remains future work.
+

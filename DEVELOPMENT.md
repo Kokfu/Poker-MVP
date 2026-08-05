@@ -165,3 +165,8 @@ Generate and validate temporary history JSON:
 Generation refuses an existing path unless `--overwrite` is passed. Use project-local scratch or operating-system temporary directories, not retained benchmark directories.
 
 The API routes are `POST /api/histories/hand` and `POST /api/histories/match`. They use the same service as the CLI. Existing `/api/matches/simulate` output intentionally omits histories and private cards.
+
+## Single-hand Replay
+
+`Replay` is a single-hand-only frontend for deterministic local histories: generate through `/api/histories/hand`, navigate events, inspect the selected snapshot and timeline, and observe validation/conservation indicators. Persistent-match replay remains future work.
+

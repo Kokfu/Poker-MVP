@@ -202,3 +202,7 @@ The final Phase 2 backend suite contains 275 passing tests. Retained runtime evi
 - No real-money integration, external poker-site automation, automatic clicking, OCR, screen scraping, screenshot card extraction, or hidden-card extraction.
 
 See [SIMULATION.md](SIMULATION.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DEVELOPMENT.md](DEVELOPMENT.md), [SECURITY.md](SECURITY.md), and [ROADMAP.md](ROADMAP.md) for further details.
+
+### Single-hand Replay
+
+The Replay tab generates one deterministic local hand through `POST /api/histories/hand`. Use the form, event controls, table-state panel, and selectable timeline to inspect incremental board reveals. Validation and chip-conservation indicators are shown client-side. Folded cards and future board cards remain private; persistent-match replay is future work.
