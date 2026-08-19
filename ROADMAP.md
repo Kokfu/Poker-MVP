@@ -136,6 +136,10 @@ The history foundation now has:
 
 Phase 3B as a whole is not complete. There is no database persistence, stored-history lookup, cross-process match resumption, saved-history browser, action replay UI, replay navigation, dataset integration, AI training, multiway poker, tournament model, or external integration. Any subsequent Phase 3 work requires a separate scope and explicit authorization.
 
+### Phase 3C1: Decision intelligence foundation
+
+The backend now has a typed, deterministic internal `DecisionState`, `PokerFeatureSet`, optional `EquityEstimate`, and normalized `DecisionObservation` boundary for future strategies. It exposes only legitimate player-visible state, authoritative betting bounds and public action context, deterministic hand/draw/board features, and finite pot/stack features. Existing bots and public response shapes remain unchanged. This does not provide opponent modeling, player classification, ExpertRuleBot, CFR, neural policy, reinforcement learning, GTO solving, training, persistence, or a Decision Intelligence UI. Phase 3C2 may add explicitly scoped opponent modeling; a future phase may add an `ExpertRuleBot` on this boundary.
+
 ## Single-hand Replay
 
 ### Phase 3B3B: Persistent-Match Replay Frontend

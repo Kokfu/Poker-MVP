@@ -9,6 +9,7 @@ from poker_analyzer import EVALUATOR
 from .actions import Action
 from .cards import Deck
 from .dataset import JsonlDataset, SCHEMA_VERSION
+from .decision_state import build_decision_observation
 from .game_state import GameState, Observation
 from .history import (
     HISTORY_SCHEMA_VERSION,
@@ -298,6 +299,15 @@ class HandEngine:
             list(self.state.action_history),
         )
 
+    def decision_observation(self, player):
+        """Return the privacy-safe, strategy-facing observation for ``player``.
+
+        ``observe`` remains as the compatibility adapter for existing bots and
+        dataset instrumentation. New strategies can implement
+        ``decide_decision(DecisionObservation)`` and never access engine state.
+        """
+        return build_decision_observation(self, player)
+
     def _record_illegal(self, diagnostic):
         self.illegal += 1
         self.illegal_diagnostics.append(diagnostic)
@@ -566,8 +576,14 @@ class HandEngine:
                 player = self.other(player)
             self.state.acting_player = player
             observation = self.observe(player)
+            decision_observation = self.decision_observation(player)
             started = time.perf_counter()
-            action = self.bots[player].decide(observation)
+            strategy = self.bots[player]
+            action = (
+                strategy.decide_decision(decision_observation)
+                if hasattr(strategy, "decide_decision")
+                else strategy.decide(observation)
+            )
             elapsed = (time.perf_counter() - started) * 1000
             self._records.append(
                 self._decision_record(player, observation, action, elapsed)

@@ -166,6 +166,10 @@ Generation refuses an existing path unless `--overwrite` is passed. Use project-
 
 The API routes are `POST /api/histories/hand` and `POST /api/histories/match`. They use the same service as the CLI. Existing `/api/matches/simulate` output intentionally omits histories and private cards.
 
+## Phase 3C1 decision-state development
+
+Keep `simulation.decision_state` a pure, read-only transformation of `HandEngine` state. It must not duplicate betting rules, inspect deck internals, consume RNG, or add fields to existing API/history/dataset serializers. Run the focused decision-state, poker-feature, and privacy suites before the complete backend regression. `DecisionObservation` is the future strategy boundary; legacy bots remain on `Observation` until deliberately migrated.
+
 ## Single-hand Replay
 
 `Replay` supports `/api/histories/hand` and `/api/histories/match`. Keep their shared event renderer responsible for event navigation, table state, timeline selection, and privacy filtering; match-only UI should remain limited to request controls, overview, hand selection, and stack progression.

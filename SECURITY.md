@@ -26,6 +26,8 @@ Internal hand-history schema 1.0 follows the same boundary. Action, blind, stree
 
 The history validator rejects hole-card disclosure outside showdown, disclosure in fold-ended histories, invalid board progression, duplicate public or revealed cards, and final-state inconsistencies.
 
+Phase 3C1 `DecisionObservation` has the same stricter per-decision boundary: `DecisionState` serializes only hero hole cards and cards public at that decision. It contains no opponent-hole-card, future-board, deck, deck-order, remaining-deck, burn-card, or RNG fields. Its builder is deterministic and read-only; tests recursively inspect serialized observations and verify construction does not change deck order or later deterministic play.
+
 Phase 3B2 exposes histories only through dedicated history API routes and CLI commands. The public serializer validates each typed history before serialization and recursively rejects deck, future-card, remaining-deck, and burn-card keys. Existing Analyzer, Simulator, Match, frontend, and dataset responses do not gain histories or hole cards.
 
 History exports are explicit local UTF-8 JSON files. Existing files require `--overwrite`; there is no automatic export, server-side history database, history lookup endpoint, upload, or external transmission.

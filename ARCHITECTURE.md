@@ -37,11 +37,18 @@ FastAPI validates card notation, uniqueness, board length, opponent count, and n
 - `simulation.match.PersistentMatchRunner` is the Phase 3A1 orchestration layer. It creates one clean `HandEngine` per hand and carries only settled stacks into the next hand.
 - `simulation.bots` contains `RandomBot`, `TightBot`, `AggressiveBot`, and `EquityBot`.
 - `Observation` is the bot-facing information boundary. It exposes the acting player's cards, public board, stacks, commitments, legal actions, and target bounds, but not hidden opponent cards, future board cards, deck order, or RNG state.
+- `simulation.decision_state` provides the Phase 3C1 strategy-facing boundary. `DecisionState` is a typed, immutable snapshot of one legitimate player decision; `PokerFeatureSet` is its deterministic derived feature layer; and `DecisionObservation` combines both with optional `EquityEstimate` data. `HandEngine` builds it immediately before each bot decision. Existing bots continue through the legacy `Observation` adapter, while future strategies may implement `decide_decision(DecisionObservation)` without direct engine access.
 - `simulation.statistics` aggregates wins, ties, losses, net chips, net BB, BB/100, showdowns, folds, action counts, and illegal actions.
 - `simulation.dataset` writes and validates JSONL schema 2.0 records.
 - `simulation.cli` lists bots, runs simulations, generates datasets, and validates datasets.
 
 Bots choose among engine-authoritative legal actions. They do not independently reconstruct betting legality. A malformed custom bot can trigger a safety fallback, but accepted built-in workloads produce no fallback diagnostics.
+
+## Decision intelligence foundation
+
+`DecisionState` derives identity, button/blind context, in/out-of-position status, only hero hole cards plus the currently public board, visible stacks/pot/effective stack, authoritative total-target bounds and legal actions, raise-reopening state, and ordered public action context. It never reads opponent cards, undealt cards, deck contents, burn cards, or RNG state.
+
+`PokerFeatureSet` is deterministic and JSON-safe. It provides pot odds and required equity (`call / (pot + call)`, or zero for a free action), SPR (`effective_stack / pot`, or zero for a zero pot), bet faced as a pot fraction, position flags, made-hand/draw flags, and deterministic board texture. It emits finite values only. Optional `EquityEstimate` is deliberately not computed as part of observation construction, so no solver or RNG work is mandatory. This is an internal foundation: it does not alter public API responses, history schema 1.0, or dataset schema 2.0.
 
 ## Betting state
 

@@ -98,6 +98,12 @@ The engine validates every submitted action. A fallback exists only as a state-s
 
 EquityBot estimates equity against a random unknown opponent. Its result is heuristic and its configurable Monte Carlo iterations trade runtime for precision.
 
+## Phase 3C1 decision intelligence foundation
+
+At every bot decision, the engine can build an immutable `DecisionObservation` from authoritative state. Its `DecisionState` includes only the acting player's hole cards and the board revealed at that instant, public stacks/commitments/action context, button/blinds, position, legal actions, total-target bounds, and reopening state. Its `PokerFeatureSet` supplies finite deterministic values: pot odds and required equity are `call / (pot + call)` (zero when `call` is zero); SPR is `effective_stack / pot` (zero when pot is zero); and bet faced is `call / pot` (zero when pot is zero).
+
+Feature categories include canonical made hands, flush/open-ended/gutshot draws, overcards and pair-plus-draw, plus paired/monotone/two-tone/rainbow/connected board texture. The builder neither consumes deck or bot RNG state nor performs equity calculation. An optional `EquityEstimate` can be attached by a future explicit estimator. New strategies can use `decide_decision(DecisionObservation)`; the four existing bots retain their legacy `Observation` contract and behavior. This internal layer does not change dataset schema 2.0, history schema 1.0, or API responses.
+
 ## Statistics
 
 For each player:
