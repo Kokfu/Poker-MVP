@@ -205,4 +205,4 @@ See [SIMULATION.md](SIMULATION.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DEVELOP
 
 ### Single-hand Replay
 
-The Replay tab generates one deterministic local hand through `POST /api/histories/hand`. Use the form, event controls, table-state panel, and selectable timeline to inspect incremental board reveals. Validation and chip-conservation indicators are shown client-side. Folded cards and future board cards remain private; persistent-match replay is future work.
+The Replay tab has Single Hand and Persistent Match modes. Persistent Match calls `POST /api/histories/match`, provides the match form, overview and aggregate checks, completed-hand controls, a responsive stack-progression table, and the shared event replay panel. Histories are local to the current browser session: there is no storage, lookup, upload, or resumption. Folded cards remain hidden and board cards appear only at their reveal event.

@@ -221,5 +221,5 @@ History schema 1.0 remains distinct from dataset schema 2.0. This foundation can
 
 ## Single-hand Replay
 
-`Replay` is a single-hand-only frontend for deterministic local histories: generate through `/api/histories/hand`, navigate events, inspect the selected snapshot and timeline, and observe validation/conservation indicators. Persistent-match replay remains future work.
+`Replay` supports local single-hand and persistent-match histories. Persistent Match exposes aggregate validation, completed-hand selection, stack carry-forward checks, and the same event replay UI. Private folded cards and future board cards remain unavailable until legitimate event data reveals them.
 

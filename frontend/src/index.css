@@ -333,7 +333,13 @@ tbody tr:last-child td {
 }
 
 .replay-panel { border-color: #365e57; background: linear-gradient(145deg, #11201f, #111a20 45%); }
+.replay-modes { display:flex; flex-wrap:wrap; gap:8px; margin:18px 0; }
+.replay-modes button[aria-selected="true"] { border-color:#66d6ad; background:#17342e; color:#8ee9c8; }
 .replay-panel .form-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
+.replay-event { margin-top:20px; background:#0e181d; }
+.selected-hand { background:#17342e; }
+.selected-hand td { border-bottom-color:#66d6ad; }
+.table-select { padding:3px 6px; }
 .replay-controls { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:18px 0; }
 .replay-controls span { color:#9de7cd; font-weight:700; }
 .replay-controls input { width:78px; margin:0; }

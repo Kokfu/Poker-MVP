@@ -58,5 +58,5 @@ The application has no credential store or external-site secrets. Explicitly gen
 
 ## Single-hand Replay
 
-`Replay` is a single-hand-only frontend for deterministic local histories: generate through `/api/histories/hand`, navigate events, inspect the selected snapshot and timeline, and observe validation/conservation indicators. Persistent-match replay remains future work.
+`Replay` renders locally generated single-hand and persistent-match histories. The shared event renderer uses only the selected event's public board and fields, so changing hands or moving earlier cannot retain future board cards. Folded hole cards remain hidden; showdown cards may appear only in the legitimate showdown event.
 

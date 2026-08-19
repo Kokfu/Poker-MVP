@@ -138,5 +138,5 @@ Docker Compose provides the reproducible local deployment. The frontend uses its
 
 ## Single-hand Replay
 
-`Replay` is a single-hand-only frontend for deterministic local histories: generate through `/api/histories/hand`, navigate events, inspect the selected snapshot and timeline, and observe validation/conservation indicators. Persistent-match replay remains future work.
+`Replay` has Single Hand and Persistent Match modes. Both use one event renderer for table state, timeline, navigation, and privacy filtering. Persistent Match uses `/api/histories/match` and adds match overview, hand selection, and stack progression without changing existing public match responses.
 

@@ -138,5 +138,7 @@ Phase 3B as a whole is not complete. There is no database persistence, stored-hi
 
 ## Single-hand Replay
 
-`Replay` is a single-hand-only frontend for deterministic local histories: generate through `/api/histories/hand`, navigate events, inspect the selected snapshot and timeline, and observe validation/conservation indicators. Persistent-match replay remains future work.
+### Phase 3B3B: Persistent-Match Replay Frontend
+
+The Replay tab now supports locally generated persistent-match documents through `/api/histories/match`, with form validation, match overview, aggregate invariants, completed-hand selection, stack progression, and the shared privacy-safe event replay UI. Phase 3B remains incomplete: there is still no stored-history lookup, database persistence, cross-process resumption, match editing, dataset integration, AI training, multiway poker, tournaments, or external integration.
 

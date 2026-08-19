@@ -112,3 +112,16 @@ export type HandHistory = {
   settlement_complete: boolean; illegal_action_count: number; fallback_diagnostics: Record<string, unknown>[];
 };
 export type HandHistoryResponse = { document_type: "hand_history"; history_schema_version: string; history: HandHistory; validation: ValidationSummary };
+export type AggregateValidation = ValidationSummary;
+export type MatchHistoryRequest = MatchRequest;
+export type MatchHistoryDocument = {
+  document_type: "match_history";
+  history_schema_version: string;
+  match: MatchResponse;
+  histories: HandHistory[];
+  history_count: number;
+  invalid_history_count: number;
+  aggregate_validation: AggregateValidation;
+  aggregate_illegal_action_count: number;
+  aggregate_fallback_count: number;
+};
