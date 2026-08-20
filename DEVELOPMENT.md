@@ -182,3 +182,7 @@ Keep `simulation.opponent_model` history-derived and deterministic: it must neve
 
 Run `\.venv\Scripts\python.exe -m simulation.expert_benchmark` from `backend` for deterministic independent 1,000-hand ExpertRuleBot matchups. It reports hands, net chips/net BB, BB/100, wins/losses/ties, illegal actions, and fallback diagnostics.
 
+For adaptive work, retain `ExpertRuleBot` unchanged and put thresholds, confidence gates, and legal transition limits in `simulation.exploit_strategy`. Run `test_simulation_adaptive_bot.py` before the full backend suite. `simulation.adaptive_benchmark` provides persistent, seat-aware A/B diagnostics; seat swapping is not duplicate-deal pairing and finite results are not strength claims.
+
+Use the long-stack archetype diagnostic when validating live activation. It deliberately uses legal, non-registered opponents to generate completed public histories; do not inject profiles into an end-to-end test or relax confidence thresholds because short eliminated matches do not mature samples.
+

@@ -124,10 +124,11 @@ def test_existing_cli_list_bots_still_works():
     assert completed.stdout.splitlines() == [
         "random",
         "tight",
-        "aggressive",
-        "equity",
-        "expert",
-    ]
+            "aggressive",
+            "equity",
+            "expert",
+            "adaptive",
+        ]
 
 
 def test_existing_independent_cli_run_still_works():

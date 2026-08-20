@@ -58,5 +58,6 @@ class EquityBot(PokerBot):
 # Imported after PokerBot is defined: ExpertRuleBot subclasses the legacy base
 # solely for registry compatibility while using DecisionObservation in-engine.
 from .expert_bot import ExpertRuleBot
+from .adaptive_bot import ExpertAdaptiveBot
 
-BOT_TYPES={"random":RandomBot,"tight":TightBot,"aggressive":AggressiveBot,"equity":EquityBot,"expert":ExpertRuleBot}
+BOT_TYPES={"random":RandomBot,"tight":TightBot,"aggressive":AggressiveBot,"equity":EquityBot,"expert":ExpertRuleBot,"adaptive":ExpertAdaptiveBot}

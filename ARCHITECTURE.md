@@ -155,3 +155,15 @@ Docker Compose provides the reproducible local deployment. The frontend uses its
 
 `simulation.expert_bot.ExpertRuleBot`, registered as `expert`, is a deterministic heads-up rule-based baseline. It consumes only `DecisionObservation`, uses engine-authoritative action bounds, and retains internal explanation metadata. It is neither GTO nor a learning system.
 
+## Phase 3C4 adaptive exploit layer
+
+`expert` remains the stable Phase 3C3 control. `adaptive` is the separate `ExpertAdaptiveBot`: it first asks an embedded `ExpertRuleBot` for its baseline decision and explanation, then passes only that result plus the current `DecisionObservation.opponent_profile` into `ExploitAdjustmentEngine`. The engine never queries `HandEngine`, histories, cards, deck, or RNG.
+
+Numeric public estimates, rather than profile labels, drive adjustments. The initial research thresholds are centralized in `exploit_strategy.py`: fold-to-bet >= .62, call-vs-bet >= .62 or fold-to-bet <= .28, aggression >= .42 or <= .18, and preflop fold-to-raise >= .58. Signal strength is bounded deviation from the relevant reference rate multiplied by a confidence weight (very-low 0, low .15, medium .55, high 1). It is explanatory rather than a statistical claim.
+
+Very-low and low confidence retain the baseline. Medium allows controlled changes and high permits stronger, still-bounded sizing. Allowed transitions are only suitable check-to-bet pressure, fold-to-call defense with showdown value, removal of an existing pure bluff against a calling station, and adjustment of existing strong-value sizing. Targets retain engine total-target semantics and are clamped to supplied legal bounds.
+
+The passive-player initiative path uses the same low-aggression threshold (smoothed aggression <= .18) and confidence gate. It may turn only an in-position, dry-board air baseline check into a 33%-pot bet. It does not require the control bot already to hold initiative, because that would exclude the check-back spots the adjustment is intended to address.
+
+For auditability, `ExpertAdaptiveBot` keeps an internal in-memory decision trace. It is derived after the strategy decision from the same observation and explanation and records profile hand count, numeric signal metadata, activation outcome, and rejection rationale. It is not part of histories, datasets, or public API serialization.
+
