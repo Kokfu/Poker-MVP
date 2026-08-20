@@ -47,6 +47,8 @@ The validator also rejects unknown fields, malformed values, unsupported schema 
 
 ## Input and runtime safeguards
 
+Phase 3C2 opponent profiles use only public completed-history actions, stacks, commitments, pot, and street. The persistent match supplies a snapshot before the current action and updates after settlement, so no current/future action, hidden card, future board, deck, or RNG can leak into it. Profile serialization contains only finite aggregate statistics.
+
 - FastAPI/Pydantic validates card notation, card uniqueness, board length, opponent count, numeric bounds, bot names, stack bounds, and EquityBot iteration choices.
 - The simulation API is capped at 10,000 hands per request.
 - Engine-authoritative legal actions and targets prevent built-in bots from bypassing betting rules.

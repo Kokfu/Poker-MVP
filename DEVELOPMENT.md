@@ -172,5 +172,9 @@ Keep `simulation.decision_state` a pure, read-only transformation of `HandEngine
 
 ## Single-hand Replay
 
+## Phase 3C2 opponent-model development
+
+Keep `simulation.opponent_model` history-derived and deterministic: it must never read engine cards, deck, or RNG. Verify pre-decision profile delivery and post-settlement updates in match tests, then run the full backend regression. Public responses and dataset schema 2.0 remain unchanged.
+
 `Replay` supports `/api/histories/hand` and `/api/histories/match`. Keep their shared event renderer responsible for event navigation, table state, timeline selection, and privacy filtering; match-only UI should remain limited to request controls, overview, hand selection, and stack progression.
 

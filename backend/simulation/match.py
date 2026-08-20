@@ -8,6 +8,7 @@ from typing import Literal
 
 from .engine import HandEngine
 from .history import HandHistory
+from .opponent_model import OpponentModel
 
 
 Player = Literal["a", "b"]
@@ -101,6 +102,9 @@ class PersistentMatchRunner:
         self.bot_a = bot_a
         self.bot_b = bot_b
         self.config = config
+        # Model A contains public behavior of A and is supplied only to B.
+        self.model_of_a = OpponentModel("a")
+        self.model_of_b = OpponentModel("b")
 
     def _match_id(self) -> str:
         identity = json.dumps(
@@ -159,8 +163,14 @@ class PersistentMatchRunner:
                 starting_stacks=hand_start,
                 small_blind=config.small_blind,
                 match_id=match_id,
+                opponent_profile_provider=lambda player: (
+                    self.model_of_b.snapshot() if player == "a" else self.model_of_a.snapshot()
+                ),
             )
             result = engine.play()
+            # A completed hand becomes visible only after its last decision.
+            self.model_of_a.update(result["history"])
+            self.model_of_b.update(result["history"])
             hand_end = dict(result["stacks"])
             settlement_complete = (
                 engine.settlement_count == 1

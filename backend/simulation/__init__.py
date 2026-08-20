@@ -2,6 +2,7 @@
 from .engine import SimulationRunner
 from .bots import BOT_TYPES
 from .match import MatchConfig, MatchResult, PersistentMatchRunner, run_match
+from .opponent_model import OpponentModel, OpponentProfileSnapshot
 
 __all__ = [
     "SimulationRunner",
@@ -9,5 +10,7 @@ __all__ = [
     "MatchConfig",
     "MatchResult",
     "PersistentMatchRunner",
+    "OpponentModel",
+    "OpponentProfileSnapshot",
     "run_match",
 ]

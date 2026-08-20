@@ -38,6 +38,7 @@ class HandEngine:
         starting_stacks=None,
         small_blind=None,
         match_id=None,
+        opponent_profile_provider=None,
     ):
         initial_stacks = (
             {"a": stack, "b": stack}
@@ -86,6 +87,7 @@ class HandEngine:
         self.simulation_id = simulation_id
         self.simulation_seed = simulation_seed
         self.hand_number = hand_number
+        self.opponent_profile_provider = opponent_profile_provider
         self._records = []
         self.showdown_count = 0
         self.settlement_count = 0
@@ -306,7 +308,8 @@ class HandEngine:
         dataset instrumentation. New strategies can implement
         ``decide_decision(DecisionObservation)`` and never access engine state.
         """
-        return build_decision_observation(self, player)
+        profile = self.opponent_profile_provider(player) if self.opponent_profile_provider else None
+        return build_decision_observation(self, player, opponent_profile=profile)
 
     def _record_illegal(self, diagnostic):
         self.illegal += 1

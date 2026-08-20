@@ -123,6 +123,7 @@ class DecisionObservation:
     decision_state: DecisionState
     poker_features: PokerFeatureSet
     equity: EquityEstimate | None = None
+    opponent_profile: Any | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return _json_safe(asdict(self))
@@ -265,6 +266,6 @@ def build_poker_features(state: DecisionState) -> PokerFeatureSet:
     )
 
 
-def build_decision_observation(engine, player: str, equity: EquityEstimate | None = None) -> DecisionObservation:
+def build_decision_observation(engine, player: str, equity: EquityEstimate | None = None, opponent_profile: Any | None = None) -> DecisionObservation:
     state = build_decision_state(engine, player)
-    return DecisionObservation(state, build_poker_features(state), equity)
+    return DecisionObservation(state, build_poker_features(state), equity, opponent_profile)

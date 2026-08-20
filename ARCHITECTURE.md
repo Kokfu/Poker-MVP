@@ -145,5 +145,9 @@ Docker Compose provides the reproducible local deployment. The frontend uses its
 
 ## Single-hand Replay
 
+## Phase 3C2 opponent-model foundation
+
+`simulation.opponent_model` consumes only completed public `HandHistory` action events. Persistent matches maintain one model per player; the opposing snapshot is attached to `DecisionObservation` before an action and histories are incorporated only after settlement. The model records explicit opportunities and occurrences, raw and Beta(1,1)-smoothed frequencies, and 0–4/5–19/20–49/50+ very-low/low/medium/high confidence. VPIP excludes blinds; a limp is an unopened voluntary preflop call; a 3-bet follows one prior preflop raise. Bet sizing is public wager increment divided by pre-action pot: small <= .40, medium <= .75, large <= 1.25, overbet above. Labels require 20 hands and VPIP opportunities and do not alter strategy. Snapshots are finite JSON-safe and contain no cards, deck, RNG, timestamps, or API/dataset additions.
+
 `Replay` has Single Hand and Persistent Match modes. Both use one event renderer for table state, timeline, navigation, and privacy filtering. Persistent Match uses `/api/histories/match` and adds match overview, hand selection, and stack progression without changing existing public match responses.
 

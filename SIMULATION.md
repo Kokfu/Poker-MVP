@@ -227,5 +227,9 @@ History schema 1.0 remains distinct from dataset schema 2.0. This foundation can
 
 ## Single-hand Replay
 
+## Phase 3C2 opponent-model foundation
+
+Persistent matches retain public-action opponent models. Each future strategy-facing observation optionally includes the other player's snapshot before the current decision; both models update only from the completed hand afterward. The foundation tracks explicit denominators for general actions, public preflop and postflop opportunities, deterministic sizing buckets, Beta(1,1) smoothing, and conservative sample confidence. It uses no hidden cards, future board, deck, or RNG and does not change bot behavior, API output, or dataset schema 2.0.
+
 `Replay` supports local single-hand and persistent-match histories. Persistent Match exposes aggregate validation, completed-hand selection, stack carry-forward checks, and the same event replay UI. Private folded cards and future board cards remain unavailable until legitimate event data reveals them.
 
