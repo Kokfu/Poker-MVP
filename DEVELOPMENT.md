@@ -178,3 +178,7 @@ Keep `simulation.opponent_model` history-derived and deterministic: it must neve
 
 `Replay` supports `/api/histories/hand` and `/api/histories/match`. Keep their shared event renderer responsible for event navigation, table state, timeline selection, and privacy filtering; match-only UI should remain limited to request controls, overview, hand selection, and stack progression.
 
+## ExpertRuleBot benchmark
+
+Run `\.venv\Scripts\python.exe -m simulation.expert_benchmark` from `backend` for deterministic independent 1,000-hand ExpertRuleBot matchups. It reports hands, net chips/net BB, BB/100, wins/losses/ties, illegal actions, and fallback diagnostics.
+

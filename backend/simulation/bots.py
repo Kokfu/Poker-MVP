@@ -55,4 +55,8 @@ class EquityBot(PokerBot):
         if o.amount_to_call and equity<required-.03: return Action("fold")
         return self._passive(o)
 
-BOT_TYPES={"random":RandomBot,"tight":TightBot,"aggressive":AggressiveBot,"equity":EquityBot}
+# Imported after PokerBot is defined: ExpertRuleBot subclasses the legacy base
+# solely for registry compatibility while using DecisionObservation in-engine.
+from .expert_bot import ExpertRuleBot
+
+BOT_TYPES={"random":RandomBot,"tight":TightBot,"aggressive":AggressiveBot,"equity":EquityBot,"expert":ExpertRuleBot}

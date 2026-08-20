@@ -146,6 +146,10 @@ The backend now has a typed, deterministic internal `DecisionState`, `PokerFeatu
 
 The backend now has deterministic public-history opponent profiles with explicit opportunity denominators, finite smoothed estimates, confidence categories, sizing buckets, and descriptive player-type labels. Persistent matches provide the opposing pre-decision profile but no bot adapts to it. Phase 3C remains incomplete: a future 3C3 may add a scoped ExpertRuleBot; there is no solver, training, persistence, or frontend profile.
 
+### Phase 3C3: ExpertRuleBot v1
+
+Phase 3C3 adds the `expert` deterministic rule-based heads-up baseline: compact preflop categories, position/stack-aware play, made-hand/draw/texture rules, pot odds and SPR thresholds, legal total-target sizing, conservative confidence-gated public-history adjustments, and internal explanations. It is a heuristic educational baseline, not GTO, CFR, reinforcement learning, or an expert-human claim. Phase 3C4 may add a carefully evaluated exploit layer while retaining these safeguards.
+
 ### Phase 3B3B: Persistent-Match Replay Frontend
 
 The Replay tab now supports locally generated persistent-match documents through `/api/histories/match`, with form validation, match overview, aggregate invariants, completed-hand selection, stack progression, and the shared privacy-safe event replay UI. Phase 3B remains incomplete: there is still no stored-history lookup, database persistence, cross-process resumption, match editing, dataset integration, AI training, multiway poker, tournaments, or external integration.

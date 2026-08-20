@@ -55,8 +55,8 @@ def health(): return {"status":"OK"}
 def analyze_hand(request: AnalyzeRequest): return analyze(request.hero_cards, request.board_cards, request.pot, request.amount_to_call, request.iterations)
 
 class SimulationRequest(BaseModel):
-    bot_a: Literal["random", "tight", "aggressive", "equity"]
-    bot_b: Literal["random", "tight", "aggressive", "equity"]
+    bot_a: Literal["random", "tight", "aggressive", "equity", "expert"]
+    bot_b: Literal["random", "tight", "aggressive", "equity", "expert"]
     hands: int = Field(default=100, ge=1, le=10000)
     seed: int | None = None
     starting_stack_bb: int = Field(default=100, ge=10, le=500)
@@ -70,8 +70,8 @@ def run_simulation(request: SimulationRequest):
 
 
 class MatchSimulationRequest(BaseModel):
-    bot_a: Literal["random", "tight", "aggressive", "equity"] = "random"
-    bot_b: Literal["random", "tight", "aggressive", "equity"] = "random"
+    bot_a: Literal["random", "tight", "aggressive", "equity", "expert"] = "random"
+    bot_b: Literal["random", "tight", "aggressive", "equity", "expert"] = "random"
     starting_stack: StrictInt = Field(default=DEFAULT_STARTING_STACK, gt=0)
     small_blind: StrictInt = Field(default=DEFAULT_SMALL_BLIND, gt=0)
     big_blind: StrictInt = Field(default=DEFAULT_BIG_BLIND, gt=0)
@@ -151,8 +151,8 @@ def simulate_match(request: MatchSimulationRequest):
 
 
 class HandHistoryRequest(BaseModel):
-    bot_a: Literal["random", "tight", "aggressive", "equity"] = "random"
-    bot_b: Literal["random", "tight", "aggressive", "equity"] = "random"
+    bot_a: Literal["random", "tight", "aggressive", "equity", "expert"] = "random"
+    bot_b: Literal["random", "tight", "aggressive", "equity", "expert"] = "random"
     starting_stack_a: StrictInt = Field(default=DEFAULT_STARTING_STACK, gt=0)
     starting_stack_b: StrictInt = Field(default=DEFAULT_STARTING_STACK, gt=0)
     small_blind: StrictInt = Field(default=DEFAULT_SMALL_BLIND, gt=0)

@@ -64,3 +64,7 @@ The application has no credential store or external-site secrets. Explicitly gen
 
 `Replay` renders locally generated single-hand and persistent-match histories. The shared event renderer uses only the selected event's public board and fields, so changing hands or moving earlier cannot retain future board cards. Folded hole cards remain hidden; showdown cards may appear only in the legitimate showdown event.
 
+## Phase 3C3 strategy boundary
+
+ExpertRuleBot consumes only the existing `DecisionObservation` privacy boundary. Its profile adjustment uses only optional public completed-hand aggregates, is disabled for very-low/low confidence samples, and never predicts hidden cards. Its decision path consumes neither deck nor bot RNG.
+

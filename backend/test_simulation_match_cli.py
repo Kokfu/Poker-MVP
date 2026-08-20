@@ -126,6 +126,7 @@ def test_existing_cli_list_bots_still_works():
         "tight",
         "aggressive",
         "equity",
+        "expert",
     ]
 
 

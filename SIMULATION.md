@@ -233,3 +233,11 @@ Persistent matches retain public-action opponent models. Each future strategy-fa
 
 `Replay` supports local single-hand and persistent-match histories. Persistent Match exposes aggregate validation, completed-hand selection, stack carry-forward checks, and the same event replay UI. Private folded cards and future board cards remain unavailable until legitimate event data reveals them.
 
+## ExpertRuleBot v1
+
+`expert` consumes the privacy-safe `DecisionObservation`: legal actions/bounds, position, stacks, pot odds, SPR, public action context, made-hand/draw/texture features, optional equity, and optional public-history profile. It groups preflop hands into premium, strong, medium playable, speculative, and weak categories; opens/isolates wider in position; tightens facing a 3-bet; and commits premium/strong hands more readily at 20 BB or less. Postflop it value-bets strong made hands, commits stronger pairs at SPR <= 3, continues strong draws at sensible prices, and makes only deterministic position/initiative/dry-board bluffs.
+
+Sizing is target-total and clamped to engine bounds: 60% pot standard value/protection, 85% pot wet-board strong value, 60% pot draw semi-bluffs, and 33% pot selective bluffs. Supplied equity is compared to required equity with a 4% conservative margin; the bot does not force expensive equity computation. Profile adjustments require medium or high confidence: loose-passive reduces bluffs, loose-aggressive widens bluff-catching, tight-passive permits selective pressure, and tight-aggressive avoids marginal aggression. Low-confidence samples create a warning but no change. Internal explanations include action/target, categories, finite odds/SPR, optional equity, adjustment, rationale, reasons, and warnings. `python -m simulation.expert_benchmark` runs 1,000-hand deterministic diagnostic matchups; it is not a strength claim.
+
+`run_mirrored` runs Expert in both seats for each seed and reports seat-specific plus combined accounting. These are seat-aware independent samples, not duplicate-deal pairs: seat swapping does not guarantee identical deck allocations. `run_legality_stress` covers 20 deterministic seeds against every built-in bot and records decisions, illegal/fallback counts, exceptions, and target incidents.
+

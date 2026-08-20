@@ -151,3 +151,7 @@ Docker Compose provides the reproducible local deployment. The frontend uses its
 
 `Replay` has Single Hand and Persistent Match modes. Both use one event renderer for table state, timeline, navigation, and privacy filtering. Persistent Match uses `/api/histories/match` and adds match overview, hand selection, and stack progression without changing existing public match responses.
 
+## Phase 3C3 ExpertRuleBot
+
+`simulation.expert_bot.ExpertRuleBot`, registered as `expert`, is a deterministic heads-up rule-based baseline. It consumes only `DecisionObservation`, uses engine-authoritative action bounds, and retains internal explanation metadata. It is neither GTO nor a learning system.
+
