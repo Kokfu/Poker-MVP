@@ -179,3 +179,9 @@ Poker seeds and bot decision seeds are deterministic and role-derived. Schedule 
 
 Every evaluated history is validated and every hand and match must satisfy exact heads-up zero-sum chip conservation. Corruption raises `EvaluationAccountingError`; it is never converted into a performance observation. Existing history schema 1.0, dataset schema 2.0, and public API response shapes remain unchanged.
 
+## Short-stack legal-action invariant
+
+Phase 3D1A corrects an authoritative `HandEngine.legal` defect found by evaluation: in a zero-wager street state, a positive stack previously received normal `bet` unconditionally even when its total all-in target was below the one-big-blind minimum. A normal target-based `bet` or `raise` is now advertised only when at least one total target satisfies `minimum_target <= maximum_target`. The engine does not clamp an empty interval into a synthetic target.
+
+The distinct `all_in` action remains available when poker state and reopening rights permit it. Thus a player with 50 chips facing no wager and a 100-chip big blind receives `check` and `all_in`, but not normal `bet`; the all-in target remains the accepted total commitment of 50. Existing short all-in call/raise classification, non-reopening behavior, full-raise reopening, and total-target action semantics are unchanged. Legacy `Observation` and `DecisionObservation` obtain the corrected legal-action tuple directly from the engine.
+

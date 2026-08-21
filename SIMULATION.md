@@ -270,3 +270,11 @@ A delta interval entirely above zero is `positive_estimate_supported`; entirely 
 
 Adaptive conclusions should use `persistent_match`; independent mode is only a reset-hand sanity check because it provides no accumulated opponent history. Compare opponents separately. Matrix output deliberately supplies no pooled overall effect, avoiding implicit weighting choices.
 
+## Phase 3D1A short-stack legality correction
+
+Evaluation seed 30002 originally reached match hand 7 on the flop with stacks A/B 50/19,750, pot 200, zero street commitments, no call, and open raising rights. The engine exposed `check`, normal `bet`, and `all_in` even though the normal total-target interval was minimum 100 and maximum 50. RandomBot selected the advertised 100-chip bet, which the authoritative action validator rejected and replaced through fallback.
+
+Normal `bet` and `raise` are now present only when their inclusive total-target interval is nonempty. The same state exposes `check` and the distinct 50-chip `all_in`; it does not convert the all-in into a normal minimum bet or change target-total semantics. Short all-in raises still do not reopen prior action, while a full raise does. The corrected seed applies the 50-chip all-in without fallback and conserves chips.
+
+The Phase 3D1 persistent diagnostic was rerun with 20 seeds, both orientations, Expert and Adaptive against Random, Tight, Aggressive, Equity, and Expert. Across 400 matches and 9,245 hands it recorded zero illegal actions, zero fallbacks, zero exceptions, and zero conservation failures. Adaptive exploit activations still occurred. This is engine-correctness evidence, not a strategy-performance improvement or tuning result.
+

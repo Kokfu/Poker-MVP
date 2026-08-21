@@ -238,7 +238,11 @@ class HandEngine:
             if not stack or not self.state.raising_reopened[player]:
                 return actions
             if self.state.current_highest_bet == 0:
-                return actions + ["bet", "all_in"]
+                maximum = self.state.current_bets[player] + stack
+                if maximum >= self.bb:
+                    actions.append("bet")
+                actions.append("all_in")
+                return actions
             maximum = self.state.current_bets[player] + stack
             minimum = (
                 self.state.current_highest_bet + self.state.last_full_raise_size

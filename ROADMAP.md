@@ -164,3 +164,9 @@ The backend now has a deterministic evaluation layer with independent-hand and p
 
 Phase 3D is not complete. Phase 3D1 does not tune either strategy, claim duplicate-deal pairing, prove superiority, provide a CI performance gate, add a frontend, persist reports in a database, or add solvers/training. Larger benchmark evidence and any later acceptance thresholds remain separately scoped work.
 
+### Phase 3D1A: Short-stack legal-action invariant
+
+The authoritative engine now withholds normal `bet` or `raise` whenever no inclusive total target is affordable, while preserving the distinct legal under-minimum `all_in`, short all-in call/raise behavior, reopening rules, and total-target semantics. Focused invariant tests cover short blinds, river states, DecisionObservation, built-in bots, and the exact evaluation seeds that exposed the defect. The 400-match Phase 3D1 regression rerun records zero illegal actions, fallbacks, exceptions, or conservation failures.
+
+This milestone is an engine correctness correction, not Expert/Adaptive tuning or a new evaluation method. Phase 3D remains in progress.
+

@@ -201,3 +201,16 @@ Tests use small fixtures and tiny engine runs. Do not add large matrices to norm
 
 When extending reports, preserve finite JSON values, deterministic sorted serialization, overwrite protection, evaluation schema 1.0, history schema 1.0, dataset schema 2.0, and existing API shapes. Any chip-conservation or history-validation failure must abort rather than enter an aggregate.
 
+## Phase 3D1A legality development
+
+`HandEngine.legal` is authoritative for normal actions and the distinct `all_in` action. For every exposed normal `bet` or `raise`, require an inclusive total-target interval with `minimum_target_to <= maximum_target_to`. Do not clamp an unaffordable normal minimum, and do not move this guard into bots. An under-minimum all-in may remain legal through `all_in` when stack, call, and reopening rules permit it.
+
+Run the focused invariant and related suites with:
+
+```powershell
+cd C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend
+.\.venv\Scripts\python.exe -m pytest -q -p no:cacheprovider test_simulation_short_stack_legality.py test_simulation_all_in.py test_simulation_decision_state.py test_simulation_fallback.py
+```
+
+Regression coverage must include zero-wager short stacks, exact minimum targets, ordinary bets/raises, short and full all-ins, reopening, short blinds, river state, DecisionObservation, all registered bots, and the evaluation seeds that originally produced invalid-target fallbacks. Preserve history/action total-target fields and keep evaluation warnings intact so future defects continue to surface naturally.
+
