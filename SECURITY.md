@@ -82,3 +82,6 @@ Phase 3D1 evaluation consumes settled results but does not expand a bot's inform
 
 Schedule generation, aggregation, confidence intervals, interpretation, and JSON formatting never receive the poker engine's RNG. Bootstrap resampling uses a separately seeded local statistics RNG. JSON files are created only at caller-supplied paths, are UTF-8, and refuse overwrite by default. There is no evaluation API, database, automatic repository artifact, external transmission, or live-poker integration.
 
+# Range strategy privacy boundary
+
+Range-aware strategy inputs are public action history to the current decision, Hero hole cards, public board cards, and optional completed-hand profile data.  Candidate opponent combinations are explicitly hypotheses, not hidden-card reads.  Showdown calibration remains post-hand diagnostic work and is not strategy input.

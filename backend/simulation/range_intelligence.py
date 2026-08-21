@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from itertools import combinations
-from math import exp, isfinite, log
+from math import exp, isfinite, log, isclose
 import random
 from typing import Any, Iterable, Mapping
 
@@ -166,8 +166,17 @@ class RangeSummary:
 
 def summarize_range(weighted: WeightedRange, board_cards: Iterable[str] = ()) -> RangeSummary:
     r = weighted.normalized(); probs = [w for _, w in r.weights if w > 0]; entropy = -sum(p * log(p) for p in probs); max_entropy = log(len(probs)) if len(probs) > 1 else 1.0
-    def fraction(predicate): return sum(w for c, w in r.weights if predicate(c))
-    return RangeSummary(r.total_combos, r.active_combos, 1 / sum(p*p for p in probs), entropy / max_entropy, fraction(lambda c: describe_preflop(c).category == "premium"), fraction(lambda c: combo_board_features(c, board_cards)["two_pair_plus"]), fraction(lambda c: combo_board_features(c, board_cards)["made_hand"] == "pair"), fraction(lambda c: combo_board_features(c, board_cards)["strong_draw"]), fraction(lambda c: not combo_board_features(c, board_cards)["two_pair_plus"] and not combo_board_features(c, board_cards)["strong_draw"] and combo_board_features(c, board_cards)["made_hand"] not in {"pair", "preflop"}), fraction(lambda c: describe_preflop(c).pocket_pair), fraction(lambda c: describe_preflop(c).suited), fraction(lambda c: describe_preflop(c).broadway_count > 0))
+    premium = strong = pair = draw = air = pocket = suited = broadway = 0.0
+    # Board evaluation is comparatively expensive; calculate it once per combo
+    # rather than once for every reported category.
+    for combo, weight in r.weights:
+        desc, features = describe_preflop(combo), combo_board_features(combo, board_cards)
+        premium += weight * (desc.category == "premium")
+        strong += weight * features["two_pair_plus"]; pair += weight * (features["made_hand"] == "pair")
+        draw += weight * features["strong_draw"]
+        air += weight * (not features["two_pair_plus"] and not features["strong_draw"] and features["made_hand"] not in {"pair", "preflop"})
+        pocket += weight * desc.pocket_pair; suited += weight * desc.suited; broadway += weight * (desc.broadway_count > 0)
+    return RangeSummary(r.total_combos, r.active_combos, 1 / sum(p*p for p in probs), entropy / max_entropy, premium, strong, pair, draw, air, pocket, suited, broadway)
 
 
 @dataclass(frozen=True)
@@ -234,3 +243,24 @@ class PublicRangeTracker:
             self.weighted_range = WeightedRange(tuple((combo, weight) for combo, weight in self.weighted_range.weights if combo in legal)).normalized()
         self.weighted_range = self.updater.update(self.weighted_range, action, board_cards, pot_fraction, profile)
         return self.weighted_range
+
+    def sync_board(self, board_cards: Iterable[str] = ()) -> WeightedRange:
+        """Remove candidates made impossible by newly public board cards.
+
+        Street cards become public before either player acts; this is not an
+        action update and intentionally applies no likelihood adjustment.
+        """
+        legal = set(legal_opponent_combos(self.hero_cards, board_cards))
+        if not set(combo for combo, _ in self.weighted_range.weights) <= legal:
+            self.weighted_range = WeightedRange(tuple((combo, weight) for combo, weight in self.weighted_range.weights if combo in legal)).normalized()
+        return self.weighted_range
+
+    def assert_invariants(self, board_cards: Iterable[str] = ()) -> None:
+        """Validate the decision-time privacy and numeric range boundary."""
+        board = set(board_cards); hero = set(self.hero_cards); seen = set()
+        for combo, weight in self.weighted_range.weights:
+            if combo in seen or set(combo.cards) & (hero | board) or not isfinite(weight) or weight < 0:
+                raise AssertionError("invalid public range candidate")
+            seen.add(combo)
+        if not self.weighted_range.weights or not isclose(self.weighted_range.total_weight, 1.0, rel_tol=0.0, abs_tol=1e-9):
+            raise AssertionError("range is not normalized")

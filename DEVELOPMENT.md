@@ -220,3 +220,6 @@ cd C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend
 
 Regression coverage must include zero-wager short stacks, exact minimum targets, ordinary bets/raises, short and full all-ins, reopening, short blinds, river state, DecisionObservation, all registered bots, and the evaluation seeds that originally produced invalid-target fallbacks. Preserve history/action total-target fields and keep evaluation warnings intact so future defects continue to surface naturally.
 
+# Phase 3D3 notes
+
+`expert`, `adaptive`, and `range_expert` are intentionally independent experimental controls.  Benchmark them with the existing evaluation framework using matched seed schedules and seat-swapped orientations; do not interpret a single seed as a performance claim.  Range equity is calculated once at the decision boundary and reused by the decision/explanation.

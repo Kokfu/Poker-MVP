@@ -59,5 +59,6 @@ class EquityBot(PokerBot):
 # solely for registry compatibility while using DecisionObservation in-engine.
 from .expert_bot import ExpertRuleBot
 from .adaptive_bot import ExpertAdaptiveBot
+from .range_expert_bot import RangeAwareExpertBot
 
-BOT_TYPES={"random":RandomBot,"tight":TightBot,"aggressive":AggressiveBot,"equity":EquityBot,"expert":ExpertRuleBot,"adaptive":ExpertAdaptiveBot}
+BOT_TYPES={"random":RandomBot,"tight":TightBot,"aggressive":AggressiveBot,"equity":EquityBot,"expert":ExpertRuleBot,"adaptive":ExpertAdaptiveBot,"range_expert":RangeAwareExpertBot}

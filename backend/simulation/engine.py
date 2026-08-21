@@ -10,6 +10,7 @@ from .actions import Action
 from .cards import Deck
 from .dataset import JsonlDataset, SCHEMA_VERSION
 from .decision_state import build_decision_observation
+from .range_intelligence import PublicRangeTracker, RangeEquityEstimator, summarize_range
 from .game_state import GameState, Observation
 from .history import (
     HISTORY_SCHEMA_VERSION,
@@ -88,6 +89,14 @@ class HandEngine:
         self.simulation_seed = simulation_seed
         self.hand_number = hand_number
         self.opponent_profile_provider = opponent_profile_provider
+        # One tracker per player.  Each uses that player's known cards and is
+        # updated only after the opponent's public action becomes final.
+        self.range_trackers = (
+            {player: PublicRangeTracker.uniform(self.holes[player]) for player in ("a", "b")}
+            if any(getattr(bot, "uses_range_equity", False) for bot in self.bots.values())
+            else {}
+        )
+        self.range_equity_estimator = RangeEquityEstimator()
         self._records = []
         self.showdown_count = 0
         self.settlement_count = 0
@@ -313,7 +322,45 @@ class HandEngine:
         ``decide_decision(DecisionObservation)`` and never access engine state.
         """
         profile = self.opponent_profile_provider(player) if self.opponent_profile_provider else None
-        return build_decision_observation(self, player, opponent_profile=profile)
+        strategy = self.bots[player]
+        if not getattr(strategy, "uses_range_equity", False):
+            return build_decision_observation(self, player, opponent_profile=profile)
+        state = build_decision_observation(self, player, opponent_profile=profile).decision_state
+        tracker = self.range_trackers[player]
+        tracker.sync_board(state.board_cards)
+        tracker.assert_invariants(state.board_cards)
+        summary = summarize_range(tracker.weighted_range, state.board_cards)
+        # Preflop inference is deliberately summary-only in v1.  Postflop gets
+        # exactly one estimate per decision; river is exact by the estimator.
+        equity = None
+        if state.street in {"flop", "turn", "river"}:
+            equity = self.range_equity_estimator.estimate(
+                state.hole_cards, state.board_cards, tracker.weighted_range,
+                iterations=getattr(strategy, "range_equity_iterations", 500),
+                seed=strategy.range_equity_seed(state),
+            )
+        return build_decision_observation(self, player, opponent_profile=profile, opponent_range_summary=summary, range_equity=equity)
+
+    def _update_public_ranges(self, actor, action, target, pot_before, commitment_before):
+        """Observe a completed action before the next strategy decision.
+
+        This never reconstructs completed history, and therefore cannot pull
+        in future board cards/actions.  Profile evidence is optional long-run
+        context for the updater, not a read of current hidden cards.
+        """
+        if action not in {"check", "call", "bet", "raise", "all_in", "fold"}:
+            return
+        if not self.range_trackers:
+            return
+        for viewer, tracker in self.range_trackers.items():
+            if viewer == actor:
+                continue
+            profile = self.opponent_profile_provider(viewer) if self.opponent_profile_provider else None
+            fraction = None
+            if action in {"bet", "raise", "all_in"} and target is not None and pot_before > 0:
+                fraction = max(0.0, (target - commitment_before) / pot_before)
+            tracker.observe(action, self.state.community_cards, fraction, profile)
+            tracker.assert_invariants(self.state.community_cards)
 
     def _record_illegal(self, diagnostic):
         self.illegal += 1
@@ -504,6 +551,7 @@ class HandEngine:
             acting_player_before=acting_before,
             acting_player_after=self.state.acting_player,
         )
+        self._update_public_ranges(player, applied_action, target, before["pot"], before[f"commitment_{player}"])
         if return_unmatched_after_action:
             self._return_unmatched_excess()
         return applied_action

@@ -284,3 +284,12 @@ Normal `bet` and `raise` are now present only when their inclusive total-target 
 
 The Phase 3D1 persistent diagnostic was rerun with 20 seeds, both orientations, Expert and Adaptive against Random, Tight, Aggressive, Equity, and Expert. Across 400 matches and 9,245 hands it recorded zero illegal actions, zero fallbacks, zero exceptions, and zero conservation failures. Adaptive exploit activations still occurred. This is engine-correctness evidence, not a strategy-performance improvement or tuning result.
 
+# Range-aware expert strategy
+
+Use `range_expert` anywhere a bot name is accepted.  A `PublicRangeTracker` is initialized from Hero's known cards and updated immediately after each opponent public action, before the next decision.  It never reconstructs a completed history and never receives unrevealed cards, deck order, future board cards, or future actions.
+
+Flop/turn use one deterministic bounded Monte Carlo estimate per decision (default 500 iterations); river uses exact enumeration.  The seed is a SHA-256 derivation of the configured seed plus stable match/hand/player/street/decision context and does not consume game or bot RNG.  The explanation records equity, method, iterations, range size/effective count/entropy, required equity, margin, gates, and safeguards.
+
+Range adjustments compare range equity with pot-odds required equity using conservative centralized margins.  Near-uniform, high-entropy ranges retain the Expert baseline; concentration merely permits bounded adjustments and is never treated as correctness.
+
+Before every range-aware decision, the tracker synchronizes the newly public flop, turn, or river cards, removes now-impossible candidate combos, renormalizes, and asserts finite/no-collision invariants.  Ordering is: prior public actions, board synchronization, range snapshot/equity, decision, then public-action update.

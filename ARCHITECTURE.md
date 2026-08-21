@@ -193,3 +193,8 @@ The distinct `all_in` action remains available when poker state and reopening ri
 
 `PublicRangeTracker` is the explicit history integration boundary. A caller supplies each opponent public action together with the board visible at that action; it has no `HandEngine`, deck, or actual-card input. Summary concentration uses normalized Shannon entropy `-sum(p log p) / log(n)` and effective combinations `1 / sum(p²)`. Equity uses `P(win) + 0.5 P(tie)`.
 
+# Range-aware expert strategy (Phase 3D3)
+
+`RangeAwareExpertBot` (`range_expert`) is separate from the immutable `ExpertRuleBot` and `ExpertAdaptiveBot`.  At each decision the engine supplies only the acting player's cards, public board/actions so far, a `PublicRangeTracker` summary, and (postflop) one range-equity estimate.  The bot applies `RangeStrategyAdjustmentEngine` after the Expert baseline.  It permits only bounded fold/call and modest check/bet value transitions; all targets remain engine-authoritative.
+
+The range represents current-hand public-action hypotheses.  Opponent profiles represent completed-hand behavioural evidence; the range-aware layer does not additionally apply profile signals, avoiding double counting.

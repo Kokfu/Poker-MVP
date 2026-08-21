@@ -176,3 +176,6 @@ Phase 3D2 adds privacy-safe canonical opponent-card hypotheses, legal visible-ca
 
 The completed foundation also has an explicit public-history tracker for diagnostics and deterministic engine-backed range evolution. It does not automatically execute in a bot decision or reinterpret history with later board information.
 
+# Phase 3D3 — range-aware expert strategy
+
+Implemented a bounded public-range/range-equity layer over `ExpertRuleBot`.  It is not a solver, CFR variant, neural strategy, self-play system, or exact opponent-card predictor.  Current limitations include heuristic ranges, conservative preflop use (summary only), and no exact EV/fold-equity solver.

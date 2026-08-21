@@ -126,9 +126,10 @@ def test_existing_cli_list_bots_still_works():
         "tight",
             "aggressive",
             "equity",
-            "expert",
-            "adaptive",
-        ]
+                "expert",
+                "adaptive",
+                "range_expert",
+            ]
 
 
 def test_existing_independent_cli_run_still_works():
