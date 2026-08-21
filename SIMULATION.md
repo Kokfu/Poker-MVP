@@ -247,3 +247,26 @@ Sizing is target-total and clamped to engine bounds: 60% pot standard value/prot
 
 `run_mirrored` runs Expert in both seats for each seed and reports seat-specific plus combined accounting. These are seat-aware independent samples, not duplicate-deal pairs: seat swapping does not guarantee identical deck allocations. `run_legality_stress` covers 20 deterministic seeds against every built-in bot and records decisions, illegal/fallback counts, exceptions, and target incidents.
 
+## Phase 3D1 statistical evaluation
+
+The reproducible Expert-versus-Adaptive command is:
+
+```powershell
+cd C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend
+.\.venv\Scripts\python.exe -m simulation.evaluation_cli compare --control expert --treatment adaptive --opponent tight --mode persistent_match --sample-count 100 --base-seed 10000 --max-hands 100 --bootstrap-resamples 2000 --statistics-seed 91001
+```
+
+Add `--output <path>` for explicit evaluation-schema 1.0 JSON. Existing files are refused unless `--overwrite` is supplied. Output includes the complete configuration and seed list, orientations, hand and unit counts, absolute metrics, confidence intervals, raw matched-unit deltas, warnings, and zero-sum status. A caller-sized unpooled matrix is also available:
+
+```powershell
+.\.venv\Scripts\python.exe -m simulation.evaluation_cli matrix --strategies expert adaptive --opponents random tight aggressive equity expert --sample-count 20 --equity-iterations 10
+```
+
+BB/100 is `100 * (total_net_chips / big_blind) / hands_played`; it is zero for no hands and is never calculated from match count. Mean, median, and descriptive per-hand values use hand results. Sample standard deviation and standard error use net BB at the evaluation-unit level: a reset hand in `independent`, a whole match in `persistent_match`. Average winning and losing sizes use that same unit.
+
+Uncertainty uses a deterministic percentile bootstrap, defaulting to 2,000 resamples at 95% confidence with a separate statistics seed. Absolute BB/100 resamples whole units and recalculates the total-net-BB/total-hands ratio. Expert-versus-Adaptive deltas resample corresponding seed/orientation entries and recalculate each strategy's BB/100 before subtracting Expert from Adaptive. This is matched-schedule comparison, not duplicate-deal pairing; divergent actions can produce different trajectories and match lengths.
+
+A delta interval entirely above zero is `positive_estimate_supported`; entirely below zero is `negative_estimate_supported`. An interval containing zero produces a directional uncertain label or `approximately_inconclusive` for a zero estimate. These are neutral finite-sample categories, not proof of superiority, GTO play, or a guaranteed winner. Fewer than 30 evaluation units sets machine-readable `sample_warning` without blocking smoke tests.
+
+Adaptive conclusions should use `persistent_match`; independent mode is only a reset-hand sanity check because it provides no accumulated opponent history. Compare opponents separately. Matrix output deliberately supplies no pooled overall effect, avoiding implicit weighting choices.
+

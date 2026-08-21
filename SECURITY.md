@@ -70,3 +70,9 @@ The application has no credential store or external-site secrets. Explicitly gen
 
 ExpertRuleBot consumes only the existing `DecisionObservation` privacy boundary. Its profile adjustment uses only optional public completed-hand aggregates, is disabled for very-low/low confidence samples, and never predicts hidden cards. Its decision path consumes neither deck nor bot RNG.
 
+## Evaluation boundary
+
+Phase 3D1 evaluation consumes settled results but does not expand a bot's information boundary. It validates the existing privacy-safe history for every evaluated hand and exports performance values, configuration, seeds, orientations, and adaptive aggregate diagnostics—not deck order, RNG state, future cards, or folded private cards. Evaluation report schema 1.0 is independent of history schema 1.0 and dataset schema 2.0.
+
+Schedule generation, aggregation, confidence intervals, interpretation, and JSON formatting never receive the poker engine's RNG. Bootstrap resampling uses a separately seeded local statistics RNG. JSON files are created only at caller-supplied paths, are UTF-8, and refuse overwrite by default. There is no evaluation API, database, automatic repository artifact, external transmission, or live-poker integration.
+

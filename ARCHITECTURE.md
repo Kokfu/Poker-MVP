@@ -167,3 +167,15 @@ The passive-player initiative path uses the same low-aggression threshold (smoot
 
 For auditability, `ExpertAdaptiveBot` keeps an internal in-memory decision trace. It is derived after the strategy decision from the same observation and explanation and records profile hand count, numeric signal metadata, activation outcome, and rejection rationale. It is not part of histories, datasets, or public API serialization.
 
+## Statistical strategy evaluation
+
+Phase 3D1 adds `simulation.evaluation` as a dedicated research layer above the existing hand and match runners. An immutable `EvaluationConfig` produces a deterministic integer seed schedule, each seed is run in the configured seat orientation(s), raw hand or match units are validated, and aggregation produces evaluation-schema `1.0` JSON. No statistical code is located in a bot, poker engine, public API serializer, history serializer, or dataset writer.
+
+`independent` mode creates a fresh bot pair and reset-stack `HandEngine` for each seed/orientation; its statistical unit is one independently reset hand. `persistent_match` mode creates a fresh `PersistentMatchRunner` for each seed/orientation and preserves stacks, alternating blinds/button, completed-hand opponent profiles, elimination, and the hand limit inside that match; its statistical unit is the whole match. Persistent-match hands are descriptive observations only and are not treated as independent for standard errors or confidence intervals.
+
+Seat swapping runs the strategy as A against the opponent as B and, when enabled, the opponent as A against the strategy as B. Both orientations use a matched seed schedule and are reported separately and combined. This is seat-swapped, orientation-paired evaluation, not claimed duplicate-deal poker: strategy actions can change random trajectories, match lengths, and decisions even when schedules correspond.
+
+Poker seeds and bot decision seeds are deterministic and role-derived. Schedule generation does not instantiate or consume an engine RNG. Percentile bootstrap work uses a separate local `random.Random(statistics_seed)` instance. Report formatting, aggregation, and JSON export use no poker RNG, so confidence analysis cannot change cards, decisions, profiles, or outcomes.
+
+Every evaluated history is validated and every hand and match must satisfy exact heads-up zero-sum chip conservation. Corruption raises `EvaluationAccountingError`; it is never converted into a performance observation. Existing history schema 1.0, dataset schema 2.0, and public API response shapes remain unchanged.
+

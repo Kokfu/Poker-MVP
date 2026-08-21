@@ -186,3 +186,18 @@ For adaptive work, retain `ExpertRuleBot` unchanged and put thresholds, confiden
 
 Use the long-stack archetype diagnostic when validating live activation. It deliberately uses legal, non-registered opponents to generate completed public histories; do not inject profiles into an end-to-end test or relax confidence thresholds because short eliminated matches do not mature samples.
 
+## Phase 3D1 evaluation development
+
+Keep statistical work in `simulation.evaluation`; bots and the authoritative poker engine must not know about bootstrap sampling or report formatting. The seed schedule is the consecutive range beginning at `base_seed`. Bot seeds are stable hashes of the evaluation seed and role, while the engine receives the schedule seed. Bootstrap calls must construct only their private statistics RNG.
+
+Run the focused suite first:
+
+```powershell
+cd C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend
+.\.venv\Scripts\python.exe -m pytest -q -p no:cacheprovider test_simulation_evaluation.py
+```
+
+Tests use small fixtures and tiny engine runs. Do not add large matrices to normal pytest execution. Diagnostic matrices are explicit CLI commands and should write only to caller-selected temporary/output locations. A performance regression record is metadata: include sample sizes, effect direction, and uncertainty overlap, but do not introduce a build failure from a small noisy BB/100 change.
+
+When extending reports, preserve finite JSON values, deterministic sorted serialization, overwrite protection, evaluation schema 1.0, history schema 1.0, dataset schema 2.0, and existing API shapes. Any chip-conservation or history-validation failure must abort rather than enter an aggregate.
+

@@ -158,3 +158,9 @@ Phase 3C3 adds the `expert` deterministic rule-based heads-up baseline: compact 
 
 The Replay tab now supports locally generated persistent-match documents through `/api/histories/match`, with form validation, match overview, aggregate invariants, completed-hand selection, stack progression, and the shared privacy-safe event replay UI. Phase 3B remains incomplete: there is still no stored-history lookup, database persistence, cross-process resumption, match editing, dataset integration, AI training, multiway poker, tournaments, or external integration.
 
+### Phase 3D1: Statistical strategy evaluation framework
+
+The backend now has a deterministic evaluation layer with independent-hand and persistent-match modes, whole-match inference for adaptive experiments, matched seed schedules, seat-swapped orientation reporting, exact zero-sum/history validation, centralized BB/100, unit-level variance and standard error, deterministic percentile-bootstrap confidence intervals, neutral interval interpretation, small-sample warnings, adaptive activation aggregates, Expert-versus-Adaptive delta reports, unpooled strategy matrices, metadata-only regression comparisons, evaluation schema 1.0 JSON export, and an internal CLI.
+
+Phase 3D is not complete. Phase 3D1 does not tune either strategy, claim duplicate-deal pairing, prove superiority, provide a CI performance gate, add a frontend, persist reports in a database, or add solvers/training. Larger benchmark evidence and any later acceptance thresholds remain separately scoped work.
+
