@@ -51,6 +51,12 @@ Phase 3C2 opponent profiles use only public completed-history actions, stacks, c
 
 Phase 3C4 `adaptive` receives that same immutable pre-decision snapshot only. Its exploit engine receives `DecisionObservation`, the Expert baseline action/explanation, and no engine reference. Therefore decision N cannot incorporate its own action, later actions in its hand, future hands, board cards not yet public, unrevealed hole cards, or deck state. Its explanation serializes only public statistic aggregates and action metadata.
 
+## Range-inference boundary
+
+Phase 3D2 range inference accepts only Hero cards, the currently public board, earlier public actions, and an optional earlier public profile snapshot. It has no engine/deck input and never reads opponent actual cards, burn cards, remaining deck, deck order, future board, or future/current action. Candidate combos are hypotheses. Legitimately revealed showdown cards are allowed only in separate post-hand calibration and never alter a decision-time range.
+
+`PublicRangeTracker` requires callers to provide actions sequentially with the board visible at that action, preventing an implicit retrospective board lookup. Range-equity sampling creates a dedicated local RNG; it does not save, restore, or consume engine, deck, bot, match, or evaluation RNG state.
+
 - FastAPI/Pydantic validates card notation, card uniqueness, board length, opponent count, numeric bounds, bot names, stack bounds, and EquityBot iteration choices.
 - The simulation API is capped at 10,000 hands per request.
 - Engine-authoritative legal actions and targets prevent built-in bots from bypassing betting rules.

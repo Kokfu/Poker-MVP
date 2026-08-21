@@ -205,6 +205,12 @@ When extending reports, preserve finite JSON values, deterministic sorted serial
 
 `HandEngine.legal` is authoritative for normal actions and the distinct `all_in` action. For every exposed normal `bet` or `raise`, require an inclusive total-target interval with `minimum_target_to <= maximum_target_to`. Do not clamp an unaffordable normal minimum, and do not move this guard into bots. An under-minimum all-in may remain legal through `all_in` when stack, call, and reopening rules permit it.
 
+## Phase 3D2 range intelligence development
+
+Run `test_simulation_range_intelligence.py` before the complete backend suite. Range builders accept visible cards and public evidence only; do not pass a `HandEngine`, deck, actual unrevealed opponent cards, or future cards into this layer. Use `RangeEquityEstimator` only when explicitly requested, because flop/turn Monte Carlo is intentionally not part of normal bot decisions. Its seed is an isolated range-equity RNG input.
+
+For an engine-backed diagnostic, feed `PublicRangeTracker.observe` each opponent `action_taken` event with that event's public board. Do not replay a final board into earlier actions. Showdown calibration accepts an actual combination only after a legitimate `showdown` event and must retain the captured pre-showdown `WeightedRange` unchanged.
+
 Run the focused invariant and related suites with:
 
 ```powershell

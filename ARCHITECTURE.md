@@ -185,3 +185,11 @@ Phase 3D1A corrects an authoritative `HandEngine.legal` defect found by evaluati
 
 The distinct `all_in` action remains available when poker state and reopening rights permit it. Thus a player with 50 chips facing no wager and a 100-chip big blind receives `check` and `all_in`, but not normal `bet`; the all-in target remains the accepted total commitment of 50. Existing short all-in call/raise classification, non-reopening behavior, full-raise reopening, and total-target action semantics are unchanged. Legacy `Observation` and `DecisionObservation` obtain the corrected legal-action tuple directly from the engine.
 
+## Phase 3D2 range and equity intelligence
+
+`simulation.range_intelligence` is optional, privacy-safe inference infrastructure. `HoleCardCombo` is an immutable canonical physical-card pair; legal ranges enumerate only combinations left after Hero cards and the currently public board are removed. `WeightedRange` is finite, nonnegative, deterministically ordered, and normalized. Uniform is the safe default; the compact preflop hand-quality prior is heuristic, not solver-derived.
+
+`RangeUpdater` converts public actions and sizing evidence into floored likelihood weights. Public numeric opponent statistics can influence it only conservatively after medium/high confidence. `RangeEquityEstimator` is exact on the river and uses an isolated seeded RNG for earlier-street Monte Carlo, removing Hero, candidate, and public board cards from each runout. Optional range fields on `DecisionObservation` are unused by Expert and Adaptive.
+
+`PublicRangeTracker` is the explicit history integration boundary. A caller supplies each opponent public action together with the board visible at that action; it has no `HandEngine`, deck, or actual-card input. Summary concentration uses normalized Shannon entropy `-sum(p log p) / log(n)` and effective combinations `1 / sum(p²)`. Equity uses `P(win) + 0.5 P(tie)`.
+

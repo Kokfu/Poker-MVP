@@ -104,6 +104,12 @@ At every bot decision, the engine can build an immutable `DecisionObservation` f
 
 Feature categories include canonical made hands, flush/open-ended/gutshot draws, overcards and pair-plus-draw, plus paired/monotone/two-tone/rainbow/connected board texture. The builder neither consumes deck or bot RNG state nor performs equity calculation. An optional `EquityEstimate` can be attached by a future explicit estimator. New strategies can use `decide_decision(DecisionObservation)`; the four existing bots retain their legacy `Observation` contract and behavior. This internal layer does not change dataset schema 2.0, history schema 1.0, or API responses.
 
+## Phase 3D2 range intelligence
+
+The optional range layer models an opponent as a normalized weighted distribution over legal two-card hypotheses. It uses public action likelihoods and compact heuristic preflop descriptors, not a GTO chart. River equity is exact across weighted candidates; preflop/flop/turn use a dedicated deterministic Monte Carlo RNG and remove every known card from each sampled runout. Expert and Adaptive do not consume range data yet.
+
+Callers can use `PublicRangeTracker` after actual public engine-history actions, supplying that action's currently revealed board. This is deliberately explicit rather than automatic bot work. Representative diagnostics use 500 Monte Carlo iterations; full legal-range construction and an update are millisecond-scale in the local environment, while equity scales with active combinations/iterations.
+
 ## Statistics
 
 For each player:

@@ -124,6 +124,10 @@ class DecisionObservation:
     poker_features: PokerFeatureSet
     equity: EquityEstimate | None = None
     opponent_profile: Any | None = None
+    # Explicit opt-in infrastructure: construction remains cheap and legacy
+    # Expert/Adaptive behavior deliberately ignores these Phase 3D2 fields.
+    opponent_range_summary: Any | None = None
+    range_equity: Any | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return _json_safe(asdict(self))
@@ -266,6 +270,6 @@ def build_poker_features(state: DecisionState) -> PokerFeatureSet:
     )
 
 
-def build_decision_observation(engine, player: str, equity: EquityEstimate | None = None, opponent_profile: Any | None = None) -> DecisionObservation:
+def build_decision_observation(engine, player: str, equity: EquityEstimate | None = None, opponent_profile: Any | None = None, opponent_range_summary: Any | None = None, range_equity: Any | None = None) -> DecisionObservation:
     state = build_decision_state(engine, player)
-    return DecisionObservation(state, build_poker_features(state), equity, opponent_profile)
+    return DecisionObservation(state, build_poker_features(state), equity, opponent_profile, opponent_range_summary, range_equity)

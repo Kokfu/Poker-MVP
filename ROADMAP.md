@@ -170,3 +170,9 @@ The authoritative engine now withholds normal `bet` or `raise` whenever no inclu
 
 This milestone is an engine correctness correction, not Expert/Adaptive tuning or a new evaluation method. Phase 3D remains in progress.
 
+### Phase 3D2: Range & equity intelligence foundation
+
+Phase 3D2 adds privacy-safe canonical opponent-card hypotheses, legal visible-card range construction, deterministic weighted priors and public-action updates, compact heuristic descriptors, range summaries, exact river weighted equity, and isolated seeded earlier-street Monte Carlo. It is not a solver, training system, card predictor, strategy retune, persistence feature, or frontend dashboard. Expert and Adaptive remain unchanged controls; showdown calibration is post-hand diagnostics only.
+
+The completed foundation also has an explicit public-history tracker for diagnostics and deterministic engine-backed range evolution. It does not automatically execute in a bot decision or reinterpret history with later board information.
+
