@@ -13,6 +13,7 @@ from .abstraction import (
 )
 from .diagnostics import abstraction_diagnostics
 from .cfr import HoldemSubgameCFRTrainer
+from .mccfr import HoldemSubgameExternalSamplingMCCFRTrainer, scaling_report
 from .diagnostics_4d import training_report, tree_diagnostics, validate_tree
 from .subgame import HoldemSubgameState, chance_states, subgame_convention
 
@@ -23,6 +24,8 @@ __all__ = [
     "card_bucket",
     "concrete_state_key",
     "HoldemSubgameCFRTrainer",
+    "HoldemSubgameExternalSamplingMCCFRTrainer",
+    "scaling_report",
     "HoldemSubgameState",
     "chance_states",
     "subgame_convention",

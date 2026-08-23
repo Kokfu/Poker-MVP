@@ -42,6 +42,17 @@ The JSON report is schema `kuhn_cfr` 1.0 and is canonical sorted JSON. It will n
 
 `compare` writes a separate `kuhn_cfr_convergence` 1.0 report with Vanilla CFR and CFR+ side by side at matched deterministic checkpoints (1, 10, 100, 1,000, 10,000, and 100,000 when in range). CFR+ is separate from Vanilla CFR: after each complete six-deal iteration it uses `R <- max(0, R + delta)`. Its average policy uses the standard linear weight `max(0, iteration - averaging_delay)`; `--averaging-delay` defaults to zero, so iterations 1, 2, ... have weights 1, 2, .... All EV, best-response, NashConv, and exploitability entries are exact enumerations, not Monte Carlo estimates.
 
+## External-sampling MCCFR research
+
+The Phase 4E control is library-only and remains outside the simulator CLI. From `backend`, produce deterministic research reports with:
+
+```powershell
+.\.venv\Scripts\python.exe -c "from research.kuhn.mccfr import convergence_report; from pprint import pprint; pprint(convergence_report())"
+.\.venv\Scripts\python.exe -c "from research.holdem.mccfr import scaling_report; from pprint import pprint; pprint(scaling_report())"
+```
+
+`KuhnExternalSamplingMCCFRTrainer(seed)` owns its own RNG. A logical iteration contains two sequential, individually frozen traversals (Player 0 then Player 1): chance and opponent actions are sampled from their target distributions while traverser actions are enumerated. Diagnostics distinguish logical iterations from total traversals. The counterfactual estimator needs no extra importance division because chance/opponent sampling is the target reach; average-policy accumulation cancels sampled opponent reach but retains chance probability through expectation. It supplies exact Kuhn EV/BR metrics through `convergence_report`; sampled trajectories are reproducible for equal seed/configuration/iterations. `HoldemSubgameExternalSamplingMCCFRTrainer(seed)` applies the same core only to the fixed Phase 4D game. Its scaling report deliberately does not include full-subgame exploitability.
+
 Use Node.js 20 or newer with npm. The Docker image uses Node 20; the accepted host build used Node 24.16.0 and npm 11.13.0.
 
 ```powershell

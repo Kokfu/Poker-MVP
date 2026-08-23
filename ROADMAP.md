@@ -195,3 +195,7 @@ Implemented a bounded public-range/range-equity layer over `ExpertRuleBot`.  It 
 ## Phase 4D — Abstract Hold'em CFR subgame prototype
 
 Phase 4D adds a deliberately bounded research subgame driven by Phase 4C: exact collision-free private-card enumeration on a fixed flop, no future board cards, legal Phase 4C abstract transitions, zero-sum terminal utilities, and deterministic Vanilla CFR/CFR+ training. It measures the complete tree and writes research-only information-set strategy tables. This is not a full Hold'em solver, full-game exploitability report, or production bot integration.
+
+## Phase 4E — External-Sampling MCCFR scaling foundation
+
+Phase 4E adds an independent, seeded External-Sampling MCCFR research core. It samples correct chance outcomes and current-strategy opponent actions while fully enumerating traverser actions; regret and average-policy estimators document their sampling/importance convention. Kuhn runs are evaluated exactly at increasing checkpoints and several seeds. The accepted Phase 4D fixed-flop game also has a sampled adapter and operational comparison with exact traversal, including tree-visit, stability, runtime, memory estimate, and sampling diagnostics. This does not integrate a strategy into the production registry or assert full Hold'em exploitability, GTO play, or a solved game.
