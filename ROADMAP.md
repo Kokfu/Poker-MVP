@@ -80,6 +80,10 @@ Phase 4A adds an isolated canonical Kuhn Poker research package: immutable game 
 
 Phase 4B retains the accepted Vanilla CFR implementation as an independent control and adds a separate exact-chance CFR+ trainer. CFR+ truncates cumulative regrets after each frozen-profile six-deal iteration; it does not replace Vanilla CFR. The reusable convergence reporter evaluates both algorithms at deterministic matched checkpoints using exact EV, information-set-constrained best responses, NashConv, and exploitability. CFR+ average policies use documented linear weights with an explicit optional delay. This remains isolated Kuhn research: no Hold'em engine, bot, schema, API, or frontend integration is introduced.
 
+## Phase 4C — Heads-Up Hold'em abstraction foundation
+
+Phase 4C adds a research-only deterministic abstraction package that consumes the immutable player-visible `DecisionState` boundary. It buckets Hero's preflop holding or current public-board hand strength/draw state, maps authoritative legal Hold'em actions into fold/check/call/all-in plus 50%, 75%, and 125%-pot sizing representatives, and returns only bounded total-target actions. Information-set keys include street, position, public betting context, legal abstract actions, and bucketed pot/stack geometry, while excluding opponent cards, future board, deck order, IDs, and RNG. Deterministic diagnostics report concrete-to-abstract compression, card-bucket occupancy/pathologies, and action mapping coverage/errors. This deliberately does not add Hold'em CFR training, a bot, API/schema/UI change, or any production-strategy change.
+
 ### Phase 3A1: Persistent match engine foundation
 
 The backend foundation now includes:
