@@ -29,7 +29,7 @@ Docker Compose runs the FastAPI backend and React/Vite frontend as separate serv
 
 ## Kuhn CFR research isolation
 
-`backend/research/kuhn` is a deliberately separate, exact three-card Kuhn Poker laboratory. It has no imports from the Hold'em engine, no registered bot, API route, frontend dependency, or shared schema. It enumerates the six deals, uses visible-card-plus-public-history information sets, and implements vanilla full-tree CFR only. Its terminal convention is Player 0 utility: check/check is +/-1, bet/fold is +/-1, and bet/call is +/-2.
+`backend/research/kuhn` is a deliberately separate, exact three-card Kuhn Poker laboratory. It has no imports from the Hold'em engine, no registered bot, API route, frontend dependency, or shared schema. It enumerates the six deals, uses visible-card-plus-public-history information sets, and keeps vanilla full-tree CFR as a control alongside a separate CFR+ implementation. CFR+ projects cumulative regrets to zero after each full iteration and uses documented linear average-policy weights. Its terminal convention is Player 0 utility: check/check is +/-1, bet/fold is +/-1, and bet/call is +/-2.
 
 ## Analyzer
 

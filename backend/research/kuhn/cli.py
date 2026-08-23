@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 
 from .cfr import KuhnCFRTrainer
+from .cfr_plus import KuhnCFRPlusTrainer
+from .convergence import DEFAULT_CHECKPOINTS, comparison_algorithm_metadata, comparison_report
 from .evaluation import metrics
 
 SCHEMA_VERSION = "1.0"
@@ -29,12 +31,35 @@ def build_report(iterations: int, checkpoints: tuple[int, ...] = ()) -> dict[str
             "exploitability": measure["exploitability"], "exploitability_convention": "NashConv / 2", "convergence_checkpoints": reports}
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Exact deterministic Kuhn Poker vanilla CFR research")
+    parser = argparse.ArgumentParser(description="Exact deterministic Kuhn Poker CFR research")
     sub = parser.add_subparsers(dest="command", required=True)
     for command in ("train", "evaluate"):
         item = sub.add_parser(command); item.add_argument("--iterations", type=int, required=True)
         item.add_argument("--output", type=Path); item.add_argument("--overwrite", action="store_true")
+    compare = sub.add_parser("compare", help="exact matched-checkpoint Vanilla CFR / CFR+ comparison")
+    compare.add_argument("--iterations", type=int, default=max(DEFAULT_CHECKPOINTS))
+    compare.add_argument("--averaging-delay", type=int, default=0)
+    compare.add_argument("--output", type=Path); compare.add_argument("--overwrite", action="store_true")
     args = parser.parse_args()
+    if args.command == "compare":
+        checkpoints = tuple(point for point in DEFAULT_CHECKPOINTS if point <= args.iterations)
+        if args.iterations not in checkpoints:
+            checkpoints += (args.iterations,)
+        report = comparison_report({"vanilla-cfr": KuhnCFRTrainer,
+                                    "cfr-plus": lambda: KuhnCFRPlusTrainer(args.averaging_delay)}, checkpoints,
+                                   comparison_algorithm_metadata(args.averaging_delay))
+        output = json.dumps(report, sort_keys=True, indent=2, allow_nan=False)
+        if args.output:
+            if args.output.exists() and not args.overwrite: parser.error("output exists; pass --overwrite to replace it")
+            args.output.write_text(output + "\n", encoding="utf-8")
+        for index, checkpoint in enumerate(report["checkpoints"]):
+            vanilla = report["algorithms"]["vanilla-cfr"][index]
+            plus = report["algorithms"]["cfr-plus"][index]
+            print("checkpoint {}: vanilla EV-error={:.10f} NashConv={:.10f} exploitability={:.10f}; "
+                  "CFR+ EV-error={:.10f} NashConv={:.10f} exploitability={:.10f}".format(
+                      checkpoint, vanilla["value_error"], vanilla["nashconv"], vanilla["exploitability"],
+                      plus["value_error"], plus["nashconv"], plus["exploitability"]))
+        return
     report = build_report(args.iterations, (1, 10, 100, 1000, 10000, 100000))
     output = json.dumps(report, sort_keys=True, indent=2, allow_nan=False)
     if args.output:

@@ -5,7 +5,10 @@ import sys
 import pytest
 
 from research.kuhn import cfr
+from research.kuhn import cfr_plus
 from research.kuhn.cfr import KuhnCFRTrainer, regret_matching
+from research.kuhn.cfr_plus import KuhnCFRPlusTrainer
+from research.kuhn.convergence import DEFAULT_CHECKPOINTS, comparison_algorithm_metadata, comparison_report
 from research.kuhn.evaluation import best_response, expected_value, metrics
 from research.kuhn.game import Action, Card, DEALS, KuhnState, TERMINAL_HISTORIES
 
@@ -78,6 +81,67 @@ def test_one_iteration_regrets_and_strategy_sums_match_exact_uniform_fixtures():
     # Root own reach is one; two deals each add (1/6) * (1/2) to each action.
     assert root_j.strategy_sum == pytest.approx({Action.CHECK: 1 / 6, Action.BET: 1 / 6})
 
+def test_cfr_plus_projects_negative_cumulative_regrets_to_zero_with_exact_fixture():
+    trainer = KuhnCFRPlusTrainer().train(1)
+    # Vanilla's uniform-profile update at J| is (-1/8, +1/8); CFR+ applies
+    # max(0, R + delta) after the complete iteration.
+    assert trainer.infosets["J|"].regrets == pytest.approx({Action.CHECK: 0.0, Action.BET: 1 / 8})
+    assert all(value >= 0 for node in trainer.infosets.values() for value in node.regrets.values())
+
+def test_cfr_plus_regret_projection_fixtures_use_explicit_precomputed_values():
+    trainer = KuhnCFRPlusTrainer(); trainer._ensure_infosets()
+    node = trainer.infosets["J|"]
+    node.regrets = {Action.CHECK: 3 / 8, Action.BET: 1 / 8}
+    regrets = trainer._empty_deltas(trainer.infosets)
+    sums = trainer._empty_deltas(trainer.infosets)
+    # Hand-derived inputs: 3/8 - 1/8 = 1/4 stays positive; 1/8 - 1/4 < 0 truncates.
+    regrets["J|"] = {Action.CHECK: -1 / 8, Action.BET: -1 / 4}
+    trainer._apply_iteration_deltas(regrets, sums)
+    assert node.regrets == pytest.approx({Action.CHECK: 1 / 4, Action.BET: 0.0})
+
+
+def test_cfr_plus_next_profile_uses_post_truncation_regrets():
+    trainer = KuhnCFRPlusTrainer(); trainer._ensure_infosets()
+    node = trainer.infosets["J|"]
+    node.regrets = {Action.CHECK: 1 / 2, Action.BET: 1 / 4}
+    regrets = trainer._empty_deltas(trainer.infosets)
+    sums = trainer._empty_deltas(trainer.infosets)
+    # (1/2 - 1/8, 1/4 - 1/2) = (3/8, -1/4), projected to (3/8, 0).
+    regrets["J|"] = {Action.CHECK: -1 / 8, Action.BET: -1 / 2}
+    trainer._apply_iteration_deltas(regrets, sums)
+    assert trainer._frozen_profile()["J|"] == pytest.approx({Action.CHECK: 1.0, Action.BET: 0.0})
+
+
+def test_cfr_plus_averaging_delay_weight_and_reach_weighted_increment_fixtures():
+    delayed = KuhnCFRPlusTrainer(averaging_delay=2).train(2, diagnostic=True)
+    assert all(value == 0.0 for node in delayed.infosets.values() for value in node.strategy_sum.values())
+    assert {row["average_weight"] for row in delayed.last_diagnostic} == {0.0}
+    delayed.train(1, diagnostic=True)
+    assert {row["average_weight"] for row in delayed.last_diagnostic} == {1.0}
+    delayed.train(1)
+    delayed.train(1, diagnostic=True)
+    assert {row["average_weight"] for row in delayed.last_diagnostic} == {3.0}
+
+    trainer = KuhnCFRPlusTrainer(); trainer._ensure_infosets()
+    # At J|, choose sigma(check)=1/4 and sigma(bet)=3/4 before iteration one.
+    # J occurs in two deals; own reach is 1, chance is 1/6, and weight is one.
+    trainer.infosets["J|"].regrets = {Action.CHECK: 1.0, Action.BET: 3.0}
+    trainer.train(1, diagnostic=True)
+    root_j = trainer.infosets["J|"]
+    assert root_j.strategy_sum == pytest.approx({Action.CHECK: 2 * 1 * (1 / 6) * (1 / 4),
+                                                  Action.BET: 2 * 1 * (1 / 6) * (3 / 4)})
+
+
+def test_cfr_plus_one_iteration_uses_one_frozen_policy_for_all_six_deals():
+    trainer = KuhnCFRPlusTrainer().train(1, diagnostic=True)
+    seen = {}
+    for row in trainer.last_diagnostic:
+        policy = tuple(sorted(row["strategy"].items()))
+        seen.setdefault(row["infoset"], set()).add(policy)
+    # Every one of the 12 information sets is visited for each compatible opposing card.
+    assert len(trainer.last_diagnostic) == 24
+    assert all(len(policies) == 1 for policies in seen.values())
+
 def test_one_iteration_is_invariant_to_reversed_chance_deal_order(monkeypatch):
     forward = KuhnCFRTrainer().train(1)
     monkeypatch.setattr(cfr, "DEALS", tuple(reversed(DEALS)))
@@ -89,6 +153,21 @@ def test_multiple_iterations_are_invariant_to_reversed_chance_deal_order(monkeyp
     monkeypatch.setattr(cfr, "DEALS", tuple(reversed(DEALS)))
     reversed_order = KuhnCFRTrainer().train(25)
     assert_accumulated_values_close(accumulated_values(forward), accumulated_values(reversed_order))
+
+@pytest.mark.parametrize("ordered_deals", [tuple(reversed(DEALS)), DEALS[::2] + DEALS[1::2]])
+def test_cfr_plus_one_iteration_is_invariant_to_reversed_and_nontrivial_deal_orders(monkeypatch, ordered_deals):
+    forward = KuhnCFRPlusTrainer().train(1)
+    monkeypatch.setattr(cfr_plus, "DEALS", ordered_deals)
+    reordered = KuhnCFRPlusTrainer().train(1)
+    assert_accumulated_values_close(accumulated_values(forward), accumulated_values(reordered))
+
+
+@pytest.mark.parametrize("ordered_deals", [tuple(reversed(DEALS)), DEALS[::2] + DEALS[1::2]])
+def test_cfr_plus_multiple_iterations_are_invariant_to_deal_order(monkeypatch, ordered_deals):
+    forward = KuhnCFRPlusTrainer().train(25)
+    monkeypatch.setattr(cfr_plus, "DEALS", ordered_deals)
+    reordered = KuhnCFRPlusTrainer().train(25)
+    assert_accumulated_values_close(accumulated_values(forward), accumulated_values(reordered))
 
 def test_all_chance_outcomes_use_one_frozen_profile_per_iteration():
     trainer = KuhnCFRTrainer().train(1)
@@ -108,6 +187,18 @@ def test_exact_ev_and_imperfect_information_best_response():
     assert set(br_policy["J|"].values()) == {0.0, 1.0}
     measure = metrics(policy, policy)
     assert measure["br1_as_u0"] <= measure["player0_ev"] <= measure["br0"]
+    assert measure["exploitability"] == pytest.approx(measure["nashconv"] / 2)
+
+
+def test_cfr_plus_repeated_training_is_deterministic_across_exact_metrics():
+    first = KuhnCFRPlusTrainer(averaging_delay=2).train(37)
+    second = KuhnCFRPlusTrainer(averaging_delay=2).train(37)
+    assert_accumulated_values_close(accumulated_values(first), accumulated_values(second))
+    for key, strategy in first.average_strategy().items():
+        assert strategy == pytest.approx(second.average_strategy()[key])
+    first_metrics = metrics(first.average_strategy(), first.average_strategy())
+    second_metrics = metrics(second.average_strategy(), second.average_strategy())
+    assert first_metrics == pytest.approx(second_metrics)
 
 def test_convergence_is_materially_less_exploitable():
     early = KuhnCFRTrainer().train(10); late = KuhnCFRTrainer().train(5000)
@@ -115,9 +206,30 @@ def test_convergence_is_materially_less_exploitable():
     assert late_m["exploitability"] < early_m["exploitability"]
     assert abs(late_m["player0_ev"] + 1 / 18) < 0.03
 
+def test_exact_convergence_comparison_is_deterministic_and_cfr_plus_improves_at_a_matched_budget():
+    algorithms = {"vanilla-cfr": KuhnCFRTrainer, "cfr-plus": KuhnCFRPlusTrainer}
+    metadata = comparison_algorithm_metadata()
+    one = comparison_report(algorithms, DEFAULT_CHECKPOINTS[:-1], metadata)
+    two = comparison_report(algorithms, DEFAULT_CHECKPOINTS[:-1], metadata)
+    assert one == two
+    vanilla = one["algorithms"]["vanilla-cfr"]
+    plus = one["algorithms"]["cfr-plus"]
+    assert any(row["exploitability"] < vanilla[index]["exploitability"] for index, row in enumerate(plus))
+    assert all("nashconv" in row and "value_error" in row for rows in one["algorithms"].values() for row in rows)
+    assert one["algorithm_metadata"] == metadata
+
 def test_cli_json_is_deterministic(tmp_path):
     output = tmp_path / "kuhn.json"
     command = [sys.executable, "-m", "research.kuhn.cli", "train", "--iterations", "10", "--output", str(output)]
     subprocess.run(command, check=True, capture_output=True, text=True)
     one = output.read_text(); subprocess.run(command + ["--overwrite"], check=True, capture_output=True, text=True)
     assert one == output.read_text() and json.loads(one)["kuhn_cfr_schema_version"] == "1.0"
+
+def test_compare_cli_reports_both_algorithms_at_requested_checkpoints(tmp_path):
+    output = tmp_path / "comparison.json"
+    command = [sys.executable, "-m", "research.kuhn.cli", "compare", "--iterations", "100", "--averaging-delay", "3", "--output", str(output)]
+    subprocess.run(command, check=True, capture_output=True, text=True)
+    report = json.loads(output.read_text())
+    assert report["checkpoints"] == [1, 10, 100]
+    assert set(report["algorithms"]) == {"vanilla-cfr", "cfr-plus"}
+    assert report["algorithm_metadata"] == comparison_algorithm_metadata(3)

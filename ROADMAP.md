@@ -76,6 +76,10 @@ Phase 2 remains heads-up only. It has no multiway pots, tournament structure, ge
 
 Phase 4A adds an isolated canonical Kuhn Poker research package: immutable game state, private-information-safe information sets, exact chance traversal, vanilla CFR, average strategies, exact EV, information-set-constrained best response, and NashConv/exploitability diagnostics. It intentionally excludes Hold'em CFR, abstraction, sampling variants, CFR+, neural methods, persistence, APIs, and UI work. Kuhn is a mathematical validation step, not a claim that Hold'em strategy is solved.
 
+## Phase 4B — CFR+ and convergence tooling
+
+Phase 4B retains the accepted Vanilla CFR implementation as an independent control and adds a separate exact-chance CFR+ trainer. CFR+ truncates cumulative regrets after each frozen-profile six-deal iteration; it does not replace Vanilla CFR. The reusable convergence reporter evaluates both algorithms at deterministic matched checkpoints using exact EV, information-set-constrained best responses, NashConv, and exploitability. CFR+ average policies use documented linear weights with an explicit optional delay. This remains isolated Kuhn research: no Hold'em engine, bot, schema, API, or frontend integration is introduced.
+
 ### Phase 3A1: Persistent match engine foundation
 
 The backend foundation now includes:

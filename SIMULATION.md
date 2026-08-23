@@ -2,7 +2,7 @@
 
 ## Kuhn Poker CFR research
 
-The separate `research.kuhn` package validates vanilla CFR before any future Hold'em abstraction work. Chance is exact over all six ordered J/Q/K deals (probability 1/6 each); no RNG is used. An information set is `hero_card|public-history`, never including the opponent card. Regret matching uses positive cumulative regrets, falling back to uniform distribution. Regret updates use opponent reach times chance reach; average-strategy sums use acting-player reach times chance reach.
+The separate `research.kuhn` package validates Vanilla CFR and the mathematically distinct CFR+ variant before any future Hold'em abstraction work. Chance is exact over all six ordered J/Q/K deals (probability 1/6 each); no RNG is used. An information set is `hero_card|public-history`, never including the opponent card. Regret matching uses positive cumulative regrets, falling back to uniform distribution. Vanilla regret updates use opponent reach times chance reach; average-strategy sums use acting-player reach times chance reach. CFR+ applies the same frozen-profile, full-iteration deltas but then truncates each cumulative regret with `max(0, regret + delta)`. Its average strategy is explicitly linearly weighted: iteration `t` contributes `max(0, t - averaging_delay)` times the acting-player/chance reach; the default delay is zero.
 
 Evaluation is exact over every action path. Best response enumerates legal behavioral policies per information set, never actions conditioned on a hidden opposing card. `NashConv = BR0 - BR1_as_u0`; reported exploitability is `NashConv / 2`. The target equilibrium value for Player 0 is -1/18. This research does not solve or alter Hold'em.
 

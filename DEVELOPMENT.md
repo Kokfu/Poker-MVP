@@ -35,9 +35,12 @@ Run from `backend`; this is not part of the simulator CLI:
 ```powershell
 .\.venv\Scripts\python.exe -m research.kuhn.cli train --iterations 100000
 .\.venv\Scripts\python.exe -m research.kuhn.cli train --iterations 100000 --output C:\Temp\kuhn-cfr.json
+.\.venv\Scripts\python.exe -m research.kuhn.cli compare --iterations 100000 --output C:\Temp\kuhn-cfr-comparison.json
 ```
 
 The JSON report is schema `kuhn_cfr` 1.0 and is canonical sorted JSON. It will not overwrite a file unless `--overwrite` is passed. It reports exact profile EV, information-set-constrained best responses, NashConv, and exploitability (`NashConv / 2`).
+
+`compare` writes a separate `kuhn_cfr_convergence` 1.0 report with Vanilla CFR and CFR+ side by side at matched deterministic checkpoints (1, 10, 100, 1,000, 10,000, and 100,000 when in range). CFR+ is separate from Vanilla CFR: after each complete six-deal iteration it uses `R <- max(0, R + delta)`. Its average policy uses the standard linear weight `max(0, iteration - averaging_delay)`; `--averaging-delay` defaults to zero, so iterations 1, 2, ... have weights 1, 2, .... All EV, best-response, NashConv, and exploitability entries are exact enumerations, not Monte Carlo estimates.
 
 Use Node.js 20 or newer with npm. The Docker image uses Node 20; the accepted host build used Node 24.16.0 and npm 11.13.0.
 
