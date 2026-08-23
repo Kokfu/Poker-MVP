@@ -191,3 +191,7 @@ The completed foundation also has an explicit public-history tracker for diagnos
 # Phase 3D3 — range-aware expert strategy
 
 Implemented a bounded public-range/range-equity layer over `ExpertRuleBot`.  It is not a solver, CFR variant, neural strategy, self-play system, or exact opponent-card predictor.  Current limitations include heuristic ranges, conservative preflop use (summary only), and no exact EV/fold-equity solver.
+
+## Phase 4D — Abstract Hold'em CFR subgame prototype
+
+Phase 4D adds a deliberately bounded research subgame driven by Phase 4C: exact collision-free private-card enumeration on a fixed flop, no future board cards, legal Phase 4C abstract transitions, zero-sum terminal utilities, and deterministic Vanilla CFR/CFR+ training. It measures the complete tree and writes research-only information-set strategy tables. This is not a full Hold'em solver, full-game exploitability report, or production bot integration.
