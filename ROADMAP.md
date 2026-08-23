@@ -72,6 +72,10 @@ Phase 2 remains heads-up only. It has no multiway pots, tournament structure, ge
 
 ## Phase 3 — in progress
 
+## Phase 4A — Kuhn Poker vanilla CFR foundation
+
+Phase 4A adds an isolated canonical Kuhn Poker research package: immutable game state, private-information-safe information sets, exact chance traversal, vanilla CFR, average strategies, exact EV, information-set-constrained best response, and NashConv/exploitability diagnostics. It intentionally excludes Hold'em CFR, abstraction, sampling variants, CFR+, neural methods, persistence, APIs, and UI work. Kuhn is a mathematical validation step, not a claim that Hold'em strategy is solved.
+
 ### Phase 3A1: Persistent match engine foundation
 
 The backend foundation now includes:

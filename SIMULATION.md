@@ -1,5 +1,11 @@
 # Phase 2 local simulator
 
+## Kuhn Poker CFR research
+
+The separate `research.kuhn` package validates vanilla CFR before any future Hold'em abstraction work. Chance is exact over all six ordered J/Q/K deals (probability 1/6 each); no RNG is used. An information set is `hero_card|public-history`, never including the opponent card. Regret matching uses positive cumulative regrets, falling back to uniform distribution. Regret updates use opponent reach times chance reach; average-strategy sums use acting-player reach times chance reach.
+
+Evaluation is exact over every action path. Best response enumerates legal behavioral policies per information set, never actions conditioned on a hidden opposing card. `NashConv = BR0 - BR1_as_u0`; reported exploitability is `NashConv / 2`. The target equilibrium value for Player 0 is -1/18. This research does not solve or alter Hold'em.
+
 The simulator is a deterministic, local-only, heads-up No-Limit Texas Hold'em research environment. It is educational software, not a real-money poker client.
 
 ## Hand model

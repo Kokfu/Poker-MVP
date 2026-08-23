@@ -28,6 +28,17 @@ Use that interpreter for all backend commands:
 
 ## Frontend
 
+## Kuhn CFR research CLI
+
+Run from `backend`; this is not part of the simulator CLI:
+
+```powershell
+.\.venv\Scripts\python.exe -m research.kuhn.cli train --iterations 100000
+.\.venv\Scripts\python.exe -m research.kuhn.cli train --iterations 100000 --output C:\Temp\kuhn-cfr.json
+```
+
+The JSON report is schema `kuhn_cfr` 1.0 and is canonical sorted JSON. It will not overwrite a file unless `--overwrite` is passed. It reports exact profile EV, information-set-constrained best responses, NashConv, and exploitability (`NashConv / 2`).
+
 Use Node.js 20 or newer with npm. The Docker image uses Node 20; the accepted host build used Node 24.16.0 and npm 11.13.0.
 
 ```powershell

@@ -27,6 +27,10 @@ FastAPI backend
 
 Docker Compose runs the FastAPI backend and React/Vite frontend as separate services. Ports 8000 and 5173 are bound to `127.0.0.1`. There is no database and no application persistence beyond explicitly requested dataset or result files.
 
+## Kuhn CFR research isolation
+
+`backend/research/kuhn` is a deliberately separate, exact three-card Kuhn Poker laboratory. It has no imports from the Hold'em engine, no registered bot, API route, frontend dependency, or shared schema. It enumerates the six deals, uses visible-card-plus-public-history information sets, and implements vanilla full-tree CFR only. Its terminal convention is Player 0 utility: check/check is +/-1, bet/fold is +/-1, and bet/call is +/-2.
+
 ## Analyzer
 
 FastAPI validates card notation, uniqueness, board length, opponent count, and numeric constraints before calling the analysis layer. `TreysAdapter` confines Treys hand evaluation to `poker_analyzer.py`. NumPy-backed Monte Carlo uses only unseen cards for preflop, flop, and turn calculations. River equity enumerates exactly 990 possible two-card opponent combinations.
