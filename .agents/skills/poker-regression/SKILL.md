@@ -1,21 +1,13 @@
----
-name: poker-regression
-description: Run the standard Poker Analyzer regression and compatibility checks before accepting a milestone.
----
+## Backend regression on Windows
 
-# Poker Regression Workflow
+Backend Python commands MUST run with `backend` as the working directory.
 
-## Repository
-
-Use the repository root discovered from Git.
-
-Do not rely on stale test counts from chat or previous milestones.
-
-## Before regression
-
-Run:
+From repository root:
 
 ```powershell
-git branch --show-current
-git status --short
-git diff --check
+Push-Location backend
+
+& ".\.venv\Scripts\python.exe" -m pytest -q -p no:cacheprovider
+& ".\.venv\Scripts\python.exe" -m pip check
+
+Pop-Location
