@@ -120,6 +120,7 @@ class ExternalSamplingMCCFRTrainer:
         self.total_visited_nodes = 0
         self.total_traversals = 0
         self.chance_sample_counts: Counter[str] = Counter()
+        self.future_chance_sample_counts: Counter[str] = Counter()
         self.action_sample_counts: Counter[str] = Counter()
         self.infoset_visit_counts: Counter[str] = Counter()
         self.last_trajectories: list[dict[str, object]] = []
@@ -165,6 +166,30 @@ class ExternalSamplingMCCFRTrainer:
             raise AssertionError("strategy probabilities do not sum to one")
         return last
 
+    def _sample_future_chance(self, state: Any) -> tuple[Any, float, str]:
+        """Sample one game-provided non-root chance outcome.
+
+        A future chance node uses the same dedicated RNG and true-probability
+        convention as root chance.  Game states expose only the public label,
+        child, and conditional probability needed here; they never expose a
+        deck order to an information-set key or policy.
+        """
+        outcomes = tuple(state.chance_outcomes())
+        if not outcomes:
+            raise AssertionError("chance node has no outcomes")
+        labels, children, weights = zip(*outcomes)
+        if any(weight <= 0.0 or not isfinite(weight) for weight in weights):
+            raise AssertionError("invalid future chance probability")
+        if abs(sum(weights) - 1.0) > 1e-12:
+            raise AssertionError("future chance probabilities do not sum to one")
+        threshold = self.rng.random()
+        cumulative = 0.0
+        for label, child, probability in zip(labels, children, weights):
+            cumulative += probability
+            if threshold < cumulative:
+                return child, probability, str(label)
+        return children[-1], weights[-1], str(labels[-1])
+
     def _frozen_profile(self) -> dict[str, dict[Action, float]]:
         """Snapshot current policies for one traverser traversal.
 
@@ -204,6 +229,25 @@ class ExternalSamplingMCCFRTrainer:
         if state.terminal:
             utility = state.utility_p0()
             return utility if traverser == 0 else -utility
+        if getattr(state, "chance", False):
+            child, probability, label = self._sample_future_chance(state)
+            self.future_chance_sample_counts[label] += 1
+            trace.append({
+                "future_chance": label,
+                "chance_probability": probability,
+            })
+            if diagnostic is not None:
+                diagnostic.append({
+                    "traverser": traverser,
+                    "sampled_future_chance": label,
+                    "sample_probability": probability,
+                })
+            # True conditional chance sampling needs no extra estimator ratio:
+            # its probability remains in the expectation just as root chance.
+            return self._traverse(
+                child, traverser, own_reach, sampled_opponent_reach,
+                profile, trace, diagnostic,
+            )
         node = self._node(state)
         strategy = self._strategy_from_profile(node, profile)
         self.infoset_visit_counts[node.key] += 1
@@ -331,6 +375,7 @@ class ExternalSamplingMCCFRTrainer:
             "estimated_infoset_memory_bytes": memory,
             "zero_visit_information_sets": sorted(known - set(self.infoset_visit_counts)),
             "chance_sample_counts": dict(sorted(self.chance_sample_counts.items())),
+            "future_chance_sample_counts": dict(sorted(self.future_chance_sample_counts.items())),
             "action_sample_counts": dict(sorted(self.action_sample_counts.items())),
             "information_set_visit_frequencies": dict(sorted(self.infoset_visit_counts.items())),
             "finite": True,

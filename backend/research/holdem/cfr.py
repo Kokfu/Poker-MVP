@@ -66,22 +66,32 @@ class HoldemSubgameCFRTrainer:
     def _ensure_infosets(self) -> None:
         def visit(state: HoldemSubgameState) -> None:
             if state.terminal: return
+            if getattr(state, "chance", False):
+                transitions = tuple((str(label), child) for label, child, _ in state.chance_outcomes())
+                self._transitions[state] = transitions
+                for _, child in transitions: visit(child)
+                return
             self._node(state)
             transitions = tuple((action.label, state.apply(action)) for action in state.legal_actions)
             self._transitions[state] = transitions
             for _, child in transitions: visit(child)
         for root in self.roots: visit(root)
 
-    def _walk(self, state, reach0, reach1, profile, regret_delta, sum_delta, weight) -> float:
+    def _walk(self, state, reach0, reach1, profile, regret_delta, sum_delta, weight, chance_reach=1.0) -> float:
         if state.terminal: return state.utility_p0()
+        if getattr(state, "chance", False):
+            outcomes = tuple(state.chance_outcomes())
+            return sum(probability * self._walk(
+                child, reach0, reach1, profile, regret_delta, sum_delta, weight, chance_reach * probability,
+            ) for _, child, probability in outcomes)
         node = self._state_nodes[state]; strategy = profile[node.key]; values = {}
         for label, child in self._transitions[state]:
             values[label] = self._walk(child, reach0 * strategy[label] if node.player == 0 else reach0,
-                reach1 * strategy[label] if node.player == 1 else reach1, profile, regret_delta, sum_delta, weight)
+                reach1 * strategy[label] if node.player == 1 else reach1, profile, regret_delta, sum_delta, weight, chance_reach)
         value = sum(strategy[label] * values[label] for label in node.actions)
         sign = 1.0 if node.player == 0 else -1.0
-        cf = (reach1 if node.player == 0 else reach0) * self.chance
-        own = (reach0 if node.player == 0 else reach1) * self.chance
+        cf = (reach1 if node.player == 0 else reach0) * self.chance * chance_reach
+        own = (reach0 if node.player == 0 else reach1) * self.chance * chance_reach
         for label in node.actions:
             regret_delta[node.key][label] += sign * cf * (values[label] - value)
             sum_delta[node.key][label] += weight * own * strategy[label]
@@ -122,6 +132,8 @@ class HoldemSubgameCFRTrainer:
         policy0, policy1 = policy0 or self.average_strategy(), policy1 or self.average_strategy()
         def walk(state):
             if state.terminal: return state.utility_p0()
+            if getattr(state, "chance", False):
+                return sum(probability * walk(child) for _, child, probability in state.chance_outcomes())
             policy = policy0 if state.acting_player == 0 else policy1
             node = self._state_nodes[state]; distribution = policy[node.key]
             return sum(distribution[label] * walk(child) for label, child in self._transitions[state])
