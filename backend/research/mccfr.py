@@ -121,6 +121,7 @@ class ExternalSamplingMCCFRTrainer:
         self.total_traversals = 0
         self.chance_sample_counts: Counter[str] = Counter()
         self.future_chance_sample_counts: Counter[str] = Counter()
+        self.future_chance_stage_sample_counts: Counter[str] = Counter()
         self.action_sample_counts: Counter[str] = Counter()
         self.infoset_visit_counts: Counter[str] = Counter()
         self.last_trajectories: list[dict[str, object]] = []
@@ -232,9 +233,13 @@ class ExternalSamplingMCCFRTrainer:
         if getattr(state, "chance", False):
             child, probability, label = self._sample_future_chance(state)
             self.future_chance_sample_counts[label] += 1
+            stage = str(getattr(state, "chance_stage", getattr(state, "street", "future")))
+            self.future_chance_stage_sample_counts[f"{stage}:{label}"] += 1
             trace.append({
                 "future_chance": label,
                 "chance_probability": probability,
+                "chance_street": getattr(state, "chance_stage", getattr(state, "street", None)),
+                "chance_parent_public_card": getattr(state, "turn_card", None),
             })
             if diagnostic is not None:
                 diagnostic.append({
@@ -376,6 +381,7 @@ class ExternalSamplingMCCFRTrainer:
             "zero_visit_information_sets": sorted(known - set(self.infoset_visit_counts)),
             "chance_sample_counts": dict(sorted(self.chance_sample_counts.items())),
             "future_chance_sample_counts": dict(sorted(self.future_chance_sample_counts.items())),
+            "future_chance_stage_sample_counts": dict(sorted(self.future_chance_stage_sample_counts.items())),
             "action_sample_counts": dict(sorted(self.action_sample_counts.items())),
             "information_set_visit_frequencies": dict(sorted(self.infoset_visit_counts.items())),
             "finite": True,
