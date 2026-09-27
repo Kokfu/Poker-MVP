@@ -17,7 +17,8 @@ export type Analysis = {
   disclaimer: string;
 };
 
-export type BotName = "random" | "tight" | "aggressive" | "equity";
+export const BOT_NAMES = ["random", "tight", "aggressive", "equity", "expert", "adaptive", "range_expert", "solver"] as const;
+export type BotName = (typeof BOT_NAMES)[number];
 export type MatchPlayer = "a" | "b";
 export type MatchWinner = "Bot A" | "Bot B" | "tied";
 export type MatchTerminationReason = "elimination" | "hand_limit";

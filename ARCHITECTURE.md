@@ -242,3 +242,72 @@ The accepted external-sampling core now handles game-provided future chance node
 `backend/research/holdem/river_subgame.py` contains a separate bounded three-street fixture: fixed flop `As Kd 7c`, collision-free private deals from a seven-card deck, flop betting, conditional turn chance and betting, conditional river chance and betting, then fold or five-board-card showdown. Street commitments reset while pot and stacks carry. River cards are derived only from cards not fixed, privately dealt, or selected as turn and never appear in earlier `DecisionState` or Phase 4C keys. `river_mccfr.py` adapts the accepted generic external-sampling trainer without a second MCCFR algorithm; it supplies deterministic stage-specific chance coverage. A representative exact private-root measurement is scaled and guarded at two million nodes, while a reduced exact control validates tree/EV invariants and explicitly omits intractable BR enumeration. This code has no HandEngine, bot, API, frontend, or schema integration.
 
 `diagnostics_4g.py` supplies both shared exhaustive validation for the reduced action wrapper and a cached full bounded-game reachable information-set universe derived by deterministic traversal, never by MCCFR visits. `scaling_4g.py` runs accepted Phase 4F and Phase 4G adapters on the same seed and logical-iteration convention and reports tree counts, chance/terminal counts, reachable and visited information sets, sampling coverage, runtime, visited nodes, table entries, and deterministic table-memory estimates. These diagnostics do not alter any regret, strategy-sum, chance, or action-sampling mathematics.
+
+## Phase 5 — solver bot, opponent learning, and Coach
+
+Phase 5 connects the research line to playable strategies without changing
+the engine's rules or any accepted bot.
+
+### Fast evaluation (5B)
+
+`poker_analyzer.Eval7Adapter` evaluates hands with eval7 (about 14x faster
+than Treys) and translates every result into the identical Treys rank through
+a 7,462-class bijection built at import.  Duplicate-card probes and invalid
+card counts are delegated to Treys so values and errors are unchanged;
+`POKER_EVALUATOR=treys` forces the reference.  Range Intelligence memoizes its
+pure per-combo feature functions.  Both changes are verified value-identical.
+
+### Solver package (`backend/solver`)
+
+| Module | Role |
+|---|---|
+| `combos` | 1,326 combos, card blockers, 169 hand classes |
+| `equity` | eval7 rank vectors; exact river/turn and sampled flop equity matrices (`D = P(win) - P(lose)`) |
+| `tree` | one-street betting trees using the engine's total-target, minimum-raise, and street-closing rules |
+| `cfr` | vectorized discounted CFR (alpha 1.5, beta 0, gamma 2) over whole ranges; O(n) fold values via card blockers; node locking |
+| `preflop` | offline 169-class preflop charts at 15/30/60/100/200 bb (`solver/data`) |
+| `exploit` | maps `OpponentModel` statistics to confidence-weighted node locks |
+| `bot` | `SolverBot` (`solver`) and `AdaptiveSolverBot` (`solver_adaptive`) |
+
+`SolverBot` rebuilds each hand from `DecisionState.hand_actions` only.  Both
+players' public ranges start uniform; every preflop action multiplies the
+actor's range by the chart probability of that action and every postflop
+action by the strategy of a solve of that street from its start.  At its own
+decision the bot solves the current street from the actual state (exact pot,
+stacks, and opponent sizing) with both public ranges and samples its combo's
+mixed strategy from a SHA-256-seeded RNG that never touches the deck or any
+other RNG.  River leaves are exact showdowns; flop and turn leaves are
+all-runout equity (future betting is not modelled).  Any inconsistency falls
+back to `ExpertRuleBot` and is counted.
+
+`AdaptiveSolverBot` reads the public `OpponentModel` snapshot supplied with
+each observation.  Confident statistics lock the opponent's aggregate action
+frequencies at matching tree nodes (fold/call/raise when facing a bet, bet
+when checked to, limp/raise/3-bet/fold-to-raise preflop).  Fitting preserves
+the opponent's hand ordering and the lock weight is 0 / 0.3 / 0.55 / 0.75 for
+very low / low / medium / high confidence, so a thin or wrong read cannot be
+exploited without limit.  Preflop locks trigger a cached re-solve of the chart
+game.
+
+### Evaluation (5A)
+
+`simulation/duplicate_evaluation.py` plays every seed twice with the bots in
+swapped seats on identical cards (seat A is the button; the deck deals seat
+A, seat B, then the board), so each pair cancels most card luck.  Session mode
+keeps the same bot instances for many reset-stack hands while each side's
+opponent profile grows, and replays the whole session swapped.  Development
+and holdout seed ranges are disjoint; `win_rate_gate` accepts only holdout
+evidence.  `simulation/slumbot.py` replays Slumbot's public-API hands through
+`HandEngine` (a remote deck supplies Slumbot's board; a proxy seat replays its
+actions), so the local bot sees ordinary observations; server winnings are
+authoritative and cross-checked against engine settlement.
+
+### Coach (5F)
+
+`backend/coach` replays a manually entered spot through `HandEngine` with the
+user in seat A and the opponent in seat B.  The engine enforces legality; the
+replay stops at the first open decision and returns either solver advice
+(action mix, equity versus the villain's estimated range, and its make-up),
+the villain's legal actions, or a request for the next board cards.  Logged
+completed hands live in a local SQLite file and are replayed through the same
+`OpponentModel` to build profiles that `solver_adaptive` exploits.

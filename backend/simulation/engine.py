@@ -40,6 +40,7 @@ class HandEngine:
         small_blind=None,
         match_id=None,
         opponent_profile_provider=None,
+        deck=None,
     ):
         initial_stacks = (
             {"a": stack, "b": stack}
@@ -64,7 +65,9 @@ class HandEngine:
         self.bb = bb
         self.sb = sb
         self.hand_seed = seed
-        self.deck = Deck(seed)
+        # ``deck`` is only for external replays (e.g. the Slumbot bridge);
+        # every local hand deals from the seeded Deck exactly as before.
+        self.deck = Deck(seed) if deck is None else deck
         self.holes = {"a": self.deck.deal(2), "b": self.deck.deal(2)}
         self.dataset = dataset or JsonlDataset()
         self.state = GameState(

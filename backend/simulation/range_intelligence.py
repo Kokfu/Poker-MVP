@@ -6,6 +6,7 @@ combos are hypotheses, never a read of an opponent's unrevealed cards.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 from itertools import combinations
 from math import exp, isfinite, log, isclose
 import random
@@ -46,6 +47,7 @@ class PreflopDescriptor:
         return self.__dict__.copy()
 
 
+@lru_cache(maxsize=None)  # pure; at most 1,326 combos
 def describe_preflop(combo: HoleCardCombo) -> PreflopDescriptor:
     a, b = combo.cards; high, low = RANK_VALUE[a[0]], RANK_VALUE[b[0]]
     pair, suited = high == low, a[1] == b[1]
@@ -110,7 +112,14 @@ def heuristic_preflop_range(hero_cards: Iterable[str], board_cards: Iterable[str
 
 
 def combo_board_features(combo: HoleCardCombo, board: Iterable[str]) -> dict[str, Any]:
-    board = tuple(board); cards = combo.cards + board
+    # Pure function of (combo, board); range updates and summaries repeat the
+    # same pairs many times per hand.  Callers get a copy of the cached value.
+    return dict(_combo_board_features(combo, tuple(board)))
+
+
+@lru_cache(maxsize=262_144)
+def _combo_board_features(combo: HoleCardCombo, board: tuple[str, ...]) -> dict[str, Any]:
+    cards = combo.cards + board
     made = "preflop" if not board else EVALUATOR.category(list(combo.cards), list(board)).lower().replace(" ", "_")
     ranks = {RANK_VALUE[c[0]] for c in cards}; hole = {RANK_VALUE[c[0]] for c in combo.cards}
     flush_draw = len(board) in (3, 4) and any(sum(c[1] == suit for c in cards) == 4 and any(c[1] == suit for c in combo.cards) for suit in SUITS)

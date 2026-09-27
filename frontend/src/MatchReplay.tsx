@@ -1,9 +1,10 @@
 import { FormEvent, useState } from "react";
 import ReplayEvent from "./ReplayEvent";
+import { BOT_NAMES } from "./types";
 import type { BotName, HandHistory, MatchHistoryDocument, MatchHistoryRequest } from "./types";
 type Form = { bot_a: BotName; bot_b: BotName; starting_stack: string; small_blind: string; big_blind: string; max_hands: string; seed: string; equity_iterations: "500" | "1000" | "2000" };
 const defaults: Form = { bot_a: "random", bot_b: "random", starting_stack: "10000", small_blind: "50", big_blind: "100", max_hands: "100", seed: "0", equity_iterations: "1000" };
-const bots: BotName[] = ["random", "tight", "aggressive", "equity"];
+const bots: readonly BotName[] = BOT_NAMES;
 const number = (value: string, label: string) => { if (!value.trim()) throw new Error(`${label} is required.`); if (!/^-?\d+$/.test(value.trim())) throw new Error(`${label} must be a whole number.`); return Number(value); };
 const player = (value: "a" | "b") => value === "a" ? "Bot A" : "Bot B";
 const winner = (value: HandHistory["winner"] | "Bot A" | "Bot B") => value === "a" ? "Bot A" : value === "b" ? "Bot B" : value === "tied" ? "Tied" : value;

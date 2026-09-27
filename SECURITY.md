@@ -85,3 +85,32 @@ Schedule generation, aggregation, confidence intervals, interpretation, and JSON
 # Range strategy privacy boundary
 
 Range-aware strategy inputs are public action history to the current decision, Hero hole cards, public board cards, and optional completed-hand profile data.  Candidate opponent combinations are explicitly hypotheses, not hidden-card reads.  Showdown calibration remains post-hand diagnostic work and is not strategy input.
+
+## Phase 5 boundaries
+
+**Solver bots.** `solver` and `solver_adaptive` read only their
+`DecisionObservation`: their own cards, the public board, public actions, and
+the public `OpponentModel` snapshot.  Ranges are public beliefs over all
+combos; a test asserts the solver module never references engine internals,
+the deck, or revealed opponent cards.  Mixed-strategy sampling uses a private
+SHA-256-seeded RNG.
+
+**Coach.** Input is typed by the user; there is no screen reading, OCR,
+browser automation, site integration, or automatic clicking.  Completed hands
+logged under an opponent name are stored only in a local SQLite file
+(`backend/data/coach.sqlite`, or `COACH_DB_PATH`; a Docker named volume in
+Compose).  Nothing is uploaded.  Stored rows contain what the user typed:
+their own cards, the board, public actions, and villain cards only if the user
+entered them as shown at showdown.  The Coach is for study, review, and
+practice; real-time assistance while playing on a poker site breaks most
+sites' terms, and this project does not support that use.
+
+**Slumbot benchmark.** `simulation/slumbot.py` talks only to Slumbot's public
+bot-benchmark API (`slumbot.com/api/new_hand`, `/api/act`), which exists so
+researchers can test bots against it.  No money is involved, no account or
+credentials are used, hands are played one at a time, and requests back off
+on errors.  It is an opt-in CLI (`python -m simulation.slumbot_cli`); tests
+use an offline fake server.  It is not a client for any real-money site.
+
+**Out of scope, unchanged.** Unattended play on poker sites, bot-detection
+evasion, and real-money automation are not provided and will not be added.

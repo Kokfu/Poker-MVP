@@ -1,5 +1,5 @@
 from typing import Literal
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, StrictInt, field_validator, model_validator
 from poker_analyzer import RANKS, SUITS, analyze
@@ -19,6 +19,9 @@ from simulation.match_service import (
     MAX_MATCH_HANDS,
     run_builtin_match,
 )
+
+# Every registered built-in bot is selectable through the API.
+BotName = Literal[tuple(BOT_TYPES)]
 
 app = FastAPI(title="Poker Analyzer MVP", openapi_url="/api/openapi.json", docs_url=None, redoc_url=None)
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"], allow_methods=["GET", "POST"], allow_headers=["Content-Type"])
@@ -55,8 +58,8 @@ def health(): return {"status":"OK"}
 def analyze_hand(request: AnalyzeRequest): return analyze(request.hero_cards, request.board_cards, request.pot, request.amount_to_call, request.iterations)
 
 class SimulationRequest(BaseModel):
-    bot_a: Literal["random", "tight", "aggressive", "equity", "expert"]
-    bot_b: Literal["random", "tight", "aggressive", "equity", "expert"]
+    bot_a: BotName
+    bot_b: BotName
     hands: int = Field(default=100, ge=1, le=10000)
     seed: int | None = None
     starting_stack_bb: int = Field(default=100, ge=10, le=500)
@@ -70,8 +73,8 @@ def run_simulation(request: SimulationRequest):
 
 
 class MatchSimulationRequest(BaseModel):
-    bot_a: Literal["random", "tight", "aggressive", "equity", "expert"] = "random"
-    bot_b: Literal["random", "tight", "aggressive", "equity", "expert"] = "random"
+    bot_a: BotName = "random"
+    bot_b: BotName = "random"
     starting_stack: StrictInt = Field(default=DEFAULT_STARTING_STACK, gt=0)
     small_blind: StrictInt = Field(default=DEFAULT_SMALL_BLIND, gt=0)
     big_blind: StrictInt = Field(default=DEFAULT_BIG_BLIND, gt=0)
@@ -151,8 +154,8 @@ def simulate_match(request: MatchSimulationRequest):
 
 
 class HandHistoryRequest(BaseModel):
-    bot_a: Literal["random", "tight", "aggressive", "equity", "expert"] = "random"
-    bot_b: Literal["random", "tight", "aggressive", "equity", "expert"] = "random"
+    bot_a: BotName = "random"
+    bot_b: BotName = "random"
     starting_stack_a: StrictInt = Field(default=DEFAULT_STARTING_STACK, gt=0)
     starting_stack_b: StrictInt = Field(default=DEFAULT_STARTING_STACK, gt=0)
     small_blind: StrictInt = Field(default=DEFAULT_SMALL_BLIND, gt=0)
@@ -188,3 +191,87 @@ def simulate_hand_history(request: HandHistoryRequest):
 @app.post("/api/histories/match")
 def simulate_match_history(request: MatchSimulationRequest):
     return run_builtin_match_history(**request.model_dump())
+
+
+# ---------------------------------------------------------------- Coach (5F)
+# Manual-entry study tool: advice for a typed-in heads-up spot and opponent
+# profiles built from logged hands.  No site integration or automation.
+
+def _normalize_card(card):
+    if isinstance(card, str) and len(card) == 2:
+        return card[0].upper() + card[1].lower()
+    return card
+
+
+class CoachAction(BaseModel):
+    actor: Literal["hero", "villain"]
+    action: Literal["fold", "check", "call", "bet", "raise", "all_in"]
+    amount: StrictInt | None = Field(default=None, gt=0)
+
+
+class CoachSpot(BaseModel):
+    hero_cards: list[str]
+    board: list[str] = Field(default_factory=list)
+    hero_position: Literal["button", "big_blind"] = "button"
+    small_blind: StrictInt = Field(default=50, gt=0)
+    big_blind: StrictInt = Field(default=100, gt=0)
+    hero_stack: StrictInt = Field(default=10_000, gt=0, le=10_000_000)
+    villain_stack: StrictInt = Field(default=10_000, gt=0, le=10_000_000)
+    actions: list[CoachAction] = Field(default_factory=list, max_length=80)
+    villain_cards: list[str] | None = None
+
+    @field_validator("hero_cards", "board", "villain_cards", mode="before")
+    @classmethod
+    def normalize_cards(cls, cards):
+        return [_normalize_card(card) for card in cards] if isinstance(cards, list) else cards
+
+    def to_spot(self):
+        from coach.service import Spot, SpotAction
+        return Spot(
+            hero_cards=self.hero_cards, board=self.board, hero_position=self.hero_position,
+            small_blind=self.small_blind, big_blind=self.big_blind, hero_stack=self.hero_stack,
+            villain_stack=self.villain_stack, villain_cards=self.villain_cards,
+            actions=[SpotAction(a.actor, a.action, a.amount) for a in self.actions],
+        )
+
+
+class CoachAdviseRequest(CoachSpot):
+    opponent: str | None = Field(default=None, max_length=60)
+    exploit: bool = True
+
+
+class CoachLogRequest(CoachSpot):
+    opponent: str = Field(min_length=1, max_length=60)
+
+
+def _coach_call(function, *args, **kwargs):
+    try:
+        return function(*args, **kwargs)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@app.post("/api/coach/advise")
+def coach_advise(request: CoachAdviseRequest):
+    from coach.service import advise
+    return _coach_call(advise, request.to_spot(), opponent=request.opponent or None, exploit=request.exploit)
+
+
+@app.post("/api/coach/hands")
+def coach_log_hand(request: CoachLogRequest):
+    from coach.service import log_hand
+    return _coach_call(log_hand, request.to_spot(), request.opponent)
+
+
+@app.get("/api/coach/opponents")
+def coach_opponents():
+    from coach.store import HandStore
+    return [{"name": name, "hands": count} for name, count in HandStore().opponents()]
+
+
+@app.get("/api/coach/opponents/{name}")
+def coach_opponent(name: str):
+    from coach.service import profile_for, profile_summary
+    from coach.store import HandStore
+    model = _coach_call(profile_for, HandStore(), name)
+    return {"name": name, "profile": profile_summary(model.snapshot()) if model.hands_observed else None}

@@ -248,3 +248,63 @@ Regression coverage must include zero-wager short stacks, exact minimum targets,
 # Phase 3D3 notes
 
 `expert`, `adaptive`, and `range_expert` are intentionally independent experimental controls.  Benchmark them with the existing evaluation framework using matched seed schedules and seat-swapped orientations; do not interpret a single seed as a performance claim.  Range equity is calculated once at the decision boundary and reused by the decision/explanation.
+
+## Phase 5 workflows
+
+All commands run from `backend` with the project interpreter.  `eval7` is a
+required dependency (`pip install -r requirements.txt`); binary wheels exist
+for Windows and Linux (Docker).
+
+### Solver preflop charts
+
+The charts in `solver/data` are committed runtime assets.  Rebuild them only
+when the preflop tree or equity model changes (about 6 minutes):
+
+```powershell
+.\.venv\Scripts\python.exe -m solver.preflop build --boards 20000 --iterations 3000
+```
+
+`PreflopCharts` refuses to load a chart whose stored node labels no longer
+match the current tree.
+
+### Duplicate-deal evaluation
+
+```powershell
+# one strategy against one opponent, 500 duplicate pairs (1,000 hands)
+.\.venv\Scripts\python.exe -m simulation.duplicate_cli pair --strategy solver --opponent equity --pairs 500
+# round robin with pool standings, saved as JSON
+.\.venv\Scripts\python.exe -m simulation.duplicate_cli tournament --bots equity expert solver --pairs 1000 --output ..\benchmark-results\phase-5\example.json
+# learning sessions: the same bots play 60 hands in a row with growing opponent profiles
+.\.venv\Scripts\python.exe -m simulation.duplicate_cli tournament --bots equity solver_adaptive --pairs 12 --session-hands 60
+# the Phase 5 win-rate gate for a saved tournament
+.\.venv\Scripts\python.exe -m simulation.duplicate_cli gate --report ..\benchmark-results\phase-5\example.json --candidate solver
+```
+
+`--workers` defaults to CPU count minus one; results are identical for any
+worker count.  Use the default `development` seed set while building
+strategies; `--seed-set holdout` is reserved for frozen final acceptance runs,
+and only holdout reports are `acceptance_eligible`.
+
+### Slumbot benchmark (network, opt-in)
+
+```powershell
+.\.venv\Scripts\python.exe -m simulation.slumbot_cli --bot solver --hands 200 --output ..\benchmark-results\phase-5\slumbot-solver.jsonl
+```
+
+Slumbot plays 200 bb deep at 50/100.  Each finished hand is appended to the
+JSONL file immediately.  `baseline_adjusted_bb_per_100` subtracts Slumbot's
+own reported baseline and has much lower variance than raw winnings.
+
+### Coach locally
+
+```powershell
+# terminal 1 (backend)
+.\.venv\Scripts\python.exe -m uvicorn main:app --reload
+# terminal 2 (frontend); API_PROXY points Vite at the local backend
+cd ..\frontend
+$env:API_PROXY = "http://127.0.0.1:8000"; npm.cmd run dev
+```
+
+Open `http://127.0.0.1:5173` and choose **Coach**.  Logged hands go to
+`backend/data/coach.sqlite` (override with `COACH_DB_PATH`); Docker Compose
+stores them in the `coach-data` volume.

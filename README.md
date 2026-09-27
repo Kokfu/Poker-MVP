@@ -2,6 +2,15 @@
 
 Poker Analyzer MVP is a local, educational, offline-first Texas Hold'em analyzer and heads-up simulator. It accepts manually entered poker states, performs mathematical analysis, and runs deterministic bot-versus-bot experiments on the local machine. It does not play poker for the user.
 
+## Phase 5 at a glance
+
+- **`solver` bot** — preflop charts solved offline plus a real-time range solve of every postflop street (discounted CFR over both players' public ranges). Select it anywhere a bot is chosen.
+- **`solver_adaptive` bot** — the same solver, adjusting to confident reads of its opponent's public tendencies (node locking), learned hand by hand.
+- **Coach tab** — type in your own heads-up hand as it happens; when it is your turn the solver recommends a play with its full action mix, your equity against the villain's estimated range, and that range's make-up. Log finished hands under an opponent's name to build their profile; the Coach then adjusts to it.
+- **Duplicate-deal evaluation** — every deal is replayed with seats swapped to cancel card luck; learning sessions measure opponent adaptation; a Slumbot bridge benchmarks against a strong outside bot.
+
+The Coach is manual entry for study, review, and practice. Using real-time assistance while playing on a poker site breaks most sites' rules; this project does not automate or assist play on any site.
+
 ## Analyzer
 
 The Analyzer supports:
@@ -93,6 +102,11 @@ The configured ports bind to localhost. The frontend proxies `/api` requests to 
 - `POST /api/matches/simulate`
 - `POST /api/histories/hand`
 - `POST /api/histories/match`
+- `POST /api/coach/advise` — replay a manually entered spot; returns advice, the villain's legal actions, or the next board cards needed
+- `POST /api/coach/hands` — log a completed hand under an opponent name
+- `GET /api/coach/opponents`, `GET /api/coach/opponents/{name}` — logged opponents and their profiles
+
+Every registered bot (`random`, `tight`, `aggressive`, `equity`, `expert`, `adaptive`, `range_expert`, `solver`, `solver_adaptive`) is accepted wherever the API takes a bot name.
 
 The simulation API accepts 1 through 10,000 hands per request. Representative Analyzer request:
 
@@ -187,7 +201,9 @@ The final Phase 2 backend suite contains 275 passing tests. Retained runtime evi
 
 ## Limitations
 
-- Heads-up only; no multiway pots.
+- Heads-up only; no multiway pots. The Coach is accurate once a hand is down to the user and one opponent.
+- The solver's flop and turn solves value the end of the street by equity over the remaining cards; future-street betting and position after that street are not modelled. Preflop charts value a seen flop by raw equity.
+- Solver decisions take about 1-3 seconds each on a desktop CPU.
 - No tournament structure, rake, antes, or ICM.
 - No general side pots beyond heads-up matched-chip settlement and unmatched-excess return.
 - No persistent bankroll across independent hands.

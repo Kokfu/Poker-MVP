@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { BOT_NAMES } from "../types";
 
 type Result = {
   hands_played: number;
@@ -64,7 +65,7 @@ export function Simulator() {
     }
   }
 
-  const bots = ["random", "tight", "aggressive", "equity"];
+  const bots = BOT_NAMES;
 
   return (
     <>

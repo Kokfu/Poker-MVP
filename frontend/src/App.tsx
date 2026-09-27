@@ -4,11 +4,12 @@ import { CardSelector } from "./components/CardSelector";
 import { DeckVisualizer } from "./components/DeckVisualizer";
 import { InputForm } from "./components/InputForm";
 import { Simulator } from "./components/Simulator";
+import Coach from "./Coach";
 import Match from "./Match";
 import Replay from "./Replay";
 import type { Analysis } from "./types";
 
-type Tab = "analyzer" | "simulator" | "match" | "replay";
+type Tab = "analyzer" | "coach" | "simulator" | "match" | "replay";
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("analyzer");
@@ -75,7 +76,7 @@ export default function App() {
         hidden-card access
       </aside>
       <nav aria-label="Poker tools">
-        {(["analyzer", "simulator", "match", "replay"] as Tab[]).map((item) => (
+        {(["analyzer", "coach", "simulator", "match", "replay"] as Tab[]).map((item) => (
           <button
             key={item}
             type="button"
@@ -84,6 +85,8 @@ export default function App() {
           >
             {item === "analyzer"
               ? "Analyzer"
+              : item === "coach"
+                ? "Coach"
               : item === "simulator"
                 ? "Simulator"
               : item === "match" ? "Match" : "Replay"}
@@ -91,7 +94,7 @@ export default function App() {
         ))}
       </nav>
 
-      {tab === "replay" ? <Replay /> : tab === "match" ? (
+      {tab === "coach" ? <Coach /> : tab === "replay" ? <Replay /> : tab === "match" ? (
         <Match />
       ) : tab === "simulator" ? (
         <Simulator />

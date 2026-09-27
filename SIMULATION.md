@@ -299,3 +299,43 @@ Flop/turn use one deterministic bounded Monte Carlo estimate per decision (defau
 Range adjustments compare range equity with pot-odds required equity using conservative centralized margins.  Near-uniform, high-entropy ranges retain the Expert baseline; concentration merely permits bounded adjustments and is never treated as correctness.
 
 Before every range-aware decision, the tracker synchronizes the newly public flop, turn, or river cards, removes now-impossible candidate combos, renormalizes, and asserts finite/no-collision invariants.  Ordering is: prior public actions, board synchronization, range snapshot/equity, decision, then public-action update.
+
+## Phase 5 duplicate-deal evaluation
+
+Duplicate report schema `1.0` (`report_type` `duplicate_evaluation` or
+`duplicate_tournament`) is separate from evaluation schema 1.0.
+
+- **Unit.** One seed played twice: strategy in seat A (the button), then in
+  seat B, with identical hole cards and board.  Stacks reset every hand.  The
+  pair total removes most card luck; measured variance reductions against
+  unpaired hands range from about 10% to 60% depending on the matchup.
+- **Sessions.** With `session_hands = H > 1` a unit is H consecutive hands
+  played by the same two bot instances with the button alternating and
+  `OpponentModel` profiles growing hand by hand, replayed with seats swapped.
+  This measures learning (e.g. `solver_adaptive`) without card luck.
+- **Statistics.** bb/100 = 100 x net big blinds / hands.  Confidence intervals
+  are deterministic percentile bootstraps over units (default 2,000
+  resamples, 95%).  Tournament pool scores are the unweighted mean of a bot's
+  head-to-head bb/100 against every other bot; seeds are resampled jointly
+  across pairings.
+- **Integrity.** Every hand's history is validated and must be zero-sum; each
+  pair verifies identical deals (`deal_mismatches` must be 0).  Results are
+  identical for any worker count.
+- **Seed sets.** `development` seeds start at 1,000,000 and `holdout` seeds at
+  7,000,000.  Strategy work uses development seeds only; the Phase 5 gate
+  (`win_rate_gate`) is `acceptance_eligible` only on holdout evidence.
+- **Gate.** A candidate passes when every head-to-head interval is above zero,
+  its pool score beats the best other bot with the paired bootstrap interval
+  of the difference above zero, and there are no illegal actions or deal
+  mismatches.  Intervals that include zero are reported as inconclusive,
+  never as wins.
+
+### Slumbot benchmark
+
+`simulation/slumbot.py` replays each Slumbot hand through `HandEngine`
+(200 bb, 50/100).  Our bot sees an ordinary `DecisionObservation`; Slumbot's
+actions are replayed by a proxy seat and its board by a remote deck.  Any
+disagreement is a reported desync, never patched.  Server `winnings` are
+authoritative and cross-checked against the engine's settlement.  Slumbot
+also reports a `baseline_winnings` value; `winnings - baseline_winnings` is
+a much lower-variance estimate than raw winnings.

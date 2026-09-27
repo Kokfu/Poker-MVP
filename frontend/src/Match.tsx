@@ -1,4 +1,5 @@
 import { FormEvent, useState } from "react";
+import { BOT_NAMES } from "./types";
 import type {
   BotName,
   MatchHandSummary,
@@ -28,7 +29,7 @@ const DEFAULT_FORM: MatchForm = {
   equity_iterations: "1000",
 };
 
-const BOTS: BotName[] = ["random", "tight", "aggressive", "equity"];
+const BOTS: readonly BotName[] = BOT_NAMES;
 
 function parseInteger(value: string, label: string): number {
   if (!/^-?\d+$/.test(value.trim())) {

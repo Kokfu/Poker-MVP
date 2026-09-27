@@ -129,6 +129,8 @@ def test_existing_cli_list_bots_still_works():
                 "expert",
                 "adaptive",
                 "range_expert",
+                "solver",
+                "solver_adaptive",
             ]
 
 

@@ -1,11 +1,12 @@
 import { FormEvent, useState } from "react";
 import MatchReplay from "./MatchReplay";
 import ReplayEvent from "./ReplayEvent";
+import { BOT_NAMES } from "./types";
 import type { BotName, HandHistoryRequest, HandHistoryResponse } from "./types";
 
 type HandForm = { bot_a: BotName; bot_b: BotName; starting_stack_a: string; starting_stack_b: string; small_blind: string; big_blind: string; button_player: "a" | "b"; seed: string; equity_iterations: "500" | "1000" | "2000" };
 const defaults: HandForm = { bot_a: "random", bot_b: "random", starting_stack_a: "10000", starting_stack_b: "10000", small_blind: "50", big_blind: "100", button_player: "a", seed: "0", equity_iterations: "1000" };
-const bots: BotName[] = ["random", "tight", "aggressive", "equity"];
+const bots: readonly BotName[] = BOT_NAMES;
 function integer(value: string, label: string) { if (!value.trim()) throw new Error(`${label} is required.`); if (!/^-?\d+$/.test(value.trim())) throw new Error(`${label} must be a whole number.`); return Number(value); }
 
 export default function Replay() {
