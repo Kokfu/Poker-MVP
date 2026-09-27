@@ -50,6 +50,25 @@ class HandStore:
             rows = connection.execute("SELECT spot FROM hands WHERE opponent = ? ORDER BY id", (normalize_name(opponent),)).fetchall()
         return [json.loads(row[0]) for row in rows]
 
+    def hands_with_meta(self, opponent: str) -> list[dict[str, Any]]:
+        """Logged hands for one opponent, newest first, with id and created_at."""
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT id, created_at, spot FROM hands WHERE opponent = ? ORDER BY id DESC",
+                (normalize_name(opponent),),
+            ).fetchall()
+        return [{"id": row_id, "created_at": created_at, "spot": json.loads(spot)} for row_id, created_at, spot in rows]
+
+    def delete_hand(self, hand_id: int) -> bool:
+        with self._connect() as connection:
+            cursor = connection.execute("DELETE FROM hands WHERE id = ?", (hand_id,))
+            return cursor.rowcount > 0
+
+    def delete_opponent(self, opponent: str) -> int:
+        with self._connect() as connection:
+            cursor = connection.execute("DELETE FROM hands WHERE opponent = ?", (normalize_name(opponent),))
+            return cursor.rowcount
+
     def opponents(self) -> list[tuple[str, int]]:
         with self._connect() as connection:
             return [(name, count) for name, count in connection.execute("SELECT opponent, COUNT(*) FROM hands GROUP BY opponent ORDER BY opponent")]

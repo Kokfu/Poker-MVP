@@ -90,3 +90,51 @@ def test_api_routes(store):
     assert logged.status_code == 200 and logged.json()["opponent_profile"]["hands_observed"] == 1
     assert client.get("/api/coach/opponents").json() == [{"name": "Reg", "hands": 1}]
     assert client.get("/api/coach/opponents/Reg").json()["profile"]["hands_observed"] == 1
+
+
+def test_list_hands_for_opponent_newest_first_with_name_normalization(store):
+    client = TestClient(main.app)
+    for amount in (200, 250, 300):
+        response = client.post("/api/coach/hands", json={
+            "hero_cards": ["As", "Kd"], "opponent": "Villain Two",
+            "actions": [{"actor": "hero", "action": "raise", "amount": amount}, {"actor": "villain", "action": "fold"}],
+        })
+        assert response.status_code == 200
+    listed = client.get("/api/coach/opponents/Villain Two/hands")
+    assert listed.status_code == 200
+    hands = listed.json()
+    assert [hand["spot"]["actions"][0]["amount"] for hand in hands] == [300, 250, 200]
+    assert all("id" in hand and "created_at" in hand for hand in hands)
+    assert hands[0]["id"] > hands[-1]["id"]
+    # extra internal whitespace normalizes to the same stored name
+    same = client.get("/api/coach/opponents/Villain%20%20Two/hands")
+    assert same.status_code == 200 and len(same.json()) == 3
+    assert client.get("/api/coach/opponents/Nobody/hands").json() == []
+
+
+def test_delete_hand(store):
+    client = TestClient(main.app)
+    logged = client.post("/api/coach/hands", json={
+        "hero_cards": ["As", "Kd"], "opponent": "Villain Three",
+        "actions": [{"actor": "hero", "action": "raise", "amount": 250}, {"actor": "villain", "action": "fold"}],
+    })
+    hand_id = client.get("/api/coach/opponents/Villain Three/hands").json()[0]["id"]
+    assert client.delete("/api/coach/hands/999999").status_code == 404
+    ok = client.delete(f"/api/coach/hands/{hand_id}")
+    assert ok.status_code == 200 and ok.json() == {"deleted": True}
+    assert client.get("/api/coach/opponents/Villain Three/hands").json() == []
+    assert client.delete(f"/api/coach/hands/{hand_id}").status_code == 404
+
+
+def test_delete_opponent(store):
+    client = TestClient(main.app)
+    for _ in range(2):
+        client.post("/api/coach/hands", json={
+            "hero_cards": ["As", "Kd"], "opponent": "Villain Four",
+            "actions": [{"actor": "hero", "action": "raise", "amount": 250}, {"actor": "villain", "action": "fold"}],
+        })
+    deleted = client.delete("/api/coach/opponents/Villain Four")
+    assert deleted.status_code == 200 and deleted.json() == {"deleted": 2}
+    assert client.get("/api/coach/opponents/Villain Four/hands").json() == []
+    assert client.get("/api/coach/opponents").json() == []
+    assert client.delete("/api/coach/opponents/Nobody").json() == {"deleted": 0}

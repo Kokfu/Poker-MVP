@@ -24,7 +24,7 @@ from simulation.match_service import (
 BotName = Literal[tuple(BOT_TYPES)]
 
 app = FastAPI(title="Poker Analyzer MVP", openapi_url="/api/openapi.json", docs_url=None, redoc_url=None)
-app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"], allow_methods=["GET", "POST"], allow_headers=["Content-Type"])
+app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"], allow_methods=["GET", "POST", "DELETE"], allow_headers=["Content-Type"])
 
 class AnalyzeRequest(BaseModel):
     hero_cards: list[str]
@@ -275,3 +275,23 @@ def coach_opponent(name: str):
     from coach.store import HandStore
     model = _coach_call(profile_for, HandStore(), name)
     return {"name": name, "profile": profile_summary(model.snapshot()) if model.hands_observed else None}
+
+
+@app.get("/api/coach/opponents/{name}/hands")
+def coach_opponent_hands(name: str):
+    from coach.store import HandStore
+    return _coach_call(HandStore().hands_with_meta, name)
+
+
+@app.delete("/api/coach/hands/{hand_id}")
+def coach_delete_hand(hand_id: int):
+    from coach.store import HandStore
+    if not HandStore().delete_hand(hand_id):
+        raise HTTPException(status_code=404, detail="hand not found")
+    return {"deleted": True}
+
+
+@app.delete("/api/coach/opponents/{name}")
+def coach_delete_opponent(name: str):
+    from coach.store import HandStore
+    return {"deleted": _coach_call(HandStore().delete_opponent, name)}

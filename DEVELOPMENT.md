@@ -308,3 +308,12 @@ $env:API_PROXY = "http://127.0.0.1:8000"; npm.cmd run dev
 Open `http://127.0.0.1:5173` and choose **Coach**.  Logged hands go to
 `backend/data/coach.sqlite` (override with `COACH_DB_PATH`); Docker Compose
 stores them in the `coach-data` volume.
+
+Hero, board, and shown-villain cards can be typed or clicked from a 52-card
+picker next to each field (used cards are disabled); bet/raise amounts have
+1/3, 1/2, 3/4, pot, and all-in quick-size buttons that fill the total-target
+amount box, clamped to the legal range.  `GET /api/coach/opponents/{name}/hands`
+lists an opponent's logged hands newest-first for the history panel under
+their profile; clicking one reloads it read-only.  `DELETE
+/api/coach/hands/{id}` and `DELETE /api/coach/opponents/{name}` remove a hand
+or every hand for an opponent; the frontend confirms before either call.
