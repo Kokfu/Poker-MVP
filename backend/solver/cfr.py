@@ -203,10 +203,17 @@ class RangeSolver:
         for node in self.decisions:
             own = reach[node.index][node.player]
             if node.index in self.locks:
-                weight, groups = self.locks[node.index]
+                lock = self.locks[node.index]
+                weight, groups = lock[0], lock[1]
+                strength = lock[2] if len(lock) > 2 else 1.0
                 sigma = strategies[node.index]
                 target = group_target(sigma, own, groups)
-                strategies[node.index] = (1 - weight) * sigma + weight * fit_frequencies(sigma, own, target)
+                fitted = fit_frequencies(sigma, own, target)
+                if strength < 1.0:
+                    # Opponents whose actions do not follow hand strength take
+                    # the observed mix with every hand (flat), not just the best.
+                    fitted = strength * fitted + (1.0 - strength) * target[:, None]
+                strategies[node.index] = (1 - weight) * sigma + weight * fitted
             sigma = strategies[node.index]
             for action, child in enumerate(node.children):
                 pair = list(reach[node.index])
