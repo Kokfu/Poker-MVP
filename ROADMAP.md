@@ -257,3 +257,11 @@ Pre-registered fresh-holdout test (holdout seeds offset by 1,000,000, 16 session
 ### Known limitations
 
 Heads-up only; flop/turn solves value the end of the street by equity over remaining cards (no later-street betting); preflop charts value a seen flop by raw equity; solver decisions take about 1-3 s on a desktop CPU; the Coach is manual entry for study and review only.
+
+### 5I pooled opponent reads (merged)
+
+Diagnosis (development sessions, identical cards): against `aggressive` and `random`, `solver_adaptive` folded far more often than `equity` and bet reckless opponents off hands they would call with, because after 60 hands its postflop reads stood on only 3-11 opportunities per street (weight 0.3).  5I partially pools postflop reads across flop/turn/river: each street's rate is shrunk toward the all-streets rate (10 pseudo-observations) and weighted by the pooled evidence.
+
+Paired A/B on unused development seeds (8 sessions x 60 hands per opponent), change versus the previous `solver_adaptive` in bb/100 [95% CI]: aggressive +358 [-50, +783], random +26 [-159, +213], equity +114 [+21, +221], expert +143 [+60, +226], tight -29 [-66, +22].  Adopted as the `solver_adaptive` default.  A sample-size lock-weight variant gained more against aggressive but lost significantly against tight (-46 [-76, -14]) and was rejected (kept as an off-by-default option).
+
+**Pre-registered final test (fixed before running):** learning-session tournament of the seven existing bots plus `solver_adaptive` on unused holdout seeds (holdout set, seed offset 2,000,000; 16 sessions x 60 hands per pairing).  Phase 5 is COMPLETE if and only if `win_rate_gate(report, "solver_adaptive")` passes: every head-to-head interval above zero, pool score above the best other bot with the paired interval of the difference above zero, and zero illegal actions and deal mismatches.

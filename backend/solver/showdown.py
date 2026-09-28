@@ -54,6 +54,7 @@ def hand_percentile(cards, board) -> float:
 
 @dataclass
 class ShowdownModel:
+    prior_strength: float = PRIOR_STRENGTH
     percentiles: dict[str, list[float]] = field(default_factory=lambda: {"aggressive": [], "call": []})
     opportunities: dict[str, int] = field(default_factory=lambda: {"aggressive": 0, "call": 0, "decisions": 0})
     hands: int = 0
@@ -90,7 +91,7 @@ class ShowdownModel:
         observed = (float(np.mean(values)) - 0.5) / max(ordered_mean - 0.5, 0.05)
         observed = min(max(observed, 0.0), 1.0)
         n = len(values)
-        return (n * observed + PRIOR_STRENGTH * 1.0) / (n + PRIOR_STRENGTH)
+        return (n * observed + self.prior_strength * 1.0) / (n + self.prior_strength)
 
     def summary(self) -> dict:
         return {"showdowns_used": {g: len(v) for g, v in self.percentiles.items()},
