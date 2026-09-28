@@ -289,6 +289,15 @@ very low / low / medium / high confidence, so a thin or wrong read cannot be
 exploited without limit.  Preflop locks trigger a cached re-solve of the chart
 game.
 
+5H adds `solver/showdown.py`: after each completed hand, orchestrators call
+the opt-in `observe_completed_hand(history, seat)` hook (persistent matches,
+duplicate sessions, and Coach profile replays).  From cards legitimately
+revealed at showdown, `ShowdownModel` estimates how strongly the opponent's
+bets/raises and calls follow hand strength (1 = strength-ordered, 0 = random,
+shrunk toward 1 until enough showdowns).  Locks blend strength-ordered
+fitting with flat play in that proportion, so a maniac's aggression is read
+as random rather than strong.
+
 ### Evaluation (5A)
 
 `simulation/duplicate_evaluation.py` plays every seed twice with the bots in
