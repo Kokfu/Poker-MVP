@@ -269,3 +269,11 @@ Paired A/B on unused development seeds (8 sessions x 60 hands per opponent), cha
 **Result of the pre-registered 5I test** (`benchmark-results/phase-5/session-tournament-holdout3-5i.json`; 53,760 hands, 0 illegal actions, 0 fallbacks, 0 deal mismatches): gate **not passed**.  Pool: equity +400 [+330, +477], `solver_adaptive` +344 [+287, +398] (difference [-157, +36], inconclusive), range_expert +114.  `solver_adaptive` head-to-head: aggressive +1,167 [+919, +1,404], random +612 [+483, +740], equity +436 [+345, +520], tight +57 [+16, +105] — all above zero — but expert +49 [-28, +116], adaptive +54 [-17, +115], and range_expert +34 [-45, +108] are inconclusive.  On this seed set `equity` also scored unusually high against every opponent (e.g. +170 against expert versus about +100 on earlier holdout seeds), which illustrates the between-seed-set variance at 16 sessions per pairing.
 
 **Verdict remains PHASE 5 NOT COMPLETE.**  Across three holdout tests `solver_adaptive` has beaten `equity` head-to-head by +333 to +436 bb/100 and every other bot on point estimate, but has not yet shown a pool score above `equity` or consistently clear margins over the expert family.
+
+### Revised success criterion (decided 2026-09-29, before any new data)
+
+The project owner changed the Phase 5 goal *prospectively*: the pool-score criterion is dominated by how hard a bot exploits the two degenerate baselines (`aggressive`, `random`) and is dropped.  No earlier result is re-scored under the new rule.
+
+**Pre-registered final test (fixed before running):** `solver_adaptive` at commit `6ccd5c3` (no strategy changes) plays each of the seven existing bots (`random`, `tight`, `aggressive`, `equity`, `expert`, `adaptive`, `range_expert`) in duplicate learning sessions on unused holdout seeds: holdout set, seed offset 3,000,000, 48 sessions x 60 hands per opponent (5,760 hands per opponent), statistics seed 91,002, 2,000 bootstrap resamples.
+
+Phase 5 is **COMPLETE** if and only if, for every one of the seven opponents, the 95% duplicate-pair bootstrap interval of `solver_adaptive`'s bb/100 has a lower bound above zero, and the run has zero illegal actions and zero deal mismatches.  Otherwise it remains NOT COMPLETE and the failing opponents are reported.
