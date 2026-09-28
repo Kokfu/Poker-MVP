@@ -252,6 +252,8 @@ Smallest missing evidence: a pool-score win over `equity` and positive intervals
 
 Learns from showdown-revealed cards how strongly an opponent's bets and calls follow hand strength, so node locks treat maniacs' aggression as random rather than strength-ordered.  Development sessions on the same seeds: aggressive +744 (was +612), random +435 (+412), equity +439 (+515), expert +48 (+80) bb/100 — every difference inside noise.  Not merged because it is not shown to avoid losses against sensible opponents; next step is a larger paired evaluation on a fresh holdout range.
 
+Pre-registered fresh-holdout test (holdout seeds offset by 1,000,000, 16 sessions x 60 hands, 53,760 hands, 0 illegal actions/fallbacks/deal mismatches; `benchmark-results/phase-5/session-tournament-holdout2-5h.json`), rule: merge only if the full gate passes.  5H `solver_adaptive` beats **all seven** existing bots with intervals above zero — aggressive +843 [+713, +985], equity +409 [+289, +514], random +381 [+198, +561], expert +110 [+17, +206], adaptive +110 [+16, +205], range_expert +100 [+11, +191], tight +73 [+32, +119] — but its pool score (+289) still trails equity (+316; difference [-108, +51], inconclusive).  Gate not passed, so 5H stays unmerged pending a decision.
+
 ### Known limitations
 
 Heads-up only; flop/turn solves value the end of the street by equity over remaining cards (no later-street betting); preflop charts value a seen flop by raw equity; solver decisions take about 1-3 s on a desktop CPU; the Coach is manual entry for study and review only.
