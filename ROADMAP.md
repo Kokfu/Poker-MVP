@@ -209,3 +209,49 @@ Phase 4F extends the isolated fixed-flop research fixture with one real conditio
 Phase 4G adds a real conditional river chance node after completed non-all-in turn betting, bounded river betting, and five-public-card showdown to the same isolated research fixture. River candidates exclude the fixed flop, both private hands, and the selected turn; flop keys hide turn and river and turn keys hide river. The accepted external-sampling core remains the sole MCCFR implementation and records the public chance stage. Direct frozen-policy fixtures independently weight root/private, turn, river, and opponent-action probabilities. A representative-root tree measurement scales to the full bounded private-root count under a two-million-node guardrail. The smallest exact three-street control exhaustively validates tree/EV invariants but labels constrained BR enumeration intractable, so it makes no Phase 4G exploitability claim. This is not a full Hold'em solver, GTO strategy, production bot, API, frontend, or schema change.
 
 The reduced control delegates its read-only physical state to the same Phase 4G transitions, so its exhaustive diagnostics derive node, decision, turn/river chance, terminal, depth, action-branching, utility, card-removal, and chance-order evidence without a second poker implementation. The larger bounded game deterministically derives and caches its full reachable information-set universe (flop/turn/river) outside MCCFR, so reports distinguish visited from zero-visit sets and publish coverage by street. `scaling_4g.py` compares the accepted Phase 4F and Phase 4G adapters under a common one-logical-iteration/two-traversal convention; it is operational cost evidence only, never strategy-strength evidence.
+
+## Phase 5 — solver bot, opponent learning, and Coach
+
+Branch `phase-5`.  Implemented and tested:
+
+- **5A evaluation** — duplicate-deal and learning-session evaluation with disjoint development/holdout seed sets, a win-rate gate, and a Slumbot benchmark bridge.
+- **5B speed** — eval7 evaluator with Treys-identical ranks (verified on all 7,462 hand classes, 60,000 random hands, and duplicate-card probes); memoized Range Intelligence features.
+- **5C/5D `solver`** — offline 169-class preflop charts (15/30/60/100/200 bb, exploitability under 0.04 mbb/hand inside the chart model) and real-time discounted-CFR range solves of each postflop street; all bots exposed in the API and UI.
+- **5E `solver_adaptive`** — confidence-gated node locking from public `OpponentModel` reads.
+- **5F Coach** — manual-entry advice tab and API with local SQLite opponent profiles.
+
+### Evidence
+
+Baseline (development, independent duplicate hands, 84,000 hands): `equity` led the existing bots at +469 bb/100 pool.
+
+**Holdout acceptance** (`benchmark-results/phase-5/session-tournament-holdout.json`): 9 bots, 16 learning sessions of 60 hands per pairing, seats swapped on identical cards — 69,120 hands, 0 illegal actions, 0 fallbacks, 0 deal mismatches.
+
+| Pool rank | Bot | Pool bb/100 | 95% CI |
+|---|---|---|---|
+| 1 | equity | +299 | [+222, +372] |
+| 2 | solver_adaptive | +249 | [+197, +300] |
+| 3 | solver | +161 | [+112, +211] |
+| 4 | range_expert | +98 | [+49, +146] |
+| 5-7 | tight / adaptive / expert | +68 to +70 | |
+
+`solver_adaptive` head-to-head (bb/100, 95% CI): aggressive +843 [+695, +995], random +395 [+242, +560], equity +333 [+139, +499], expert +100 [+12, +181], adaptive +100 [+11, +180], solver +103 [+15, +189], range_expert +74 [-12, +164] (inconclusive), tight +43 [-5, +94] (inconclusive).
+
+`solver` head-to-head: beats random, aggressive, equity (+133 [+40, +222]), expert, adaptive, and range_expert with intervals above zero; tight +11 [-37, +60] is inconclusive.
+
+Slumbot (300 hands each, 200 bb): baseline-adjusted `solver` +131 bb/100 [-18, +321], `expert` -137 [-394, +80]; both inconclusive; 0 desyncs, all settlements verified.
+
+Regression: 770 backend tests pass, `pip check` clean, frontend production build passes, Docker Compose build/run verified (Coach and solver answer inside the container; Coach data persists in the `coach-data` volume).
+
+### Verdict
+
+**PHASE 5 NOT COMPLETE.**  The gate requires every head-to-head interval above zero *and* a pool score above the best other bot.  `solver_adaptive` beats every bot on point estimate and six of eight with intervals above zero, but its pool score (+249) trails `equity` (+299; difference interval [-148, +57], inconclusive), and the `tight` and `range_expert` intervals include zero.  `equity`'s pool lead comes from its larger margin against the two degenerate bots (`aggressive`, `random`).
+
+Smallest missing evidence: a pool-score win over `equity` and positive intervals against `tight` and `range_expert`, measured on fresh holdout seeds.
+
+### Experiment 5H (branch `experiment-5h-showdown-learning`, not merged)
+
+Learns from showdown-revealed cards how strongly an opponent's bets and calls follow hand strength, so node locks treat maniacs' aggression as random rather than strength-ordered.  Development sessions on the same seeds: aggressive +744 (was +612), random +435 (+412), equity +439 (+515), expert +48 (+80) bb/100 — every difference inside noise.  Not merged because it is not shown to avoid losses against sensible opponents; next step is a larger paired evaluation on a fresh holdout range.
+
+### Known limitations
+
+Heads-up only; flop/turn solves value the end of the street by equity over remaining cards (no later-street betting); preflop charts value a seen flop by raw equity; solver decisions take about 1-3 s on a desktop CPU; the Coach is manual entry for study and review only.
