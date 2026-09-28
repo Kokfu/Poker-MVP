@@ -179,13 +179,16 @@ def _hand_complete_payload(spot: Spot, payload: dict[str, Any]) -> dict[str, Any
     return {"status": "hand_complete", "summary": summary}
 
 
-def profile_for(store: HandStore, opponent: str):
+def profile_for(store: HandStore, opponent: str, observer=None):
+    """Rebuild the opponent model; ``observer`` (a bot) also sees each history."""
     model = OpponentModel(VILLAIN)
     for stored in store.hands(opponent):
         spot = spot_from_dict(stored)
         status, payload, _ = _replay(spot)
         if status == "hand_complete":
             model.update(payload["result"]["history"])
+            if observer is not None:
+                observer.observe_completed_hand(payload["result"]["history"], HERO)
     return model
 
 
@@ -193,10 +196,12 @@ def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store:
     from solver.bot import AdaptiveSolverBot, SolverBot
 
     profile_snapshot = None
+    advisor = AdaptiveSolverBot(seed=seed) if exploit and opponent else SolverBot(seed=seed)
     if opponent:
-        model = profile_for(store or HandStore(), opponent)
+        model = profile_for(store or HandStore(), opponent, advisor if advisor.exploit else None)
         profile_snapshot = model.snapshot() if model.hands_observed else None
-    advisor = (AdaptiveSolverBot if exploit and profile_snapshot is not None else SolverBot)(seed=seed)
+    if advisor.exploit and profile_snapshot is None:
+        advisor = SolverBot(seed=seed)
     status, payload, engine = _replay(spot, advisor, profile_snapshot)
     if status == "hand_complete":
         return _hand_complete_payload(spot, payload)

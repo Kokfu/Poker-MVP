@@ -43,6 +43,7 @@ from .cfr import RangeSolver
 from .combos import CLASS_COMBO_COUNT, COMBO_CLASS, COMBO_COUNT, COMBOS, HAND_CLASSES, card_mask, combo_index
 from .equity import equity_matrix, rank_vector
 from .exploit import locks_key, tree_locks
+from .showdown import ShowdownModel
 from .preflop import CHART_BB, PreflopCharts, load_charts, load_class_equity
 from .tree import POSTFLOP_MENU, SizeMenu, StreetState, StreetTree
 
@@ -220,6 +221,15 @@ class SolverBot(PokerBot):
         self.decision_count = self.fallback_count = self.solve_count = 0
         self.last_explanation: dict[str, Any] | None = None
         self.decision_trace: list[dict[str, Any]] = []
+        self.showdown_model = ShowdownModel()
+
+    def observe_completed_hand(self, history, seat: str) -> None:
+        """Post-hand public evidence (showdown reveals) for strength modelling."""
+        if self.exploit:
+            self.showdown_model.observe(history, "b" if seat == "a" else "a")
+
+    def _strength_correlation(self) -> dict[str, float]:
+        return {group: self.showdown_model.correlation(group) for group in ("aggressive", "call")}
 
     # ------------------------------------------------------------- interface
     def decide(self, observation) -> Action:
@@ -258,7 +268,7 @@ class SolverBot(PokerBot):
         # Preflop: walk the chart tree, updating ranges with the preflop policy
         # (the stored chart, or a re-solve against confident opponent reads).
         chart_tree = self.charts.trees[depth]
-        preflop_locks = tree_locks(chart_tree, opponent, "preflop", profile) if profile is not None else {}
+        preflop_locks = tree_locks(chart_tree, opponent, "preflop", profile, self._strength_correlation()) if profile is not None else {}
         policy = self._preflop_policy(depth, opponent, preflop_locks)
         node = chart_tree.root
         preflop_steps = [s for s in replay.steps if s.street == "preflop"]
@@ -344,7 +354,7 @@ class SolverBot(PokerBot):
         d = full_d[np.ix_(rows, cols)]
         compat = full_compat[np.ix_(rows, cols)]
         tree = StreetTree(root_state, self.postflop_menu)
-        locks = tree_locks(tree, 1 - hero, root_state.street, profile) if profile is not None else {}
+        locks = tree_locks(tree, 1 - hero, root_state.street, profile, self._strength_correlation()) if profile is not None else {}
         solver = RangeSolver(tree, (ranges[0][combos[0]], ranges[1][combos[1]]), d, compat, combo_ids=(combos[0], combos[1]), locks=locks)
         result = solver.solve(self.iterations[root_state.street])
         return StreetSolve(tree, (combos[0], combos[1]), result.average, None, time.perf_counter() - started, len(locks))
@@ -398,11 +408,11 @@ class SolverBot(PokerBot):
             report["villain_range_makeup"] = [{"type": label, "share": round(share, 4)} for label, share in sorted(makeup.items(), key=lambda item: -item[1])]
         return report
 
-    @staticmethod
-    def _profile_summary(profile) -> dict[str, Any]:
+    def _profile_summary(self, profile) -> dict[str, Any]:
         if profile is None:
             return {"active": False}
-        return {"active": True, "hands_observed": getattr(profile, "hands_observed", 0), "classification": getattr(profile, "classification", "unknown")}
+        return {"active": True, "hands_observed": getattr(profile, "hands_observed", 0), "classification": getattr(profile, "classification", "unknown"),
+                **self.showdown_model.summary()}
 
     @staticmethod
     def _apply_strategy(weights: np.ndarray, solve: StreetSolve, node: int, choice: int) -> np.ndarray:

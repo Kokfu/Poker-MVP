@@ -121,6 +121,17 @@ def _play_hand(config: DuplicateConfig, strategy: str, opponent: str, seed: int,
     return net, holes, tuple(result["state"].community_cards), result["illegal_actions"], len(result["illegal_diagnostics"])
 
 
+def notify_completed_hand(seats, history) -> None:
+    """Give bots that opt in the finished, validated public history.
+
+    Only bots defining ``observe_completed_hand`` are called; the history
+    contains hole cards solely when both were revealed at showdown."""
+    for seat, bot in zip(("a", "b"), seats):
+        hook = getattr(bot, "observe_completed_hand", None)
+        if hook is not None:
+            hook(history, seat)
+
+
 def _same_deal(first, second) -> bool:
     (holes_a, board_a), (holes_b, board_b) = first, second
     shared = min(len(board_a), len(board_b))
@@ -160,6 +171,7 @@ def _play_sessions(config: DuplicateConfig, strategy: str, opponent: str, start:
             _validate_history_and_conservation(result["history"], net_a, net_b)
             models["a"].update(result["history"])
             models["b"].update(result["history"])
+            notify_completed_hand(side["seats"], result["history"])
             side["net"] += net_a if strategy_seat == "a" else net_b
             side["illegal"] += result["illegal_actions"]
             side["fallback"] += len(result["illegal_diagnostics"])

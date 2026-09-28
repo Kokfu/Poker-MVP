@@ -171,6 +171,11 @@ class PersistentMatchRunner:
             # A completed hand becomes visible only after its last decision.
             self.model_of_a.update(result["history"])
             self.model_of_b.update(result["history"])
+            # Opt-in post-hand hook (Phase 5H); bots without it are unaffected.
+            for seat, bot in (("a", self.bot_a), ("b", self.bot_b)):
+                hook = getattr(bot, "observe_completed_hand", None)
+                if hook is not None:
+                    hook(result["history"], seat)
             hand_end = dict(result["stacks"])
             settlement_complete = (
                 engine.settlement_count == 1
