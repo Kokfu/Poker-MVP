@@ -277,3 +277,23 @@ The project owner changed the Phase 5 goal *prospectively*: the pool-score crite
 **Pre-registered final test (fixed before running):** `solver_adaptive` at commit `6ccd5c3` (no strategy changes) plays each of the seven existing bots (`random`, `tight`, `aggressive`, `equity`, `expert`, `adaptive`, `range_expert`) in duplicate learning sessions on unused holdout seeds: holdout set, seed offset 3,000,000, 48 sessions x 60 hands per opponent (5,760 hands per opponent), statistics seed 91,002, 2,000 bootstrap resamples.
 
 Phase 5 is **COMPLETE** if and only if, for every one of the seven opponents, the 95% duplicate-pair bootstrap interval of `solver_adaptive`'s bb/100 has a lower bound above zero, and the run has zero illegal actions and zero deal mismatches.  Otherwise it remains NOT COMPLETE and the failing opponents are reported.
+
+**Result of the pre-registered final test** (`benchmark-results/phase-5/final-h2h-<opponent>.json`; commit `b3be891`, identical strategy code to `6ccd5c3`; holdout set, seed offset 3,000,000, 48 sessions x 60 hands per opponent):
+
+| Opponent | bb/100 | 95% CI | Hands | Illegal actions | Deal mismatches |
+|---|---|---|---|---|---|
+| random | +539.6 | [+433.7, +645.7] | 5,760 | 0 | 0 |
+| tight | +81.7 | [+46.2, +113.5] | 5,760 | 0 | 0 |
+| aggressive | +1,124.7 | [+1,039.1, +1,213.4] | 5,760 | 0 | 0 |
+| equity | +438.8 | [+350.8, +525.1] | 5,760 | 0 | 0 |
+| expert | +110.1 | [+54.6, +166.1] | 5,760 | 0 | 0 |
+| adaptive | +110.1 | [+54.6, +166.1] | 5,760 | 0 | 0 |
+| range_expert | +117.1 | [+60.3, +171.5] | 5,760 | 0 | 0 |
+
+Total: 40,320 hands, 0 illegal actions, 0 deal mismatches across all seven runs.
+
+The `adaptive` result is numerically identical to `expert` (verified byte-for-byte, differing only in the `opponent` field): a diagnostic replay of one session confirmed `ExpertAdaptiveBot`'s exploit-adjustment engine had zero activations against `solver_adaptive` in either seat orientation, so it deterministically fell back to its `ExpertRuleBot` baseline for every decision, producing identical play with the same derived seed. Not a test artifact.
+
+Every one of the seven 95% bootstrap intervals has a lower bound above zero, and the run is clean (0 illegal actions, 0 deal mismatches).
+
+**PHASE 5 COMPLETE**
