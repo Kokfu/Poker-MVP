@@ -20,15 +20,22 @@ _EVAL_CARDS = [eval7.Card(card) for card in CARDS]
 
 def rank_vector(board: list[str], combos: np.ndarray) -> np.ndarray:
     """eval7 strength (higher is better) for ``combos``; -1 where a combo hits the board."""
-    board_cards = [_EVAL_CARDS[CARD_INDEX[card]] for card in board]
-    board_set = {CARD_INDEX[card] for card in board}
+    board_indices = [CARD_INDEX[card] for card in board]
+    board_cards = [_EVAL_CARDS[i] for i in board_indices]
     evaluate = eval7.evaluate
     ranks = np.full(len(combos), -1, dtype=np.int64)
-    for position, combo in enumerate(combos):
-        first, second = COMBO_CARDS[combo]
-        if first in board_set or second in board_set:
-            continue
-        ranks[position] = evaluate(board_cards + [_EVAL_CARDS[first], _EVAL_CARDS[second]])
+    pairs = COMBO_CARDS[combos]
+    # eval7 has no batch entry point, so the call itself stays a Python loop;
+    # this only removes the per-combo list-concat and fancy-index overhead
+    # around it (a fixed two-slot tail reused every call, and one vectorized
+    # gather of every combo's card pair up front instead of one per combo).
+    live = np.flatnonzero(~np.isin(pairs, board_indices).any(axis=1)) if board_indices else np.arange(len(combos))
+    hand = board_cards + [None, None]
+    for position in live:
+        first, second = pairs[position]
+        hand[-2] = _EVAL_CARDS[first]
+        hand[-1] = _EVAL_CARDS[second]
+        ranks[position] = evaluate(hand)
     return ranks
 
 
@@ -68,11 +75,19 @@ def equity_matrix(board: list[str], rows: np.ndarray, cols: np.ndarray, samples:
     boards = runout_boards(board, samples)
     total = np.zeros(shape, dtype=np.int16 if len(boards) < 30_000 else np.int32)
     valid = np.zeros((len(boards), len(union)), dtype=np.float32)
+    # Scratch buffers reused every board instead of the four temporaries
+    # (two gathers, a broadcast subtract, a sign) the naive expression below
+    # would allocate on each of possibly thousands of iterations.
+    row_buf, col_buf, diff = np.empty(len(rows), dtype=np.int16), np.empty(len(cols), dtype=np.int16), np.empty(shape, dtype=np.int16)
     for index, full_board in enumerate(boards):
         ordinal = _ordinal_ranks(full_board, union)
         valid[index] = ordinal > 0
         # Blocked combos rank lowest here; their pairs are corrected below.
-        total += np.sign(ordinal[row_pos][:, None] - ordinal[col_pos][None, :])
+        np.take(ordinal, row_pos, out=row_buf)
+        np.take(ordinal, col_pos, out=col_buf)
+        np.subtract(row_buf[:, None], col_buf[None, :], out=diff)
+        np.sign(diff, out=diff)
+        total += diff
     row_valid, col_valid = valid[:, row_pos], valid[:, col_pos]
     row_blocked, col_blocked = 1.0 - row_valid, 1.0 - col_valid
     # Remove (valid row vs blocked col: +1) and (blocked row vs valid col: -1).

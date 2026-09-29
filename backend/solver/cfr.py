@@ -105,61 +105,74 @@ class RangeSolver:
         self.regret = {n.index: np.zeros((len(n.actions), self.sizes[n.player])) for n in self.decisions}
         self.strategy_sum = {n.index: np.zeros((len(n.actions), self.sizes[n.player])) for n in self.decisions}
         self.iterations = 0
+        # Precomputed once per tree so the hot loop below never rebuilds a
+        # Python list or calls np.stack per node per iteration: children are
+        # gathered with one fancy-index instead, and the "no regret yet"
+        # uniform strategy is a cached array instead of a fresh np.full_like.
+        self._num_nodes = len(tree.nodes)
+        self._children = {n.index: np.array(n.children, dtype=np.intp) for n in self.decisions}
+        self._uniform = {n.index: np.full((len(n.actions), self.sizes[n.player]), 1.0 / len(n.actions)) for n in self.decisions}
+        self._leaf_index = np.array([n.index for n in self.leaves], dtype=np.intp)
+        self._fold_index = np.array([n.index for n in self.folds], dtype=np.intp)
 
     # ------------------------------------------------------------------ core
     def current(self, node: Node) -> np.ndarray:
         positive = np.maximum(self.regret[node.index], 0.0)
         total = positive.sum(axis=0)
-        uniform = np.full_like(positive, 1.0 / len(node.actions))
-        return np.where(total > 0, positive / np.where(total > 0, total, 1.0), uniform)
+        has_total = total > 0
+        return np.where(has_total, positive / np.where(has_total, total, 1.0), self._uniform[node.index])
 
     def average(self, node: Node) -> np.ndarray:
-        total = self.strategy_sum[node.index].sum(axis=0)
-        uniform = np.full_like(self.strategy_sum[node.index], 1.0 / len(node.actions))
-        return np.where(total > 0, self.strategy_sum[node.index] / np.where(total > 0, total, 1.0), uniform)
+        strategy_sum = self.strategy_sum[node.index]
+        total = strategy_sum.sum(axis=0)
+        has_total = total > 0
+        return np.where(has_total, strategy_sum / np.where(has_total, total, 1.0), self._uniform[node.index])
 
-    def _reaches(self, traverser: int, policy) -> tuple[dict[int, np.ndarray], dict[int, np.ndarray]]:
+    def _reaches(self, traverser: int, policy) -> tuple[np.ndarray, np.ndarray]:
+        """Reach probabilities for every node, as one array per player (row =
+        node index) instead of a dict, so terminal reaches can be gathered
+        below with a single fancy-index instead of a per-node Python loop."""
         opponent = 1 - traverser
-        own = {self.tree.root: self.ranges[traverser].copy()}
-        opp = {self.tree.root: self.ranges[opponent].copy()}
+        own = np.zeros((self._num_nodes, self.sizes[traverser]))
+        opp = np.zeros((self._num_nodes, self.sizes[opponent]))
+        own[self.tree.root] = self.ranges[traverser]
+        opp[self.tree.root] = self.ranges[opponent]
         for node in self.tree.nodes:  # parents precede children
             if node.kind != "decision":
                 continue
             sigma = policy(node)
+            own_row, opp_row = own[node.index], opp[node.index]
             for action, child in enumerate(node.children):
                 if node.player == traverser:
-                    own[child] = own[node.index] * sigma[action]
-                    opp[child] = opp[node.index]
+                    own[child] = own_row * sigma[action]
+                    opp[child] = opp_row
                 else:
-                    own[child] = own[node.index]
-                    opp[child] = opp[node.index] * sigma[action]
+                    own[child] = own_row
+                    opp[child] = opp_row * sigma[action]
         return own, opp
 
-    def _terminal_values(self, traverser: int, opp: dict[int, np.ndarray]) -> dict[int, np.ndarray]:
-        values: dict[int, np.ndarray] = {}
-        if self.leaves:
-            reach = np.stack([opp[n.index] for n in self.leaves], axis=1).astype(np.float32)
+    def _terminal_values(self, traverser: int, opp: np.ndarray) -> np.ndarray:
+        values = np.zeros((self._num_nodes, self.sizes[traverser]))
+        if len(self._leaf_index):
+            reach = opp[self._leaf_index].T.astype(np.float32)
             product = (self.win[traverser] @ reach) * self.leaf_scale
-            for column, node in enumerate(self.leaves):
-                values[node.index] = product[:, column]
-        if self.folds and self.blockers is not None:
-            reach = np.stack([opp[n.index] for n in self.folds], axis=1)
+            values[self._leaf_index] = product.T
+        if len(self._fold_index) and self.blockers is not None:
+            reach = opp[self._fold_index].T
             card_reach, cards, position, same = self.blockers[traverser]
             by_card = card_reach @ reach  # (52, folds)
             compatible_reach = reach.sum(axis=0) - by_card[cards[:, 0]] - by_card[cards[:, 1]] + reach[position] * same[:, None]
             product = compatible_reach * self.fold_scale[traverser]
-            for column, node in enumerate(self.folds):
-                values[node.index] = product[:, column]
-        elif self.folds:
-            reach = np.stack([opp[n.index] for n in self.folds], axis=1).astype(np.float32)
+            values[self._fold_index] = product.T
+        elif len(self._fold_index):
+            reach = opp[self._fold_index].T.astype(np.float32)
             product = (self.compat[traverser] @ reach) * self.fold_scale[traverser]
-            for column, node in enumerate(self.folds):
-                values[node.index] = product[:, column]
+            values[self._fold_index] = product.T
         return values
 
-    def _backward(self, traverser: int, values: dict[int, np.ndarray], policy, best_response: bool = False):
+    def _backward(self, traverser: int, values: np.ndarray, policy, best_response: bool = False) -> np.ndarray:
         for node in reversed(self.decisions):
-            children = np.stack([values[c] for c in node.children])
+            children = values[self._children[node.index]]
             if node.player == traverser:
                 if best_response:
                     values[node.index] = children.max(axis=0)
@@ -181,7 +194,7 @@ class RangeSolver:
             own, opp = self._reaches(traverser, lambda node: strategies[node.index])
             values = self._terminal_values(traverser, opp)
             for node in reversed(self.decisions):
-                children = np.stack([values[c] for c in node.children])
+                children = values[self._children[node.index]]
                 if node.player != traverser:
                     values[node.index] = children.sum(axis=0)
                     continue

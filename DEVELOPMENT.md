@@ -308,3 +308,98 @@ $env:API_PROXY = "http://127.0.0.1:8000"; npm.cmd run dev
 Open `http://127.0.0.1:5173` and choose **Coach**.  Logged hands go to
 `backend/data/coach.sqlite` (override with `COACH_DB_PATH`); Docker Compose
 stores them in the `coach-data` volume.
+
+### Solver performance
+
+`solver/benchmark.py` is a reproducible, fixed-seed benchmark: ~30 solver
+decision spots (every street, both a cached street solve and a re-solve
+forced by an off-tree opponent size, with and without a confident opponent
+profile) plus 200 full fixed-seed hands of `solver` vs `equity`.  It records
+each spot's exact sampled strategy vector and every hand's chosen actions.
+
+```powershell
+.\.venv\Scripts\python.exe -m solver.benchmark --save solver/data/benchmark_baseline.json
+.\.venv\Scripts\python.exe -m solver.benchmark --compare solver/data/benchmark_baseline.json
+```
+
+`test_solver_benchmark.py` runs a small fixed-size configuration against
+`solver/data/benchmark_baseline_fast.json` as a fast regression guard; it is
+not itself the equivalence evidence for a performance change (that needs the
+full 30-spot/200-hand run compared against a baseline recorded before the
+change).
+
+A perf-solver pass (branch `perf-solver`, based on `b3be891`) profiled
+`SolverBot`/`AdaptiveSolverBot` with `cProfile` and found the cost concentrated
+in three places, in order: `cfr.py`'s per-node Python loop rebuilding a
+`np.stack` from a list comprehension once per decision node per iteration
+(about 55% of profiled time across `_terminal_values`/`iterate`), eval7 calls
+and array construction in `equity.py`'s `rank_vector`/`equity_matrix`, and
+`current()`/`average()` reallocating a fresh uniform-strategy array with
+`np.full_like` on every call (tens of thousands of calls per hand).
+
+Changes, in the profiled order:
+
+- `cfr.py`: `_reaches`/`_terminal_values`/`iterate` now store reach
+  probabilities and backward-induction values as one `(nodes, combos)` array
+  per player instead of a `dict[int, ndarray]`, and gather a node's children
+  with a single fancy-index (`values[self._children[node.index]]`) instead of
+  `np.stack([values[c] for c in node.children])`.  `current()`/`average()`
+  reuse a per-node uniform-strategy array computed once in `__init__` instead
+  of calling `np.full_like` every call.  No iteration count, discounting
+  parameter, or lock/exploit logic changed.
+- `equity.py`: `rank_vector` gathers every combo's card pair once
+  (vectorized) instead of fancy-indexing per combo, reuses one two-slot list
+  for the eval7 call instead of concatenating a new list per combo, and skips
+  blocked combos via a precomputed index instead of a per-combo membership
+  check; eval7 has no batch entry point, so the evaluate() call itself is
+  still one Python call per live combo.  `equity_matrix`'s per-board loop
+  reuses three scratch buffers instead of allocating four temporaries
+  (two gathers, a subtract, a sign) on every board.
+- `bot.py`: `_EQUITY_CACHE` (memoized per-board equity matrices, shared for
+  the life of the process) grew from 6 to 12 entries so a session touching
+  many distinct boards recomputes fewer of them; worst case is roughly
+  6&nbsp;MB/entry, so 12 entries stays under 75&nbsp;MB.
+
+**Measured speedup.**  A `cProfile` run of 6 full hands (`solver` vs
+`equity`, unaffected by the machine's other concurrent load because it counts
+CPU time inside each function rather than wall clock) went from 18.38 s to
+12.47 s, about **1.47x**.  `_terminal_values` dropped from 7.41 s to 4.63 s
+tottime and no longer shows any `np.stack` calls; `equity_matrix` dropped
+from 2.89 s to 1.70 s; `rank_vector` from 1.37 s to 0.86 s.  Wall-clock
+benchmark runs were recorded while another long-running benchmark shared the
+same machine (up to a dozen-plus competing processes), so their absolute
+numbers are noisy and are not used as the primary evidence; the cProfile
+figures above, measuring CPU time actually spent inside the code, are.  This
+falls short of the 3-5x target; the remaining cost is real compute (BLAS
+matmuls in `_terminal_values`, and eval7's per-combo Python call in
+`rank_vector`, which has no batch API) rather than avoidable Python/numpy
+overhead.  A JIT-compiled hand evaluator (`numba`, discussed with the user)
+could remove the eval7 call overhead but was not attempted in this pass: it
+would require an independently-verified hand-ranking implementation, which is
+a larger, separately-scoped piece of work.
+
+**Equivalence.**  All 30 spots' chosen actions and all 200 fixed hands'
+action sequences were compared against a baseline recorded at `b3be891`
+before any change.  28/30 spots and 197/200 hands matched exactly (mixed
+strategies within 1e-5).  Two spots and three hands differed.  Investigation
+(isolating `_reaches`, `_terminal_values`, and the backward-induction gather
+against the original dict/`np.stack` implementation on identical real
+tree/range/equity inputs) found `cfr.py`'s core functions individually
+reproduce the original to within 1e-13-1e-16 &mdash; floating-point noise from
+computing the same sums via `fancy-index` gathers instead of
+`np.stack`-from-a-list, not a logic difference.  In one case that noise
+landed on a regret value sitting almost exactly at zero for one combo at a
+deeply nested decision node; DCFR's regret matching is a hard threshold
+(`positive = max(regret, 0)`), so the two implementations picked the opposite
+pure action for that one combo, and the discounted-regret iteration then
+compounded that single flip over the remaining iterations.  This is the
+"float tie at a sampling threshold" scenario documented as a possible outcome
+of this kind of change: it is an inherent property of restructuring array
+construction in an iterative regret-matching algorithm, not a defect, and is
+not fixable without giving up the array-gather rewrite (the largest single
+win).  The user reviewed this evidence and chose to accept it; the benchmark
+baseline was then re-recorded from the optimized code, so it is now the
+regression reference going forward.
+
+No new dependency was added.  `pip check` passes, and the full backend suite
+(776 tests before this branch, 778 with the two new tests above) passes.

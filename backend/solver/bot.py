@@ -49,7 +49,12 @@ from .tree import POSTFLOP_MENU, SizeMenu, StreetState, StreetTree
 
 STREETS = ("preflop", "flop", "turn", "river")
 _EQUITY_CACHE: OrderedDict[tuple, tuple[np.ndarray, np.ndarray, np.ndarray]] = OrderedDict()
-_EQUITY_CACHE_SIZE = 6
+# Session play touches many distinct boards; 6 entries thrashed within a few
+# hands and forced a full equity_matrix recompute on every new board even
+# when the same board recurs later in the same session. Worst case (a
+# river/turn board with no combos pruned) is ~6MB/entry (float32 d + bool
+# compat at up to ~1,081 live combos), so 12 entries stays well under 75MB.
+_EQUITY_CACHE_SIZE = 12
 _PREFLOP_CACHE: OrderedDict[tuple, dict[int, np.ndarray]] = OrderedDict()
 _PREFLOP_CACHE_SIZE = 128
 PREFLOP_LOCKED_ITERATIONS = 250
