@@ -317,6 +317,10 @@ lists an opponent's logged hands newest-first for the history panel under
 their profile; clicking one reloads it read-only.  `DELETE
 /api/coach/hands/{id}` and `DELETE /api/coach/opponents/{name}` remove a hand
 or every hand for an opponent; the frontend confirms before either call.
+**New hand** clears the cards and board, alternates your seat between button
+and big blind, and keeps blinds, stacks, and opponent; a finished hand can be
+logged once.  Quick sizes use the acting player's own stack, so they are also
+correct for villain actions when stacks differ.
 
 ### Solver performance
 

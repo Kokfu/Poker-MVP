@@ -90,10 +90,11 @@ function describeAction(step: SpotAction): string {
   return `${who}: ${ACTION_TEXT[step.action]}${step.amount ? ` ${step.amount}` : ""}`;
 }
 
-function quickSizes(state: SpotState): { label: string; amount: number }[] {
-  const { pot, to_call, minimum_target, maximum_target, hero_stack } = state;
+function quickSizes(state: SpotState, actor: Actor): { label: string; amount: number }[] {
+  const { pot, to_call, minimum_target, maximum_target } = state;
+  const actorStack = actor === "hero" ? state.hero_stack : state.villain_stack;
   const floor = minimum_target ?? 0;
-  const currentHighestBet = maximum_target - hero_stack + to_call;
+  const currentHighestBet = maximum_target - actorStack + to_call;
   const clamp = (raw: number) => Math.min(maximum_target, Math.max(floor, Math.round(raw)));
   const fractions: [string, number][] = [["1/3 pot", 1 / 3], ["1/2 pot", 0.5], ["3/4 pot", 0.75], ["Pot", 1]];
   const sized = fractions.map(([label, fraction]) => ({
@@ -159,7 +160,9 @@ function CardField({ label, cards, onChange, max, usedCards, placeholder, autoFo
 }
 
 export default function Coach() {
-  const [heroCards, setHeroCards] = useState<string[]>(["As", "Kd"]);
+  const [heroCards, setHeroCards] = useState<string[]>([]);
+  const [handNumber, setHandNumber] = useState(0);
+  const [logged, setLogged] = useState(false);
   const [position, setPosition] = useState<"button" | "big_blind">("button");
   const [blinds, setBlinds] = useState({ small: "50", big: "100" });
   const [stacks, setStacks] = useState({ hero: "10000", villain: "10000" });
@@ -241,7 +244,7 @@ export default function Coach() {
   }
 
   function beginHand() {
-    setError(""); setBoardDraft([]); setVillainCards([]); setReviewMode(false);
+    setError(""); setBoardDraft([]); setVillainCards([]); setReviewMode(false); setLogged(false);
     loadProfile(opponent); loadHistory(opponent);
     evaluate([], []);
   }
@@ -253,8 +256,10 @@ export default function Coach() {
   }
 
   function newHand() {
-    if (heroCards.length !== 2) { setError("Pick or type exactly two hero cards."); return; }
-    beginHand();
+    setHeroCards([]); setBoard([]); setBoardDraft([]); setVillainCards([]); setActions([]);
+    setResult(undefined); setReviewMode(false); setLogged(false); setError(""); setNotice(""); setAmount("");
+    setPosition((current) => (current === "button" ? "big_blind" : "button"));
+    setHandNumber((current) => current + 1);
   }
 
   function act(actor: Actor, action: ActionKind) {
@@ -290,6 +295,7 @@ export default function Coach() {
       });
       const body = await response.json();
       if (!response.ok) throw new Error(typeof body.detail === "string" ? body.detail : body.detail?.[0]?.msg || "Could not log the hand");
+      setLogged(true);
       setProfile(body.opponent_profile); setNotice(`Logged. ${opponent.trim()} now has ${body.opponent_profile.hands_observed} hands on record.`);
       loadOpponents(); loadHistory(opponent);
     } catch (requestError) {
@@ -315,7 +321,7 @@ export default function Coach() {
       setStacks({ hero: String(record.spot.hero_stack), villain: String(record.spot.villain_stack) });
       setBlinds({ small: String(record.spot.small_blind), big: String(record.spot.big_blind) });
       setPosition(record.spot.hero_position);
-      setResult(body); setReviewMode(true); setError(""); setNotice("");
+      setResult(body); setReviewMode(true); setLogged(false); setError(""); setNotice("");
     } catch (requestError) {
       setHistoryError(requestError instanceof Error ? requestError.message : "Could not load this hand");
     } finally {
@@ -379,7 +385,7 @@ export default function Coach() {
               <small>{state.minimum_target} – {state.maximum_target}</small>
             </label>
             <div className="coach-quick-sizes" role="group" aria-label="Quick bet sizes">
-              {quickSizes(state).map((size) => (
+              {quickSizes(state, actor).map((size) => (
                 <button key={size.label} type="button" className="chip" disabled={loading} onClick={() => setAmount(String(size.amount))}>
                   {size.label}
                 </button>
@@ -405,7 +411,7 @@ export default function Coach() {
       <form onSubmit={start}>
         <div className="form-grid">
           <div className="span-2">
-            <CardField label="Your cards" cards={heroCards} onChange={setHeroCards} max={2} usedCards={usedForHero} placeholder="As Kd" />
+            <CardField key={handNumber} label="Your cards" cards={heroCards} onChange={setHeroCards} max={2} usedCards={usedForHero} placeholder="As Kd" autoFocus={handNumber > 0} />
           </div>
           <label>Your position<select value={position} onChange={(e) => setPosition(e.target.value as "button" | "big_blind")}><option value="button">Button (small blind)</option><option value="big_blind">Big blind</option></select></label>
           <label>Small blind<input inputMode="numeric" value={blinds.small} onChange={(e) => setBlinds({ ...blinds, small: e.target.value })} /></label>
@@ -498,7 +504,7 @@ export default function Coach() {
                     {result.summary.showdown && (
                       <CardField label="Villain's shown cards (optional)" cards={villainCards} onChange={setVillainCards} max={2} usedCards={usedForVillain} placeholder="Qh Qd" />
                     )}
-                    <button type="button" className="analyze" onClick={logHand} disabled={loading || !opponent.trim()}>{opponent.trim() ? `Log hand vs ${opponent.trim()}` : "Enter an opponent name to log"}</button>
+                    <button type="button" className="analyze" onClick={logHand} disabled={loading || logged || !opponent.trim()}>{logged ? "Hand logged" : opponent.trim() ? `Log hand vs ${opponent.trim()}` : "Enter an opponent name to log"}</button>
                   </>
                 )}
               </div>
@@ -541,8 +547,11 @@ export default function Coach() {
                       <li key={record.id}>
                         <button type="button" className="coach-history-entry" onClick={() => viewHand(record)} disabled={loading}>
                           <span className="coach-history-meta">
-                            <span>{record.spot.hero_cards.join(" ")}</span>
-                            <small>{new Date(record.created_at).toLocaleString()}</small>
+                            <span>{record.spot.hero_cards.join(" ")}{record.spot.board.length > 0 && ` · ${record.spot.board.join(" ")}`}</span>
+                            <small>
+                              {record.spot.actions.length > 0 && `${describeAction(record.spot.actions[record.spot.actions.length - 1])} · `}
+                              {new Date(record.created_at).toLocaleString()}
+                            </small>
                           </span>
                         </button>
                         <button type="button" className="secondary danger" onClick={() => deleteHand(record.id)} disabled={deletingId === record.id}>
