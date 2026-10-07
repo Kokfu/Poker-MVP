@@ -90,11 +90,20 @@ function describeAction(step: SpotAction): string {
   return `${who}: ${ACTION_TEXT[step.action]}${step.amount ? ` ${step.amount}` : ""}`;
 }
 
+function effectiveMaximum(state: SpotState, actor: Actor): number {
+  const actorStack = actor === "hero" ? state.hero_stack : state.villain_stack;
+  const opponentStack = actor === "hero" ? state.villain_stack : state.hero_stack;
+  const actorPosted = state.maximum_target - actorStack;
+  const opponentCap = actorPosted + state.to_call + opponentStack;
+  return Math.max(state.minimum_target ?? 0, Math.min(state.maximum_target, opponentCap));
+}
+
 function quickSizes(state: SpotState, actor: Actor): { label: string; amount: number }[] {
-  const { pot, to_call, minimum_target, maximum_target } = state;
+  const { pot, to_call, minimum_target } = state;
+  const maximum_target = effectiveMaximum(state, actor);
   const actorStack = actor === "hero" ? state.hero_stack : state.villain_stack;
   const floor = minimum_target ?? 0;
-  const currentHighestBet = maximum_target - actorStack + to_call;
+  const currentHighestBet = state.maximum_target - actorStack + to_call;
   const clamp = (raw: number) => Math.min(maximum_target, Math.max(floor, Math.round(raw)));
   const fractions: [string, number][] = [["1/3 pot", 1 / 3], ["1/2 pot", 0.5], ["3/4 pot", 0.75], ["Pot", 1]];
   const sized = fractions.map(([label, fraction]) => ({
@@ -382,7 +391,7 @@ export default function Coach() {
           <>
             <label className="coach-amount">Total this street
               <input inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} />
-              <small>{state.minimum_target} – {state.maximum_target}</small>
+              <small>{state.minimum_target} – {effectiveMaximum(state, actor)}</small>
             </label>
             <div className="coach-quick-sizes" role="group" aria-label="Quick bet sizes">
               {quickSizes(state, actor).map((size) => (
