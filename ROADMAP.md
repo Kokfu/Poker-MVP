@@ -297,3 +297,5 @@ The `adaptive` result is numerically identical to `expert` (verified byte-for-by
 Every one of the seven 95% bootstrap intervals has a lower bound above zero, and the run is clean (0 illegal actions, 0 deal mismatches).
 
 **PHASE 5 COMPLETE**
+
+**Scope of the verdict.**  The final test above ran on the solver code at `b3be891`, before the `perf-solver` speed-up (array-based CFR, leaner equity loop, about 1.47x) was merged.  That change reproduces the old results to floating-point noise but is not bit-identical: 3 of 200 fixed benchmark hands and 2 of 30 spots chose a different action after a regret value sitting almost exactly at zero landed on the other side of the matching threshold (see DEVELOPMENT.md, "Solver performance").  The COMPLETE verdict is therefore evidence for the `b3be891` solver; it has not been re-measured on the merged faster code.
