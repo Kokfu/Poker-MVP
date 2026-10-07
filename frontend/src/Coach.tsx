@@ -64,6 +64,7 @@ const STAT_TEXT: Record<string, string> = {
   fold_to_bet: "Folds to a bet", call_vs_bet: "Calls a bet", raise_vs_bet: "Raises a bet",
 };
 
+const POSTFLOP_STREETS = ["flop", "turn", "river"] as const;
 const RANKS = ["A", "K", "Q", "J", "T", "9", "8", "7", "6", "5", "4", "3", "2"];
 const SUITS = ["s", "h", "d", "c"] as const;
 const SUIT_SYMBOL: Record<string, string> = { s: "♠", h: "♥", d: "♦", c: "♣" };
@@ -533,12 +534,14 @@ export default function Coach() {
               <>
                 <p><strong>{profile.classification.replace(/_/g, " ")}</strong> · {profile.hands_observed} hands</p>
                 <ul>
-                  {Object.entries(profile.preflop).map(([name, read]) => (
-                    <li key={name}><span>{STAT_TEXT[name] ?? name}</span><b>{Math.round(read.frequency * 100)}%</b><small>{read.confidence.replace("_", " ")}</small></li>
+                  {Object.entries(profile.preflop).filter(([, read]) => read.opportunities > 0).map(([name, read]) => (
+                    <li key={name}><span>{STAT_TEXT[name] ?? name}</span><b>{Math.round(read.frequency * 100)}%</b><small>{read.confidence.replace("_", " ")} ({read.opportunities})</small></li>
                   ))}
-                  {Object.entries(profile.postflop.flop ?? {}).map(([name, read]) => (
-                    <li key={name}><span>Flop: {STAT_TEXT[name] ?? name}</span><b>{Math.round(read.frequency * 100)}%</b><small>{read.confidence.replace("_", " ")}</small></li>
-                  ))}
+                  {POSTFLOP_STREETS.flatMap((street) => Object.entries(profile.postflop[street] ?? {})
+                    .filter(([, read]) => read.opportunities > 0)
+                    .map(([name, read]) => (
+                      <li key={`${street}-${name}`}><span>{street[0].toUpperCase() + street.slice(1)}: {STAT_TEXT[name] ?? name}</span><b>{Math.round(read.frequency * 100)}%</b><small>{read.confidence.replace("_", " ")} ({read.opportunities})</small></li>
+                    )))}
                 </ul>
                 <p className="muted">Reads need roughly 20+ opportunities before they carry weight.</p>
               </>

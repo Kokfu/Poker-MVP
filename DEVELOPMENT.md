@@ -321,7 +321,9 @@ or every hand for an opponent; the frontend confirms before either call.
 and big blind, and keeps blinds, stacks, and opponent; a finished hand can be
 logged once.  Quick sizes use the acting player's own stack, so they are also
 correct for villain actions when stacks differ, and the amount range and
-all-in size are capped at the effective stack (the shorter of the two).
+all-in size are capped at the effective stack (the shorter of the two).  The
+opponent profile lists flop, turn, and river reads with their sample sizes and
+hides reads that have no observations yet.
 
 ### Solver performance
 
