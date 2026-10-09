@@ -323,7 +323,9 @@ logged once.  Quick sizes use the acting player's own stack, so they are also
 correct for villain actions when stacks differ, and the amount range and
 all-in size are capped at the effective stack (the shorter of the two).  The
 opponent profile lists flop, turn, and river reads with their sample sizes and
-hides reads that have no observations yet.
+hides reads that have no observations yet.  Input errors name the field
+("Small blind: input should be greater than 0"), and a bet or raise amount
+outside the legal range is rejected in the browser before any request is sent.
 
 ### Solver performance
 

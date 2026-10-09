@@ -75,6 +75,25 @@ const RANK_NAME: Record<string, string> = {
 };
 const RED_SUITS = new Set(["h", "d"]);
 
+const FIELD_LABELS: Record<string, string> = {
+  small_blind: "Small blind", big_blind: "Big blind", hero_stack: "Your stack", villain_stack: "Villain stack",
+  opponent: "Opponent name", hero_cards: "Your cards", board: "Board", villain_cards: "Villain's cards",
+};
+
+function describeError(body: { detail?: unknown } | null, fallback: string): string {
+  const detail = body?.detail;
+  if (typeof detail === "string") return detail;
+  if (!Array.isArray(detail) || detail.length === 0) return fallback;
+  return detail.map((item: { loc?: (string | number)[]; msg?: string }) => {
+    const path = (item.loc ?? []).slice(1);
+    const message = (item.msg ?? "invalid value").replace(/^./, (letter) => letter.toLowerCase());
+    let label: string;
+    if (path[0] === "actions" && typeof path[1] === "number") label = `Action ${path[1] + 1}${path[2] === "amount" ? " amount" : ""}`;
+    else label = FIELD_LABELS[String(path[0])] ?? path.join(".");
+    return label ? `${label}: ${message}` : message;
+  }).join("; ");
+}
+
 function parseCards(text: string): string[] {
   return text.split(/[\s,]+/).filter(Boolean).map((card) => card.length === 2 ? card[0].toUpperCase() + card[1].toLowerCase() : card);
 }
@@ -242,7 +261,7 @@ export default function Coach() {
         body: JSON.stringify({ ...spot, actions: nextActions, board: nextBoard, opponent: opponent.trim() || null, exploit }),
       });
       const body = await response.json();
-      if (!response.ok) throw new Error(typeof body.detail === "string" ? body.detail : body.detail?.[0]?.msg || "Coach request failed");
+      if (!response.ok) throw new Error(describeError(body, "Coach request failed"));
       setActions(nextActions); setBoard(nextBoard); setResult(body);
       if (body.status === "hero_to_act") setAmount(body.advice.amount ? String(body.advice.amount) : String(body.state.minimum_target ?? ""));
       if (body.status === "villain_to_act") setAmount(String(body.state.minimum_target ?? ""));
@@ -273,6 +292,14 @@ export default function Coach() {
   }
 
   function act(actor: Actor, action: ActionKind) {
+    if ((action === "bet" || action === "raise") && state) {
+      const total = Number(amount);
+      const high = effectiveMaximum(state, actor);
+      if (!amount.trim() || !Number.isInteger(total) || total < (state.minimum_target ?? 0) || total > high) {
+        setError(`Enter a whole-number total between ${state.minimum_target} and ${high} to ${action}.`);
+        return;
+      }
+    }
     const step: SpotAction = { actor, action, amount: action === "bet" || action === "raise" ? Math.round(+amount) : null };
     evaluate([...actions, step]);
   }
@@ -304,7 +331,7 @@ export default function Coach() {
         body: JSON.stringify({ ...spot, opponent: opponent.trim(), villain_cards: villainCards.length === 2 ? villainCards : null }),
       });
       const body = await response.json();
-      if (!response.ok) throw new Error(typeof body.detail === "string" ? body.detail : body.detail?.[0]?.msg || "Could not log the hand");
+      if (!response.ok) throw new Error(describeError(body, "Could not log the hand"));
       setLogged(true);
       setProfile(body.opponent_profile); setNotice(`Logged. ${opponent.trim()} now has ${body.opponent_profile.hands_observed} hands on record.`);
       loadOpponents(); loadHistory(opponent);
