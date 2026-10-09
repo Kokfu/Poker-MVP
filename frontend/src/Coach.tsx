@@ -65,6 +65,8 @@ const STAT_TEXT: Record<string, string> = {
 };
 
 const POSTFLOP_STREETS = ["flop", "turn", "river"] as const;
+const ACTION_KEYS: Record<string, ActionKind[]> = { F: ["fold"], C: ["check", "call"], B: ["bet", "raise"], A: ["all_in"] };
+const KEY_FOR_ACTION: Record<ActionKind, string> = { fold: "F", check: "C", call: "C", bet: "B", raise: "B", all_in: "A" };
 const RANKS = ["A", "K", "Q", "J", "T", "9", "8", "7", "6", "5", "4", "3", "2"];
 const SUITS = ["s", "h", "d", "c"] as const;
 const SUIT_SYMBOL: Record<string, string> = { s: "♠", h: "♥", d: "♦", c: "♣" };
@@ -410,6 +412,23 @@ export default function Coach() {
   const usedForBoard = new Set([...heroCards, ...villainCards, ...board]);
   const usedForVillain = new Set([...heroCards, ...board]);
 
+  useEffect(() => {
+    if (!result || (result.status !== "hero_to_act" && result.status !== "villain_to_act") || loading) return;
+    const actor: Actor = result.status === "hero_to_act" ? "hero" : "villain";
+    const legal = result.state.legal_actions;
+    function onKey(event: KeyboardEvent) {
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target && (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable)) return;
+      const choice = ACTION_KEYS[event.key.toUpperCase()]?.find((candidate) => legal.includes(candidate));
+      if (!choice) return;
+      event.preventDefault();
+      act(actor, choice);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
   function actionButtons(actor: Actor) {
     if (!state) return null;
     const sized = state.legal_actions.some((a) => a === "bet" || a === "raise");
@@ -418,7 +437,15 @@ export default function Coach() {
         {sized && (
           <>
             <label className="coach-amount">Total this street
-              <input inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} />
+              <input
+                inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return;
+                  e.preventDefault();
+                  const sizedAction = state.legal_actions.find((a) => a === "bet" || a === "raise");
+                  if (sizedAction && !loading) act(actor, sizedAction);
+                }}
+              />
               <small>{state.minimum_target} – {effectiveMaximum(state, actor)}</small>
             </label>
             <div className="coach-quick-sizes" role="group" aria-label="Quick bet sizes">
@@ -431,8 +458,9 @@ export default function Coach() {
           </>
         )}
         {state.legal_actions.map((action) => (
-          <button key={action} type="button" className="secondary" disabled={loading} onClick={() => act(actor, action)}>
+          <button key={action} type="button" className="secondary" disabled={loading} title={`Shortcut: ${KEY_FOR_ACTION[action]}`} onClick={() => act(actor, action)}>
             {ACTION_TEXT[action]}{(action === "bet" || action === "raise") && amount ? ` ${amount}` : ""}{action === "call" ? ` ${state.to_call}` : ""}
+            <span className="key-hint" aria-hidden="true">{KEY_FOR_ACTION[action]}</span>
           </button>
         ))}
       </div>

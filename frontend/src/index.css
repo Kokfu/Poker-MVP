@@ -415,6 +415,7 @@ tbody tr:last-child td {
 .card-picker { margin: 10px 0 4px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; max-width: 240px; }
 .card-cell { padding: 6px 2px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .card-cell.selected { border-color: #66d6ad; background: #12352b; color: #8ee9c8; }
+.coach-actions .key-hint { margin-left: 6px; padding: 0 5px; border: 1px solid currentColor; border-radius: 4px; font-size: 0.7rem; opacity: 0.6; }
 .coach-quick-sizes { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
 .coach-quick-sizes button.chip { padding: 5px 11px; font-size: 0.82rem; }
 .danger { color: #ff9b9b; border-color: #6b3238; }

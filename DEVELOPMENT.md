@@ -326,6 +326,10 @@ opponent profile lists flop, turn, and river reads with their sample sizes and
 hides reads that have no observations yet.  Input errors name the field
 ("Small blind: input should be greater than 0"), and a bet or raise amount
 outside the legal range is rejected in the browser before any request is sent.
+Actions can be entered from the keyboard: Enter in the amount box bets or
+raises, and when no field is focused `F` folds, `C` checks or calls, `B` bets or
+raises the amount in the box, and `A` goes all-in (shown on each button; "Undo
+last action" reverts a mistaken key).
 
 ### Solver performance
 
