@@ -298,4 +298,20 @@ Every one of the seven 95% bootstrap intervals has a lower bound above zero, and
 
 **PHASE 5 COMPLETE**
 
-**Scope of the verdict.**  The final test above ran on the solver code at `b3be891`, before the `perf-solver` speed-up (array-based CFR, leaner equity loop, about 1.47x) was merged.  That change reproduces the old results to floating-point noise but is not bit-identical: 3 of 200 fixed benchmark hands and 2 of 30 spots chose a different action after a regret value sitting almost exactly at zero landed on the other side of the matching threshold (see DEVELOPMENT.md, "Solver performance").  The COMPLETE verdict is therefore evidence for the `b3be891` solver; it has not been re-measured on the merged faster code.
+**Scope of the verdict.**  The final test above ran on the solver code at `b3be891`, before the `perf-solver` speed-up (array-based CFR, leaner equity loop, about 1.47x) was merged.  That change reproduces the old results to floating-point noise but is not bit-identical: 3 of 200 fixed benchmark hands and 2 of 30 spots chose a different action after a regret value sitting almost exactly at zero landed on the other side of the matching threshold (see DEVELOPMENT.md, "Solver performance").  The COMPLETE verdict above is therefore evidence for the `b3be891` solver; the re-measurement below covers the merged faster code.
+
+**Re-measurement on the merged code** (commit `4987a71`, which includes `perf-solver`; `benchmark-results/phase-5/rerun-perf-h2h-<opponent>.json`).  Same test, same seeds, same pass rule as above, stated before the runs started.  The seeds had already been seen, so this re-measures the pre-registered test on new code and is not a fresh holdout.
+
+| Opponent | bb/100 | 95% CI | Original run (`b3be891`) | Illegal | Deal mismatches |
+|---|---|---|---|---|---|
+| random | +536.7 | [+431.3, +642.8] | +539.6 | 0 | 0 |
+| tight | +82.8 | [+47.4, +114.6] | +81.7 | 0 | 0 |
+| aggressive | +1,119.5 | [+1,031.8, +1,208.2] | +1,124.7 | 0 | 0 |
+| equity | +438.7 | [+350.7, +525.1] | +438.8 | 0 | 0 |
+| expert | +111.5 | [+55.3, +167.4] | +110.1 | 0 | 0 |
+| adaptive | +111.5 | [+55.3, +167.4] | +110.1 | 0 | 0 |
+| range_expert | +118.5 | [+61.6, +172.1] | +117.1 | 0 | 0 |
+
+All seven lower bounds are above zero with 0 illegal actions and 0 deal mismatches over 40,320 hands, and every estimate is within 6 bb/100 of the original run.  `adaptive` again equals `expert` exactly (its exploit engine never activates in these sessions).
+
+**PHASE 5 COMPLETE** on both the `b3be891` solver and the merged faster solver at `4987a71`.
