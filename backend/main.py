@@ -277,6 +277,13 @@ def coach_opponent(name: str):
     return {"name": name, "profile": profile_summary(model.snapshot()) if model.hands_observed else None}
 
 
+@app.get("/api/coach/review")
+def coach_review(opponent: str | None = None):
+    from coach.review import review
+    from coach.store import HandStore
+    return _coach_call(review, HandStore(), opponent)
+
+
 @app.get("/api/coach/opponents/{name}/hands")
 def coach_opponent_hands(name: str):
     from coach.store import HandStore
