@@ -1,0 +1,27 @@
+import { FormEvent, useState } from "react";
+import MatchReplay from "./MatchReplay";
+import ReplayEvent from "./ReplayEvent";
+import { BOT_NAMES } from "./types";
+import type { BotName, HandHistoryRequest, HandHistoryResponse } from "./types";
+
+type HandForm = { bot_a: BotName; bot_b: BotName; starting_stack_a: string; starting_stack_b: string; small_blind: string; big_blind: string; button_player: "a" | "b"; seed: string; equity_iterations: "500" | "1000" | "2000" };
+const defaults: HandForm = { bot_a: "random", bot_b: "random", starting_stack_a: "10000", starting_stack_b: "10000", small_blind: "50", big_blind: "100", button_player: "a", seed: "0", equity_iterations: "1000" };
+const bots: readonly BotName[] = BOT_NAMES;
+function integer(value: string, label: string) { if (!value.trim()) throw new Error(`${label} is required.`); if (!/^-?\d+$/.test(value.trim())) throw new Error(`${label} must be a whole number.`); return Number(value); }
+
+export default function Replay() {
+  const [mode, setMode] = useState<"hand" | "match">("hand");
+  const [form, setForm] = useState(defaults); const [result, setResult] = useState<HandHistoryResponse | null>(null); const [error, setError] = useState(""); const [loading, setLoading] = useState(false);
+  const update = <K extends keyof HandForm>(key: K, value: HandForm[K]) => setForm(old => ({ ...old, [key]: value }));
+  async function submit(event: FormEvent) {
+    event.preventDefault(); if (loading) return; setError("");
+    try {
+      const a = integer(form.starting_stack_a, "Starting stack A"), b = integer(form.starting_stack_b, "Starting stack B"), sb = integer(form.small_blind, "Small blind"), bb = integer(form.big_blind, "Big blind"), seed = integer(form.seed, "Seed");
+      if (a < 1 || b < 1) throw new Error("Both starting stacks must be at least 1."); if (sb < 1 || bb < 1) throw new Error("Blinds must be at least 1."); if (sb > bb) throw new Error("Small blind cannot exceed the big blind.");
+      const request: HandHistoryRequest = { ...form, starting_stack_a: a, starting_stack_b: b, small_blind: sb, big_blind: bb, seed, equity_iterations: Number(form.equity_iterations) as 500 | 1000 | 2000 };
+      setLoading(true); const response = await fetch("/api/histories/hand", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(request) }); const body: unknown = await response.json().catch(() => null); if (!response.ok) throw new Error("The replay request was rejected."); setResult(body as HandHistoryResponse);
+    } catch (reason) { setError(reason instanceof TypeError ? "The backend is unavailable." : reason instanceof Error ? reason.message : "Replay failed."); } finally { setLoading(false); }
+  }
+  return <section className="panel replay-panel"><h1>Replay</h1><div className="replay-modes" role="tablist" aria-label="Replay mode"><button type="button" role="tab" aria-selected={mode === "hand"} onClick={() => { setMode("hand"); setError(""); }}>Single Hand</button><button type="button" role="tab" aria-selected={mode === "match"} onClick={() => { setMode("match"); setError(""); }}>Persistent Match</button></div>
+    {mode === "match" ? <MatchReplay /> : <><p>Run one deterministic heads-up hand and inspect the recorded engine events step by step.</p><p className="muted">Histories are generated locally. Folded private cards remain hidden. Future board cards appear only at their reveal event.</p><form onSubmit={submit}><div className="form-grid"><label>Bot A<select value={form.bot_a} onChange={e => update("bot_a", e.target.value as BotName)}>{bots.map(bot => <option key={bot}>{bot}</option>)}</select></label><label>Bot B<select value={form.bot_b} onChange={e => update("bot_b", e.target.value as BotName)}>{bots.map(bot => <option key={bot}>{bot}</option>)}</select></label><label>Starting stack A<input inputMode="numeric" value={form.starting_stack_a} onChange={e => update("starting_stack_a", e.target.value)} /></label><label>Starting stack B<input inputMode="numeric" value={form.starting_stack_b} onChange={e => update("starting_stack_b", e.target.value)} /></label><label>Small blind<input inputMode="numeric" value={form.small_blind} onChange={e => update("small_blind", e.target.value)} /></label><label>Big blind<input inputMode="numeric" value={form.big_blind} onChange={e => update("big_blind", e.target.value)} /></label><label>Seed<input inputMode="numeric" value={form.seed} onChange={e => update("seed", e.target.value)} /></label><label>Button player<select value={form.button_player} onChange={e => update("button_player", e.target.value as "a" | "b")}><option value="a">Bot A</option><option value="b">Bot B</option></select></label><label>Equity iterations<select value={form.equity_iterations} onChange={e => update("equity_iterations", e.target.value as HandForm["equity_iterations"])}><option value="500">500</option><option value="1000">1,000</option><option value="2000">2,000</option></select></label></div><button className="analyze" disabled={loading}>{loading ? "Generating replay..." : "Run replay"}</button><span className="sr-status" role="status">{loading ? "Generating replay..." : ""}</span></form>{error && <p className="error" role="alert">{error}</p>}{result && <ReplayEvent history={result.history} validation={result.validation} />}</>}</section>;
+}

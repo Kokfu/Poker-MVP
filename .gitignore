@@ -26,3 +26,6 @@ Thumbs.db
 *.tsbuildinfo
 frontend/vite.config.js
 frontend/vite.config.d.ts
+
+# Local Coach hand database
+backend/data/

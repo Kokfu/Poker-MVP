@@ -1,0 +1,583 @@
+{
+  "config": {
+    "fixed_hand_count": 8,
+    "hands_per_opponent": 2,
+    "profile_sample": 3,
+    "profile_warmup": 6,
+    "spot_count": 6
+  },
+  "fixed_hands": [
+    {
+      "actions": [
+        {
+          "action": "call",
+          "street": "preflop",
+          "target": null
+        },
+        {
+          "action": "bet",
+          "street": "flop",
+          "target": 100
+        },
+        {
+          "action": "all_in",
+          "street": "turn",
+          "target": null
+        }
+      ],
+      "decision_timings_ms": [
+        {
+          "elapsed_ms": 6.474100053310394,
+          "street": "preflop"
+        },
+        {
+          "elapsed_ms": 21076.642699888907,
+          "street": "flop"
+        },
+        {
+          "elapsed_ms": 36583.67480000015,
+          "street": "turn"
+        }
+      ],
+      "fallback_count": 0,
+      "net_chips_a": 10000,
+      "seed": 9300000,
+      "showdown": true,
+      "winner": "a"
+    },
+    {
+      "actions": [
+        {
+          "action": "raise",
+          "street": "preflop",
+          "target": 250
+        },
+        {
+          "action": "bet",
+          "street": "flop",
+          "target": 500
+        },
+        {
+          "action": "bet",
+          "street": "turn",
+          "target": 750
+        },
+        {
+          "action": "bet",
+          "street": "river",
+          "target": 1500
+        }
+      ],
+      "decision_timings_ms": [
+        {
+          "elapsed_ms": 10.607300093397498,
+          "street": "preflop"
+        },
+        {
+          "elapsed_ms": 16912.21679991577,
+          "street": "flop"
+        },
+        {
+          "elapsed_ms": 12553.52049996145,
+          "street": "turn"
+        },
+        {
+          "elapsed_ms": 19629.22250002157,
+          "street": "river"
+        }
+      ],
+      "fallback_count": 0,
+      "net_chips_a": 1500,
+      "seed": 9300001,
+      "showdown": false,
+      "winner": "a"
+    },
+    {
+      "actions": [
+        {
+          "action": "call",
+          "street": "preflop",
+          "target": null
+        },
+        {
+          "action": "all_in",
+          "street": "flop",
+          "target": null
+        }
+      ],
+      "decision_timings_ms": [
+        {
+          "elapsed_ms": 8.872400037944317,
+          "street": "preflop"
+        },
+        {
+          "elapsed_ms": 17729.54099997878,
+          "street": "flop"
+        }
+      ],
+      "fallback_count": 0,
+      "net_chips_a": 0,
+      "seed": 9300002,
+      "showdown": true,
+      "winner": null
+    },
+    {
+      "actions": [
+        {
+          "action": "raise",
+          "street": "preflop",
+          "target": 250
+        },
+        {
+          "action": "bet",
+          "street": "flop",
+          "target": 250
+        },
+        {
+          "action": "check",
+          "street": "turn",
+          "target": null
+        },
+        {
+          "action": "check",
+          "street": "river",
+          "target": null
+        }
+      ],
+      "decision_timings_ms": [
+        {
+          "elapsed_ms": 6.357699981890619,
+          "street": "preflop"
+        },
+        {
+          "elapsed_ms": 18924.743399955332,
+          "street": "flop"
+        },
+        {
+          "elapsed_ms": 3972.241299925372,
+          "street": "turn"
+        },
+        {
+          "elapsed_ms": 3412.5996000366285,
+          "street": "river"
+        }
+      ],
+      "fallback_count": 0,
+      "net_chips_a": 500,
+      "seed": 9300003,
+      "showdown": true,
+      "winner": "a"
+    },
+    {
+      "actions": [
+        {
+          "action": "call",
+          "street": "preflop",
+          "target": null
+        },
+        {
+          "action": "bet",
+          "street": "flop",
+          "target": 100
+        },
+        {
+          "action": "bet",
+          "street": "turn",
+          "target": 400
+        },
+        {
+          "action": "call",
+          "street": "river",
+          "target": null
+        }
+      ],
+      "decision_timings_ms": [
+        {
+          "elapsed_ms": 0.9968999074772,
+          "street": "preflop"
+        },
+        {
+          "elapsed_ms": 6576.236699940637,
+          "street": "flop"
+        },
+        {
+          "elapsed_ms": 4122.553599998355,
+          "street": "turn"
+        },
+        {
+          "elapsed_ms": 4158.639800036326,
+          "street": "river"
+        }
+      ],
+      "fallback_count": 0,
+      "net_chips_a": -1200,
+      "seed": 9300004,
+      "showdown": true,
+      "winner": "b"
+    },
+    {
+      "actions": [
+        {
+          "action": "check",
+          "street": "preflop",
+          "target": null
+        },
+        {
+          "action": "check",
+          "street": "flop",
+          "target": null
+        },
+        {
+          "action": "bet",
+          "street": "turn",
+          "target": 100
+        },
+        {
+          "action": "bet",
+          "street": "river",
+          "target": 200
+        }
+      ],
+      "decision_timings_ms": [
+        {
+          "elapsed_ms": 1.0275999084115028,
+          "street": "preflop"
+        },
+        {
+          "elapsed_ms": 1215.835400042124,
+          "street": "flop"
+        },
+        {
+          "elapsed_ms": 1153.1336000189185,
+          "street": "turn"
+        },
+        {
+          "elapsed_ms": 4897.01169996988,
+          "street": "river"
+        }
+      ],
+      "fallback_count": 0,
+      "net_chips_a": 400,
+      "seed": 9300005,
+      "showdown": true,
+      "winner": "a"
+    },
+    {
+      "actions": [
+        {
+          "action": "raise",
+          "street": "preflop",
+          "target": 250
+        },
+        {
+          "action": "check",
+          "street": "flop",
+          "target": null
+        },
+        {
+          "action": "check",
+          "street": "turn",
+          "target": null
+        },
+        {
+          "action": "bet",
+          "street": "river",
+          "target": 250
+        }
+      ],
+      "decision_timings_ms": [
+        {
+          "elapsed_ms": 0.9865999454632401,
+          "street": "preflop"
+        },
+        {
+          "elapsed_ms": 1043.7865999992937,
+          "street": "flop"
+        },
+        {
+          "elapsed_ms": 1831.471599987708,
+          "street": "turn"
+        },
+        {
+          "elapsed_ms": 1954.4417000142857,
+          "street": "river"
+        }
+      ],
+      "fallback_count": 0,
+      "net_chips_a": 500,
+      "seed": 9300006,
+      "showdown": true,
+      "winner": "a"
+    },
+    {
+      "actions": [
+        {
+          "action": "check",
+          "street": "preflop",
+          "target": null
+        },
+        {
+          "action": "bet",
+          "street": "flop",
+          "target": 100
+        },
+        {
+          "action": "call",
+          "street": "flop",
+          "target": null
+        },
+        {
+          "action": "check",
+          "street": "turn",
+          "target": null
+        },
+        {
+          "action": "call",
+          "street": "turn",
+          "target": null
+        },
+        {
+          "action": "check",
+          "street": "river",
+          "target": null
+        },
+        {
+          "action": "fold",
+          "street": "river",
+          "target": null
+        }
+      ],
+      "decision_timings_ms": [
+        {
+          "elapsed_ms": 1.0933000594377518,
+          "street": "preflop"
+        },
+        {
+          "elapsed_ms": 7426.959799951874,
+          "street": "flop"
+        },
+        {
+          "elapsed_ms": 90.62540007289499,
+          "street": "flop"
+        },
+        {
+          "elapsed_ms": 958.6506999330595,
+          "street": "turn"
+        },
+        {
+          "elapsed_ms": 1337.5695999711752,
+          "street": "turn"
+        },
+        {
+          "elapsed_ms": 3954.0007000323385,
+          "street": "river"
+        },
+        {
+          "elapsed_ms": 7422.063000034541,
+          "street": "river"
+        }
+      ],
+      "fallback_count": 0,
+      "net_chips_a": -700,
+      "seed": 9300007,
+      "showdown": false,
+      "winner": "b"
+    }
+  ],
+  "spots": [
+    {
+      "action": "check",
+      "chosen": "check",
+      "elapsed": 13.711476200027391,
+      "hand_number": 1,
+      "hand_seed": 9100000,
+      "has_profile": false,
+      "labels": [
+        "check",
+        "bet_100",
+        "bet_200",
+        "all_in"
+      ],
+      "locked_nodes": 0,
+      "opponent": "equity",
+      "probabilities": [
+        0.86850345,
+        0.10452564,
+        0.02695801,
+        1.29e-05
+      ],
+      "resolved_from_current_state": false,
+      "source": "postflop_solve",
+      "street": "flop",
+      "target": null
+    },
+    {
+      "action": "call",
+      "chosen": "call",
+      "elapsed": 0.025986699969507754,
+      "hand_number": 1,
+      "hand_seed": 9100000,
+      "has_profile": false,
+      "labels": [
+        "fold",
+        "call",
+        "raise_250",
+        "all_in"
+      ],
+      "locked_nodes": 0,
+      "opponent": "equity",
+      "probabilities": [
+        1.194e-05,
+        0.99998546,
+        2.58e-06,
+        0.0
+      ],
+      "resolved_from_current_state": false,
+      "source": "preflop_chart",
+      "street": "preflop",
+      "target": null
+    },
+    {
+      "action": "check",
+      "chosen": "check",
+      "elapsed": 71.55223859997932,
+      "hand_number": 1,
+      "hand_seed": 9100000,
+      "has_profile": false,
+      "labels": [
+        "check",
+        "bet_100",
+        "bet_200",
+        "all_in"
+      ],
+      "locked_nodes": 0,
+      "opponent": "equity",
+      "probabilities": [
+        0.91956537,
+        0.06864911,
+        0.01172837,
+        5.715e-05
+      ],
+      "resolved_from_current_state": false,
+      "source": "postflop_solve",
+      "street": "river",
+      "target": null
+    },
+    {
+      "action": "check",
+      "chosen": "check",
+      "elapsed": 51.36306779994629,
+      "hand_number": 1,
+      "hand_seed": 9100000,
+      "has_profile": false,
+      "labels": [
+        "check",
+        "bet_100",
+        "bet_200",
+        "all_in"
+      ],
+      "locked_nodes": 0,
+      "opponent": "equity",
+      "probabilities": [
+        0.69611474,
+        0.20458525,
+        0.09920696,
+        9.306e-05
+      ],
+      "resolved_from_current_state": false,
+      "source": "postflop_solve",
+      "street": "turn",
+      "target": null
+    },
+    {
+      "action": "all_in",
+      "chosen": "all_in",
+      "elapsed": 0.3332080999389291,
+      "hand_number": 1,
+      "hand_seed": 9101000,
+      "has_profile": false,
+      "labels": [
+        "fold",
+        "call",
+        "all_in"
+      ],
+      "locked_nodes": 0,
+      "opponent": "aggressive",
+      "probabilities": [
+        1.72e-05,
+        0.02502763,
+        0.97495517
+      ],
+      "resolved_from_current_state": true,
+      "source": "postflop_solve",
+      "street": "flop",
+      "target": null
+    },
+    {
+      "action": "bet",
+      "chosen": "bet_200",
+      "elapsed": 2.9597109000897035,
+      "hand_number": 1,
+      "hand_seed": 9200006,
+      "has_profile": true,
+      "labels": [
+        "check",
+        "bet_100",
+        "bet_200",
+        "all_in"
+      ],
+      "locked_nodes": 10,
+      "opponent": "equity",
+      "probabilities": [
+        0.3984322,
+        0.29605443,
+        0.30463907,
+        0.00087429
+      ],
+      "resolved_from_current_state": false,
+      "source": "postflop_solve",
+      "street": "flop",
+      "target": 200
+    }
+  ],
+  "timing": {
+    "by_street_ms": {
+      "flop": {
+        "count": 22,
+        "mean_ms": 13565.356,
+        "median_ms": 15311.846,
+        "p95_ms": 22798.105,
+        "total_ms": 298437.825
+      },
+      "preflop": {
+        "count": 23,
+        "mean_ms": 145.992,
+        "median_ms": 5.591,
+        "p95_ms": 1065.675,
+        "total_ms": 3357.811
+      },
+      "river": {
+        "count": 11,
+        "mean_ms": 25256.191,
+        "median_ms": 7422.063,
+        "p95_ms": 119134.014,
+        "total_ms": 277818.103
+      },
+      "turn": {
+        "count": 16,
+        "mean_ms": 17566.157,
+        "median_ms": 4923.856,
+        "p95_ms": 51363.068,
+        "total_ms": 281058.513
+      }
+    },
+    "overall_ms": {
+      "count": 72,
+      "mean_ms": 11953.781,
+      "median_ms": 2994.521,
+      "p95_ms": 51363.068,
+      "total_ms": 860672.252
+    }
+  },
+  "wall_seconds": 1192.62
+}

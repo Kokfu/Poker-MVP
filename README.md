@@ -2,6 +2,15 @@
 
 Poker Analyzer MVP is a local, educational, offline-first Texas Hold'em analyzer and heads-up simulator. It accepts manually entered poker states, performs mathematical analysis, and runs deterministic bot-versus-bot experiments on the local machine. It does not play poker for the user.
 
+## Phase 5 at a glance
+
+- **`solver` bot** — preflop charts solved offline plus a real-time range solve of every postflop street (discounted CFR over both players' public ranges). Select it anywhere a bot is chosen.
+- **`solver_adaptive` bot** — the same solver, adjusting to confident reads of its opponent's public tendencies (node locking), learned hand by hand.
+- **Coach tab** — enter your own heads-up hand as it happens, either by typing card notation or clicking a 52-card picker; quick 1/3, 1/2, 3/4, pot, and all-in buttons fill a legal bet/raise size. When it is your turn the solver recommends a play with its full action mix, your equity against the villain's estimated range, and that range's make-up. Log finished hands under an opponent's name to build their profile — the Coach then adjusts to it — and browse, reload, or delete an opponent's hand history from the profile panel. Actions can also be entered from the keyboard (F fold, C check/call, B bet/raise, A all-in).
+- **Duplicate-deal evaluation** — every deal is replayed with seats swapped to cancel card luck; learning sessions measure opponent adaptation; a Slumbot bridge benchmarks against a strong outside bot.
+
+The Coach is manual entry for study, review, and practice. Using real-time assistance while playing on a poker site breaks most sites' rules; this project does not automate or assist play on any site.
+
 ## Analyzer
 
 The Analyzer supports:
@@ -31,7 +40,7 @@ Phase 2 adds a deterministic, local-only, heads-up No-Limit Texas Hold'em simula
 - JSONL dataset schema 2.0 generation and strict validation;
 - CLI, API, and React Simulator interfaces.
 
-Built-in bots are `RandomBot`, `TightBot`, `AggressiveBot`, and `EquityBot`. They are baseline research strategies, not claims of optimal or game-theoretic play.
+The original baseline bots are `RandomBot`, `TightBot`, `AggressiveBot`, and `EquityBot`; later phases add `expert`, `adaptive`, `range_expert`, `solver`, and `solver_adaptive`. All are research strategies, not claims of optimal play.
 
 Chip amounts are integer internal units:
 
@@ -43,6 +52,8 @@ bb_per_100 = net_bb / hands_played * 100
 ```
 
 Each hand begins from a fresh configured stack, normally 100 BB. Results are not a persistent bankroll.
+
+Phase 3 adds a separate persistent match mode: settled stacks carry between hands, positions alternate, and the match stops on elimination or a configured hand limit. Independent simulation mode still resets both stacks every hand. Open the **Match** tab in the local frontend to configure and run this mode.
 
 ## Requirements
 
@@ -68,7 +79,7 @@ npm.cmd install
 npm.cmd run dev
 ```
 
-Open `http://127.0.0.1:5173`. The backend listens on `http://127.0.0.1:8000`.
+Open `http://127.0.0.1:5173`. The backend listens on `http://127.0.0.1:8000`. When running the frontend outside Docker, point Vite at the local backend with `$env:API_PROXY = "http://127.0.0.1:8000"` before `npm.cmd run dev`. Tabs: Analyzer, Coach, Simulator, Match, Replay.
 
 ## Docker
 
@@ -88,6 +99,17 @@ The configured ports bind to localhost. The frontend proxies `/api` requests to 
 - `GET /api/health`
 - `POST /api/analyze`
 - `POST /api/simulations/run`
+- `POST /api/matches/simulate`
+- `POST /api/histories/hand`
+- `POST /api/histories/match`
+- `POST /api/coach/advise` — replay a manually entered spot; returns advice, the villain's legal actions, or the next board cards needed
+- `POST /api/coach/hands` — log a completed hand under an opponent name
+- `GET /api/coach/opponents`, `GET /api/coach/opponents/{name}` — logged opponents and their profiles
+- `GET /api/coach/opponents/{name}/hands` — that opponent's logged hands, newest first, each with its `id` and `created_at`
+- `DELETE /api/coach/hands/{id}` — delete one logged hand (404 if the id does not exist)
+- `DELETE /api/coach/opponents/{name}` — delete every logged hand for that opponent
+
+Every registered bot (`random`, `tight`, `aggressive`, `equity`, `expert`, `adaptive`, `range_expert`, `solver`, `solver_adaptive`) is accepted wherever the API takes a bot name.
 
 The simulation API accepts 1 through 10,000 hands per request. Representative Analyzer request:
 
@@ -103,6 +125,61 @@ $body = @{
 } | ConvertTo-Json
 Invoke-RestMethod http://127.0.0.1:8000/api/analyze -Method Post -ContentType application/json -Body $body
 ```
+
+Persistent match request:
+
+```powershell
+$match = @{
+  bot_a = "tight"
+  bot_b = "aggressive"
+  starting_stack = 10000
+  small_blind = 50
+  big_blind = 100
+  max_hands = 100
+  seed = 42
+  equity_iterations = 500
+} | ConvertTo-Json
+Invoke-RestMethod http://127.0.0.1:8000/api/matches/simulate -Method Post -ContentType application/json -Body $match
+```
+
+Match defaults are `random` versus `random`, 10,000-unit stacks, 50/100 blinds, 100 hands, seed 0, and 1,000 EquityBot iterations. Stack and blinds must be positive integers, the small blind cannot exceed the big blind, `max_hands` is 1–10,000, and EquityBot iterations are 500, 1,000, or 2,000. Bot names are case-normalized.
+
+The response contains match configuration, final stacks, winner, termination reason, net chips, showdown/fold totals, diagnostics, and settled per-hand summaries without private hole cards. The Match tab renders these aggregate results, explicit chip-conservation and zero-sum checks, and every returned hand summary in a horizontally scrollable table.
+
+The equivalent CLI command is:
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe -m simulation.cli match --bot-a tight --bot-b aggressive --starting-stack 10000 --small-blind 50 --big-blind 100 --max-hands 100 --seed 42 --equity-iterations 500
+```
+
+## Action-level history JSON
+
+History schema `1.0` is separate from dataset schema 2.0. Dedicated history interfaces validate the engine-generated event stream before returning or writing it; existing Analyzer, Simulator, and Match response shapes remain unchanged.
+
+Run or export one deterministic hand:
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe -m simulation.cli history-hand --bot-a tight --bot-b aggressive --seed 42 --equity-iterations 500
+.\.venv\Scripts\python.exe -m simulation.cli history-hand --seed 42 --output ..\history-output\hand-seed42.json --overwrite
+```
+
+Run or export a persistent match with every completed hand history:
+
+```powershell
+.\.venv\Scripts\python.exe -m simulation.cli history-match --bot-a tight --bot-b aggressive --max-hands 25 --seed 42 --equity-iterations 500 --output ..\history-output\match-seed42.json
+```
+
+Validate either JSON document type:
+
+```powershell
+.\.venv\Scripts\python.exe -m simulation.cli validate-history ..\history-output\hand-seed42.json
+```
+
+Exports use UTF-8 JSON. An existing output is refused unless `--overwrite` is supplied. `hand_history` documents contain one validated history; `match_history` documents contain the unchanged public match summary plus one validated history per completed hand and aggregate validation evidence.
+
+Fold histories contain no private cards. Showdown events may contain only legitimately revealed hole cards. Histories never contain future board cards, deck order, remaining-deck contents, or burn cards.
 
 ## Dataset schema 2.0
 
@@ -127,16 +204,24 @@ The final Phase 2 backend suite contains 275 passing tests. Retained runtime evi
 
 ## Limitations
 
-- Heads-up only; no multiway pots.
+- Heads-up only; no multiway pots. The Coach is accurate once a hand is down to the user and one opponent.
+- The solver's flop and turn solves value the end of the street by equity over the remaining cards; future-street betting and position after that street are not modelled. Preflop charts value a seen flop by raw equity.
+- Solver decisions take about 1-3 seconds each on a desktop CPU.
 - No tournament structure, rake, antes, or ICM.
 - No general side pots beyond heads-up matched-chip settlement and unmatched-excess return.
 - No persistent bankroll across independent hands.
-- No AI-training pipeline in Phase 2.
+- No AI-training pipeline.
 - No schema 1.0 migration, separate dataset manifest, or multiple simulation IDs per dataset file.
 - EquityBot is computationally expensive, especially in long runs.
 - Monte Carlo analysis is approximate and varies unless seeded.
 - The frontend Analyzer has no loading or disabled submission state.
+- Persistent matches have no dataset output, database persistence, or saved-match browser; results exist only in the current frontend session or API/CLI response.
+- History JSON can be returned or written explicitly and replayed in the Replay tab, but there is no server-side history store, lookup endpoint, or cross-process resumption. The only stored data is the Coach hand log (local SQLite).
 - Browser verification covers only the local application.
 - No real-money integration, external poker-site automation, automatic clicking, OCR, screen scraping, screenshot card extraction, or hidden-card extraction.
 
 See [SIMULATION.md](SIMULATION.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DEVELOPMENT.md](DEVELOPMENT.md), [SECURITY.md](SECURITY.md), and [ROADMAP.md](ROADMAP.md) for further details.
+
+### Single-hand Replay
+
+The Replay tab has Single Hand and Persistent Match modes. Persistent Match calls `POST /api/histories/match`, provides the match form, overview and aggregate checks, completed-hand controls, a responsive stack-progression table, and the shared event replay panel. Histories are local to the current browser session: there is no storage, lookup, upload, or resumption. Folded cards remain hidden and board cards appear only at their reveal event.

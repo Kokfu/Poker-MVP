@@ -55,4 +55,27 @@ class EquityBot(PokerBot):
         if o.amount_to_call and equity<required-.03: return Action("fold")
         return self._passive(o)
 
-BOT_TYPES={"random":RandomBot,"tight":TightBot,"aggressive":AggressiveBot,"equity":EquityBot}
+# Imported after PokerBot is defined: ExpertRuleBot subclasses the legacy base
+# solely for registry compatibility while using DecisionObservation in-engine.
+from .expert_bot import ExpertRuleBot
+from .adaptive_bot import ExpertAdaptiveBot
+from .range_expert_bot import RangeAwareExpertBot
+
+
+class SolverBot:
+    """Registry entry for the Phase 5 solver bot (preflop charts + postflop
+    range re-solving).  Imported lazily: ``solver.bot`` itself imports this
+    module, so a module-level import would be circular."""
+    def __new__(cls, *args, **kwargs):
+        from solver.bot import SolverBot as Implementation
+        return Implementation(*args, **kwargs)
+
+
+class AdaptiveSolverBot:
+    """Registry entry for ``solver`` plus confidence-gated opponent exploitation."""
+    def __new__(cls, *args, **kwargs):
+        from solver.bot import AdaptiveSolverBot as Implementation
+        return Implementation(*args, **kwargs)
+
+
+BOT_TYPES={"random":RandomBot,"tight":TightBot,"aggressive":AggressiveBot,"equity":EquityBot,"expert":ExpertRuleBot,"adaptive":ExpertAdaptiveBot,"range_expert":RangeAwareExpertBot,"solver":SolverBot,"solver_adaptive":AdaptiveSolverBot}

@@ -6,12 +6,19 @@ The application is local and stateless:
 
 ```text
 React/Vite frontend
+        +-- Analyzer tab
+        +-- Coach tab (manual entry)
+        +-- independent Simulator tab
+        +-- persistent Match tab
+        +-- Replay tab
         |
         | JSON over localhost /api
         v
 FastAPI backend
         |
         +-- Analyzer: validation, Treys, NumPy/Monte Carlo
+        |
+        +-- Coach API (replay through HandEngine, solver advice, SQLite hand log)
         |
         +-- Simulator API and CLI
                 |
@@ -22,7 +29,23 @@ FastAPI backend
                 +-- JSONL dataset writer/validator
 ```
 
-Docker Compose runs the FastAPI backend and React/Vite frontend as separate services. Ports 8000 and 5173 are bound to `127.0.0.1`. There is no database and no application persistence beyond explicitly requested dataset or result files.
+Docker Compose runs the FastAPI backend and React/Vite frontend as separate services. Ports 8000 and 5173 are bound to `127.0.0.1`. The only application persistence is the Coach hand log, a local SQLite file (`backend/data/coach.sqlite`, or the `coach-data` Docker volume); everything else is stateless apart from explicitly requested dataset or result files.
+
+## Kuhn CFR research isolation
+
+`backend/research/kuhn` is a deliberately separate, exact three-card Kuhn Poker laboratory. It has no imports from the Hold'em engine, no registered bot, API route, frontend dependency, or shared schema. It enumerates the six deals, uses visible-card-plus-public-history information sets, and keeps vanilla full-tree CFR as a control alongside a separate CFR+ implementation. CFR+ projects cumulative regrets to zero after each full iteration and uses documented linear average-policy weights. Its terminal convention is Player 0 utility: check/check is +/-1, bet/fold is +/-1, and bet/call is +/-2.
+
+## Hold'em abstraction research isolation
+
+`backend/research/holdem` is a Phase 4C research-only abstraction layer. It accepts immutable `DecisionState` snapshots and has no `HandEngine` dependency or engine-rule implementation. Its deterministic card abstraction reads only Hero hole cards and cards public on the current street; its information-set key omits opponent cards, future board, deck/deck order, RNG, and identity fields. Action representatives preserve the authoritative total-target contract and are rejected before conversion if their supplied legal interval is empty or their target is outside it; all-in remains distinct so short all-ins cannot be disguised as normal bets or raises. Diagnostics consume caller-supplied deterministic state sets and report compression, card and geometry bucket occupancy/pathology, and round-trip coverage. The package is not a CFR trainer, bot, API, schema, or frontend feature and does not alter Expert, Adaptive, or RangeExpert.
+
+### Phase 4C card and information-set abstraction
+
+The card abstraction is deterministic and uses no equity calculation or RNG. Preflop it sorts Hero's two ranks and assigns: `preflop_premium` to AA/KK or a non-pair score of at least 26; `preflop_strong` to QQ–TT or score at least 22; `preflop_medium` to 99–66 or score at least 18; `preflop_speculative` to lower pairs or score at least 15; and `preflop_weak` otherwise. The non-pair score is high rank plus half the low rank, plus 2 if suited and plus 1 if connected within two ranks.
+
+On flop and turn, `postflop_draw` denotes a Hero-involved four-flush or incomplete straight with at least one completion; `postflop_pair_draw` combines that with one pair. Made-hand categories are `postflop_air`, `postflop_pair`, `postflop_two_pair`, `postflop_trips`, `postflop_straight_plus` (straight or flush), and `postflop_full_house_plus` (full house, quads, straight flush, or royal flush). River has no draw bucket: it uses the applicable made-hand bucket.
+
+The key deliberately abstracts exact min/max target, last-full-raise size, and board texture beyond Hero's made-hand/draw category. Exact bounds are represented operationally by bounded abstract legal actions and are rechecked on every concretization; action labels, pot/SPR/call/commitment bands, public betting history, and reopening state retain the relevant action context. Board texture is intentionally deferred from this small foundation: its direct Hero draw/made-hand effect is retained in the card bucket, while a future strategically richer abstraction may add a separately justified texture bucket. These are intentional aliases, not hidden information reads; tests record matching aliases and contrasting visible states that must remain distinct. Diagnostics report every absent card bucket and report an encountered card bucket as overloaded only for samples of at least 10 states when it contains more than 70% of those states; this is a warning, never a threshold to tune away.
 
 ## Analyzer
 
@@ -31,13 +54,21 @@ FastAPI validates card notation, uniqueness, board length, opponent count, and n
 ## Simulation components
 
 - `simulation.engine.HandEngine` owns cards, stacks, betting state, legal-action validation, street progression, runout, and settlement.
-- `simulation.bots` contains `RandomBot`, `TightBot`, `AggressiveBot`, and `EquityBot`.
+- `simulation.match.PersistentMatchRunner` is the Phase 3A1 orchestration layer. It creates one clean `HandEngine` per hand and carries only settled stacks into the next hand.
+- `simulation.bots` contains `RandomBot`, `TightBot`, `AggressiveBot`, and `EquityBot`, and registers the later strategies under `BOT_TYPES`: `expert`, `adaptive`, `range_expert`, `solver`, and `solver_adaptive`.
 - `Observation` is the bot-facing information boundary. It exposes the acting player's cards, public board, stacks, commitments, legal actions, and target bounds, but not hidden opponent cards, future board cards, deck order, or RNG state.
+- `simulation.decision_state` provides the Phase 3C1 strategy-facing boundary. `DecisionState` is a typed, immutable snapshot of one legitimate player decision; `PokerFeatureSet` is its deterministic derived feature layer; and `DecisionObservation` combines both with optional `EquityEstimate` data. `HandEngine` builds it immediately before each bot decision. Existing bots continue through the legacy `Observation` adapter, while future strategies may implement `decide_decision(DecisionObservation)` without direct engine access.
 - `simulation.statistics` aggregates wins, ties, losses, net chips, net BB, BB/100, showdowns, folds, action counts, and illegal actions.
 - `simulation.dataset` writes and validates JSONL schema 2.0 records.
 - `simulation.cli` lists bots, runs simulations, generates datasets, and validates datasets.
 
 Bots choose among engine-authoritative legal actions. They do not independently reconstruct betting legality. A malformed custom bot can trigger a safety fallback, but accepted built-in workloads produce no fallback diagnostics.
+
+## Decision intelligence foundation
+
+`DecisionState` derives identity, button/blind context, in/out-of-position status, only hero hole cards plus the currently public board, visible stacks/pot/effective stack, authoritative total-target bounds and legal actions, raise-reopening state, and ordered public action context. It never reads opponent cards, undealt cards, deck contents, burn cards, or RNG state.
+
+`PokerFeatureSet` is deterministic and JSON-safe. It provides pot odds and required equity (`call / (pot + call)`, or zero for a free action), SPR (`effective_stack / pot`, or zero for a zero pot), bet faced as a pot fraction, position flags, made-hand/draw flags, and deterministic board texture. It emits finite values only. Optional `EquityEstimate` is deliberately not computed as part of observation construction, so no solver or RNG work is mandatory. This is an internal foundation: it does not alter public API responses, history schema 1.0, or dataset schema 2.0.
 
 ## Betting state
 
@@ -84,6 +115,212 @@ General cumulative multiway reopening rules are outside this heads-up engine's s
 
 When no further betting is possible, the engine automatically deals the remaining community cards. A hand has exactly one fold settlement or one showdown and exactly one settlement. Settlement returns unmatched excess, awards the matched pot, clears the pot and street commitments, clears `pending_players`, marks the hand complete, and asserts chip conservation. Aggregate results remain zero-sum.
 
+## Internal hand-history boundary
+
+Phase 3B1 adds `simulation.history` as a typed observation layer around the authoritative `HandEngine`. The engine appends events while each transition occurs; the history module does not calculate legal actions, betting, cards, winners, or settlement independently.
+
+History schema `1.0` is separate from dataset schema 2.0. A `HandHistory` records deterministic hand identity/configuration, blinds, initial and final stacks, public board, result, diagnostics, and a contiguous event stream. Its event types are:
+
+- `hand_started`
+- `blind_posted`
+- `action_taken`
+- `street_started`
+- `board_revealed`
+- `unmatched_excess_returned`
+- `automatic_runout_started`
+- `showdown`
+- `pot_awarded`
+- `hand_settled`
+
+Every event carries before/after pot, stack, street-commitment, and current-highest-bet evidence. Action events preserve requested and applied actions, engine fallback details, exact amount paid, total target, legal bounds, reopening state, last-full-raise state, pending players, and all-in classification. Thus a raise to 1,200 is stored as target 1,200, consistent with the engine contract.
+
+Blind events distinguish assigned and actually posted amounts, including capped short-stack all-ins. Street and board events reveal the flop, turn, and river separately. Automatic runout records its start and still produces each intermediate public reveal. Settlement is split into showdown when applicable, pot award, and exactly one final cleanup event.
+
+`validate_hand_history` verifies schema support, indexes, event cardinality, state continuity, chip conservation, non-negative values, board progression, card uniqueness, action targets, cleanup, final-result agreement, and privacy. It returns a structured list of useful errors.
+
+Phase 3B2 adds `simulation.history_service` as the only public serialization boundary. It converts typed histories to ordinary JSON-safe dictionaries only after validation, scans forbidden internal keys, constructs deterministic single-hand and persistent-match documents, parses exported documents back into typed models, and coordinates UTF-8 file output with explicit overwrite protection.
+
+`POST /api/histories/hand`, `POST /api/histories/match`, and the `history-hand`, `history-match`, and `validate-history` CLI commands all call this service. The existing match summary endpoint still calls its original serializer and does not gain history fields. Dataset schema 2.0 remains a separate decision-record system.
+
+History JSON is request/command output, not server-side persistence. There is no history database, lookup ID endpoint, or process-resumption mechanism; the Replay tab renders histories generated on request.
+
+## Phase 3 persistent match boundary
+
+Persistent match mode is Phase 3 work in progress and remains separate from `SimulationRunner`:
+
+- `SimulationRunner` retains Phase 2 independent-hand semantics and starts every hand with fresh equal stacks.
+- `PersistentMatchRunner` accepts per-player starting stacks, small and big blinds, a deterministic seed, and a maximum hand count.
+- The match alternates the button each hand, passes settled stacks into a new `HandEngine`, and stops on elimination or the hand limit.
+- The hand engine still owns betting, legal actions, all-ins, runout, unmatched-excess return, and settlement; the match layer does not duplicate poker rules.
+- A capped blind post never exceeds the player's available stack. If a blind is all-in, only a live opponent who owes chips receives a decision; otherwise unmatched excess is returned and the board runs out.
+- Every hand must finish with exactly one settlement, zero pot, zero current commitments, and no pending players before its stacks are accepted by the match.
+
+Phase 3A2 exposes this orchestration through `simulation.match_service.run_builtin_match`. That adapter normalizes and validates public parameters, constructs seeded built-in bots, invokes `run_match`, flattens the internal dataclasses into the public snake_case response, and checks aggregate invariants. Both `POST /api/matches/simulate` and `simulation.cli match` call this same adapter.
+
+The match API/CLI layer has no poker-rule implementation. Phase 3A3 adds a presentation-only React Match tab that calls the existing endpoint, performs strict client input checks, and renders aggregate and per-hand public output. It does not calculate poker state, persist matches, or alter the independent Simulator. There is still no match dataset integration, database persistence, or saved-match browser (the separate Replay tab renders generated match histories). Dataset schema 2.0 and retained Phase 2 evidence remain unchanged.
+
 ## Deployment
 
 Docker Compose provides the reproducible local deployment. The frontend uses its `/api` proxy to reach `http://backend:8000` inside the Compose network. Host access remains on `http://127.0.0.1:5173` and `http://127.0.0.1:8000`.
+
+## Single-hand Replay
+
+## Phase 3C2 opponent-model foundation
+
+`simulation.opponent_model` consumes only completed public `HandHistory` action events. Persistent matches maintain one model per player; the opposing snapshot is attached to `DecisionObservation` before an action and histories are incorporated only after settlement. The model records explicit opportunities and occurrences, raw and Beta(1,1)-smoothed frequencies, and 0–4/5–19/20–49/50+ very-low/low/medium/high confidence. VPIP excludes blinds; a limp is an unopened voluntary preflop call; a 3-bet follows one prior preflop raise. Bet sizing is public wager increment divided by pre-action pot: small <= .40, medium <= .75, large <= 1.25, overbet above. Labels require 20 hands and VPIP opportunities and do not alter strategy. Snapshots are finite JSON-safe and contain no cards, deck, RNG, timestamps, or API/dataset additions.
+
+`Replay` has Single Hand and Persistent Match modes. Both use one event renderer for table state, timeline, navigation, and privacy filtering. Persistent Match uses `/api/histories/match` and adds match overview, hand selection, and stack progression without changing existing public match responses.
+
+## Phase 3C3 ExpertRuleBot
+
+`simulation.expert_bot.ExpertRuleBot`, registered as `expert`, is a deterministic heads-up rule-based baseline. It consumes only `DecisionObservation`, uses engine-authoritative action bounds, and retains internal explanation metadata. It is neither GTO nor a learning system.
+
+## Phase 3C4 adaptive exploit layer
+
+`expert` remains the stable Phase 3C3 control. `adaptive` is the separate `ExpertAdaptiveBot`: it first asks an embedded `ExpertRuleBot` for its baseline decision and explanation, then passes only that result plus the current `DecisionObservation.opponent_profile` into `ExploitAdjustmentEngine`. The engine never queries `HandEngine`, histories, cards, deck, or RNG.
+
+Numeric public estimates, rather than profile labels, drive adjustments. The initial research thresholds are centralized in `exploit_strategy.py`: fold-to-bet >= .62, call-vs-bet >= .62 or fold-to-bet <= .28, aggression >= .42 or <= .18, and preflop fold-to-raise >= .58. Signal strength is bounded deviation from the relevant reference rate multiplied by a confidence weight (very-low 0, low .15, medium .55, high 1). It is explanatory rather than a statistical claim.
+
+Very-low and low confidence retain the baseline. Medium allows controlled changes and high permits stronger, still-bounded sizing. Allowed transitions are only suitable check-to-bet pressure, fold-to-call defense with showdown value, removal of an existing pure bluff against a calling station, and adjustment of existing strong-value sizing. Targets retain engine total-target semantics and are clamped to supplied legal bounds.
+
+The passive-player initiative path uses the same low-aggression threshold (smoothed aggression <= .18) and confidence gate. It may turn only an in-position, dry-board air baseline check into a 33%-pot bet. It does not require the control bot already to hold initiative, because that would exclude the check-back spots the adjustment is intended to address.
+
+For auditability, `ExpertAdaptiveBot` keeps an internal in-memory decision trace. It is derived after the strategy decision from the same observation and explanation and records profile hand count, numeric signal metadata, activation outcome, and rejection rationale. It is not part of histories, datasets, or public API serialization.
+
+## Statistical strategy evaluation
+
+Phase 3D1 adds `simulation.evaluation` as a dedicated research layer above the existing hand and match runners. An immutable `EvaluationConfig` produces a deterministic integer seed schedule, each seed is run in the configured seat orientation(s), raw hand or match units are validated, and aggregation produces evaluation-schema `1.0` JSON. No statistical code is located in a bot, poker engine, public API serializer, history serializer, or dataset writer.
+
+`independent` mode creates a fresh bot pair and reset-stack `HandEngine` for each seed/orientation; its statistical unit is one independently reset hand. `persistent_match` mode creates a fresh `PersistentMatchRunner` for each seed/orientation and preserves stacks, alternating blinds/button, completed-hand opponent profiles, elimination, and the hand limit inside that match; its statistical unit is the whole match. Persistent-match hands are descriptive observations only and are not treated as independent for standard errors or confidence intervals.
+
+Seat swapping runs the strategy as A against the opponent as B and, when enabled, the opponent as A against the strategy as B. Both orientations use a matched seed schedule and are reported separately and combined. This is seat-swapped, orientation-paired evaluation, not claimed duplicate-deal poker: strategy actions can change random trajectories, match lengths, and decisions even when schedules correspond.
+
+Poker seeds and bot decision seeds are deterministic and role-derived. Schedule generation does not instantiate or consume an engine RNG. Percentile bootstrap work uses a separate local `random.Random(statistics_seed)` instance. Report formatting, aggregation, and JSON export use no poker RNG, so confidence analysis cannot change cards, decisions, profiles, or outcomes.
+
+Every evaluated history is validated and every hand and match must satisfy exact heads-up zero-sum chip conservation. Corruption raises `EvaluationAccountingError`; it is never converted into a performance observation. Existing history schema 1.0, dataset schema 2.0, and public API response shapes remain unchanged.
+
+## Short-stack legal-action invariant
+
+Phase 3D1A corrects an authoritative `HandEngine.legal` defect found by evaluation: in a zero-wager street state, a positive stack previously received normal `bet` unconditionally even when its total all-in target was below the one-big-blind minimum. A normal target-based `bet` or `raise` is now advertised only when at least one total target satisfies `minimum_target <= maximum_target`. The engine does not clamp an empty interval into a synthetic target.
+
+The distinct `all_in` action remains available when poker state and reopening rights permit it. Thus a player with 50 chips facing no wager and a 100-chip big blind receives `check` and `all_in`, but not normal `bet`; the all-in target remains the accepted total commitment of 50. Existing short all-in call/raise classification, non-reopening behavior, full-raise reopening, and total-target action semantics are unchanged. Legacy `Observation` and `DecisionObservation` obtain the corrected legal-action tuple directly from the engine.
+
+## Phase 3D2 range and equity intelligence
+
+`simulation.range_intelligence` is optional, privacy-safe inference infrastructure. `HoleCardCombo` is an immutable canonical physical-card pair; legal ranges enumerate only combinations left after Hero cards and the currently public board are removed. `WeightedRange` is finite, nonnegative, deterministically ordered, and normalized. Uniform is the safe default; the compact preflop hand-quality prior is heuristic, not solver-derived.
+
+`RangeUpdater` converts public actions and sizing evidence into floored likelihood weights. Public numeric opponent statistics can influence it only conservatively after medium/high confidence. `RangeEquityEstimator` is exact on the river and uses an isolated seeded RNG for earlier-street Monte Carlo, removing Hero, candidate, and public board cards from each runout. Optional range fields on `DecisionObservation` are unused by Expert and Adaptive.
+
+`PublicRangeTracker` is the explicit history integration boundary. A caller supplies each opponent public action together with the board visible at that action; it has no `HandEngine`, deck, or actual-card input. Summary concentration uses normalized Shannon entropy `-sum(p log p) / log(n)` and effective combinations `1 / sum(p²)`. Equity uses `P(win) + 0.5 P(tie)`.
+
+# Range-aware expert strategy (Phase 3D3)
+
+`RangeAwareExpertBot` (`range_expert`) is separate from the immutable `ExpertRuleBot` and `ExpertAdaptiveBot`.  At each decision the engine supplies only the acting player's cards, public board/actions so far, a `PublicRangeTracker` summary, and (postflop) one range-equity estimate.  The bot applies `RangeStrategyAdjustmentEngine` after the Expert baseline.  It permits only bounded fold/call and modest check/bet value transitions; all targets remain engine-authoritative.
+
+The range represents current-hand public-action hypotheses.  Opponent profiles represent completed-hand behavioural evidence; the range-aware layer does not additionally apply profile signals, avoiding double counting.
+
+## Phase 4D bounded abstract Hold'em CFR subgame
+
+`backend/research/holdem` also contains a research-only fixed-flop CFR game. It is not full heads-up no-limit Hold'em: the board is permanently `As Kd 7c`, there are no turn or river cards, and chance exactly enumerates disjoint two-card private deals from a six-card deck. The starting pot is 100 and both players have 100 chips behind. Player 0 acts first; all legal public transitions are obtained from the accepted Phase 4C `HoldemAbstraction`, retaining fold/check/call/all-in and its legal 50%, 75%, and 125%-pot total-target representatives. Fixed-board fold/showdown payoffs are zero-sum net chip changes from the start of this subgame.
+
+The acting player's Phase 4C `DecisionState` contains only that player's cards, the fixed public flop, public abstract history, and visible geometry. Opponent cards, deck/deal order, and future cards never enter an information-set key. The generic state-operation CFR core supports frozen-profile Vanilla CFR and regret-truncated, linearly averaged CFR+. Tree/training reports and deterministic strategy tables remain research-only; no bot, engine, API, schema, frontend, Expert, Adaptive, or RangeExpert integration occurs.
+
+`diagnostics_4d.training_report` records matched 1/10/100/1,000 checkpoints and the L1 change between average strategies. That stability measure is diagnostic only, not proof of Nash convergence. `reduced_exact` separately validates exact information-set-constrained best responses and NashConv on a three-deal, action-restricted configuration; its exploitability is explicitly not the exploitability of the full Phase 4D subgame.
+
+## Phase 4E external-sampling MCCFR foundation
+
+`backend/research/mccfr.py` is a separate seeded External-Sampling MCCFR core. One logical iteration is two sequential traversals, Player 0 then Player 1. Each traversal freezes the current behavioral profile at its own start, fully enumerates that traverser's actions, and samples one true chance outcome plus only the opposing player's actions. Player 1 intentionally snapshots after Player 0's traversal has applied updates; no profile mutation can affect decisions later in the same traversal. With true chance and opponent-policy sampling, the counterfactual regret estimator has no extra ratio: trajectory probability already contains `q_c * q_-i = pi_c * pi_-i`. Average-policy accumulation is `(pi_i / q_-i) * sigma_i`: chance probability remains in the expectation, while only sampled opponent reach cancels. The trainer owns a dedicated `random.Random(seed)` and exposes deterministic trajectory, chance/action, traversal-count, visit, zero-visit, finite-value, and memory diagnostics.
+
+Kuhn uses this core only as a stochastic research control, evaluated against the existing exact six-deal EV and information-set best responses. The Phase 4D adapter retains its fixed flop, Phase 4C abstraction, and bounded rules; its scaling report compares nodes and runtime with exact Vanilla CFR and reports profile EV/stability diagnostics only. MCCFR does not add a bot, touch the engine or its RNG, change public schemas, or claim full Hold'em exploitability.
+
+## Phase 4F bounded turn-chance Hold'em MCCFR research
+
+`backend/research/holdem/turn_subgame.py` is a separate, bounded two-street research fixture: fixed flop `As Kd 7c`; four private cards dealt without collision from the seven-card research deck `Ah Ad Kh Kc Qs Js Ts`; flop betting; one public uniformly dealt turn from the physically remaining cards; turn betting; then terminal. Player 0 is out of position and acts first on both streets. The starting pot is 100 and each player has 100 behind. Phase 4C remains the only card/geometry/history/action abstraction; action targets are current-street totals, commitments reset on the turn, while pot and remaining stacks carry forward. Normal reraises are intentionally absent from this bounded tree.
+
+Flop information sets are constructed before a turn exists and contain only own cards, fixed flop, public history, and visible geometry. The internal deck and opponent cards are used only to derive the conditional chance outcomes and never reach an information-set key. After the public turn, the same Phase 4C card bucket naturally receives the four-card public board. A called flop all-in ends this fixture without a turn decision; folds also end immediately. Turn showdowns use the fixed flop plus the public turn, while that bounded flop-all-in fixture evaluates its fixed flop only. All utilities are Player 0 net chip changes and are zero sum.
+
+The accepted external-sampling core now handles game-provided future chance nodes using the same dedicated RNG and true-chance estimator convention as root chance: a turn is sampled once per reached traversal, with no added chance importance ratio. `turn_exact.py` supplies a deliberately reduced exact two-turn, constrained-best-response control; its exploitability is explicitly not an exploitability measure for the larger Phase 4F game. The full Phase 4F tree is measured and guarded at 150,000 nodes (the configured game measures 70,560); MCCFR diagnostics report turn-card coverage, visited nodes, per-street infosets, finite values, and seed reproducibility. This research is not river-complete, full-game GTO, a production bot, or a Hold'em engine integration.
+
+## Phase 4G bounded river-chance Hold'em MCCFR research
+
+`backend/research/holdem/river_subgame.py` contains a separate bounded three-street fixture: fixed flop `As Kd 7c`, collision-free private deals from a seven-card deck, flop betting, conditional turn chance and betting, conditional river chance and betting, then fold or five-board-card showdown. Street commitments reset while pot and stacks carry. River cards are derived only from cards not fixed, privately dealt, or selected as turn and never appear in earlier `DecisionState` or Phase 4C keys. `river_mccfr.py` adapts the accepted generic external-sampling trainer without a second MCCFR algorithm; it supplies deterministic stage-specific chance coverage. A representative exact private-root measurement is scaled and guarded at two million nodes, while a reduced exact control validates tree/EV invariants and explicitly omits intractable BR enumeration. This code has no HandEngine, bot, API, frontend, or schema integration.
+
+`diagnostics_4g.py` supplies both shared exhaustive validation for the reduced action wrapper and a cached full bounded-game reachable information-set universe derived by deterministic traversal, never by MCCFR visits. `scaling_4g.py` runs accepted Phase 4F and Phase 4G adapters on the same seed and logical-iteration convention and reports tree counts, chance/terminal counts, reachable and visited information sets, sampling coverage, runtime, visited nodes, table entries, and deterministic table-memory estimates. These diagnostics do not alter any regret, strategy-sum, chance, or action-sampling mathematics.
+
+## Phase 5 — solver bot, opponent learning, and Coach
+
+Phase 5 connects the research line to playable strategies without changing
+the engine's rules or any accepted bot.
+
+### Fast evaluation (5B)
+
+`poker_analyzer.Eval7Adapter` evaluates hands with eval7 (about 14x faster
+than Treys) and translates every result into the identical Treys rank through
+a 7,462-class bijection built at import.  Duplicate-card probes and invalid
+card counts are delegated to Treys so values and errors are unchanged;
+`POKER_EVALUATOR=treys` forces the reference.  Range Intelligence memoizes its
+pure per-combo feature functions.  Both changes are verified value-identical.
+
+### Solver package (`backend/solver`)
+
+| Module | Role |
+|---|---|
+| `combos` | 1,326 combos, card blockers, 169 hand classes |
+| `equity` | eval7 rank vectors; exact river/turn and sampled flop equity matrices (`D = P(win) - P(lose)`) |
+| `tree` | one-street betting trees using the engine's total-target, minimum-raise, and street-closing rules |
+| `cfr` | vectorized discounted CFR (alpha 1.5, beta 0, gamma 2) over whole ranges; O(n) fold values via card blockers; node locking |
+| `preflop` | offline 169-class preflop charts at 15/30/60/100/200 bb (`solver/data`) |
+| `exploit` | maps `OpponentModel` statistics to confidence-weighted node locks |
+| `bot` | `SolverBot` (`solver`) and `AdaptiveSolverBot` (`solver_adaptive`) |
+
+`SolverBot` rebuilds each hand from `DecisionState.hand_actions` only.  Both
+players' public ranges start uniform; every preflop action multiplies the
+actor's range by the chart probability of that action and every postflop
+action by the strategy of a solve of that street from its start.  At its own
+decision the bot solves the current street from the actual state (exact pot,
+stacks, and opponent sizing) with both public ranges and samples its combo's
+mixed strategy from a SHA-256-seeded RNG that never touches the deck or any
+other RNG.  River leaves are exact showdowns; flop and turn leaves are
+all-runout equity (future betting is not modelled).  Any inconsistency falls
+back to `ExpertRuleBot` and is counted.
+
+`AdaptiveSolverBot` reads the public `OpponentModel` snapshot supplied with
+each observation.  Confident statistics lock the opponent's aggregate action
+frequencies at matching tree nodes (fold/call/raise when facing a bet, bet
+when checked to, limp/raise/3-bet/fold-to-raise preflop).  Fitting preserves
+the opponent's hand ordering and the lock weight is 0 / 0.3 / 0.55 / 0.75 for
+very low / low / medium / high confidence, so a thin or wrong read cannot be
+exploited without limit.  Preflop locks trigger a cached re-solve of the chart
+game.
+
+5H adds `solver/showdown.py`: after each completed hand, orchestrators call
+the opt-in `observe_completed_hand(history, seat)` hook (persistent matches,
+duplicate sessions, and Coach profile replays).  From cards legitimately
+revealed at showdown, `ShowdownModel` estimates how strongly the opponent's
+bets/raises and calls follow hand strength (1 = strength-ordered, 0 = random,
+shrunk toward 1 until enough showdowns).  Locks blend strength-ordered
+fitting with flat play in that proportion, so a maniac's aggression is read
+as random rather than strong.
+
+### Evaluation (5A)
+
+`simulation/duplicate_evaluation.py` plays every seed twice with the bots in
+swapped seats on identical cards (seat A is the button; the deck deals seat
+A, seat B, then the board), so each pair cancels most card luck.  Session mode
+keeps the same bot instances for many reset-stack hands while each side's
+opponent profile grows, and replays the whole session swapped.  Development
+and holdout seed ranges are disjoint; `win_rate_gate` accepts only holdout
+evidence.  `simulation/slumbot.py` replays Slumbot's public-API hands through
+`HandEngine` (a remote deck supplies Slumbot's board; a proxy seat replays its
+actions), so the local bot sees ordinary observations; server winnings are
+authoritative and cross-checked against engine settlement.
+
+### Coach (5F)
+
+`backend/coach` replays a manually entered spot through `HandEngine` with the
+user in seat A and the opponent in seat B.  The engine enforces legality; the
+replay stops at the first open decision and returns either solver advice
+(action mix, equity versus the villain's estimated range, and its make-up),
+the villain's legal actions, or a request for the next board cards.  Logged
+completed hands live in a local SQLite file and are replayed through the same
+`OpponentModel` to build profiles that `solver_adaptive` exploits.

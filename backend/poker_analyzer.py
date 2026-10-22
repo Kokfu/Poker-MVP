@@ -1,6 +1,14 @@
-"""Pure poker-analysis functions; Treys stays isolated behind TreysAdapter."""
+"""Pure poker-analysis functions; hand evaluators stay isolated behind adapters.
+
+``TreysAdapter`` is the accepted reference evaluator.  ``Eval7Adapter`` is the
+fast production evaluator: it evaluates with eval7 and translates every result
+into the identical Treys rank (1 = royal flush, 7462 = worst high card), so all
+comparisons, categories, and seeded results are unchanged.
+"""
 from __future__ import annotations
-from itertools import combinations
+from collections import Counter
+from itertools import combinations, combinations_with_replacement
+import os
 import random
 import time
 from typing import Iterable
@@ -10,15 +18,68 @@ RANKS = "23456789TJQKA"
 SUITS = "shdc"
 FULL_DECK = tuple(f"{r}{s}" for r in RANKS for s in SUITS)
 RANK_VALUE = {r: i + 2 for i, r in enumerate(RANKS)}
+DISTINCT_HAND_CLASSES = 7462
 
 class TreysAdapter:
+    name = "treys"
     def __init__(self): self.evaluator = Evaluator()
     def score(self, hole: list[str], board: list[str]) -> int:
         return self.evaluator.evaluate([Card.new(c) for c in hole], [Card.new(c) for c in board])
     def category(self, hole: list[str], board: list[str]) -> str:
         return self.evaluator.class_to_string(self.evaluator.get_rank_class(self.score(hole, board)))
 
-EVALUATOR = TreysAdapter()
+def hand_class_representatives() -> tuple[tuple[str, ...], ...]:
+    """One five-card hand for each of the 7,462 distinct poker hand classes."""
+    hands: list[tuple[str, ...]] = []
+    for ranks in combinations_with_replacement(RANKS, 5):
+        counts = Counter(ranks)
+        if max(counts.values()) > 4:
+            continue
+        # Every rank group starts on a different suit and repeated ranks use
+        # successive suits, so there are no duplicate cards and no flush.
+        seen: Counter[str] = Counter()
+        groups = {rank: index for index, rank in enumerate(sorted(counts))}
+        cards = []
+        for rank in ranks:
+            cards.append(rank + SUITS[(groups[rank] + seen[rank]) % 4]); seen[rank] += 1
+        hands.append(tuple(cards))
+    for ranks in combinations(RANKS, 5):
+        hands.append(tuple(rank + SUITS[0] for rank in ranks))
+    return tuple(hands)
+
+class Eval7Adapter:
+    """eval7 speed with Treys-identical ranks and category strings."""
+    name = "eval7"
+    def __init__(self, reference: TreysAdapter | None = None):
+        import eval7
+        self.reference = reference or TreysAdapter()
+        self._evaluate = eval7.evaluate
+        self._cards = {card: eval7.Card(card) for card in FULL_DECK}
+        self._rank_for: dict[int, int] = {}
+        for hand in hand_class_representatives():
+            value = self._evaluate([self._cards[card] for card in hand])
+            rank = self.reference.score(list(hand[:2]), list(hand[2:]))
+            if self._rank_for.setdefault(value, rank) != rank:
+                raise RuntimeError("eval7 and Treys disagree on hand-class equivalence")
+        if len(self._rank_for) != DISTINCT_HAND_CLASSES or len(set(self._rank_for.values())) != DISTINCT_HAND_CLASSES:
+            raise RuntimeError("eval7/Treys rank translation is not a bijection")
+    def score(self, hole: list[str], board: list[str]) -> int:
+        cards = hole + board
+        # Invalid counts and duplicate cards (callers may probe impossible
+        # combos) keep the reference's exact errors and values.
+        if not 5 <= len(cards) <= 7 or len(set(cards)) != len(cards):
+            return self.reference.score(hole, board)
+        lookup = self._cards
+        return self._rank_for[self._evaluate([lookup[c] for c in cards])]
+    def category(self, hole: list[str], board: list[str]) -> str:
+        evaluator = self.reference.evaluator
+        return evaluator.class_to_string(evaluator.get_rank_class(self.score(hole, board)))
+
+def _default_evaluator() -> TreysAdapter | Eval7Adapter:
+    # POKER_EVALUATOR=treys forces the reference implementation for debugging.
+    return TreysAdapter() if os.environ.get("POKER_EVALUATOR", "").lower() == "treys" else Eval7Adapter()
+
+EVALUATOR = _default_evaluator()
 STRAIGHTS = [set(range(s, s + 5)) for s in range(2, 11)] + [{14, 2, 3, 4, 5}]
 
 def street_for(board: list[str]) -> str: return {0: "Preflop", 3: "Flop", 4: "Turn", 5: "River"}[len(board)]

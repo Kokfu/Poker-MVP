@@ -1,5 +1,11 @@
 # Phase 2 local simulator
 
+## Kuhn Poker CFR research
+
+The separate `research.kuhn` package validates Vanilla CFR and the mathematically distinct CFR+ variant before any future Hold'em abstraction work. Chance is exact over all six ordered J/Q/K deals (probability 1/6 each); no RNG is used. An information set is `hero_card|public-history`, never including the opponent card. Regret matching uses positive cumulative regrets, falling back to uniform distribution. Vanilla regret updates use opponent reach times chance reach; average-strategy sums use acting-player reach times chance reach. CFR+ applies the same frozen-profile, full-iteration deltas but then truncates each cumulative regret with `max(0, regret + delta)`. Its average strategy is explicitly linearly weighted: iteration `t` contributes `max(0, t - averaging_delay)` times the acting-player/chance reach; the default delay is zero.
+
+Evaluation is exact over every action path. Best response enumerates legal behavioral policies per information set, never actions conditioned on a hidden opposing card. `NashConv = BR0 - BR1_as_u0`; reported exploitability is `NashConv / 2`. The target equilibrium value for Player 0 is -1/18. This research does not solve or alter Hold'em.
+
 The simulator is a deterministic, local-only, heads-up No-Limit Texas Hold'em research environment. It is educational software, not a real-money poker client.
 
 ## Hand model
@@ -98,6 +104,18 @@ The engine validates every submitted action. A fallback exists only as a state-s
 
 EquityBot estimates equity against a random unknown opponent. Its result is heuristic and its configurable Monte Carlo iterations trade runtime for precision.
 
+## Phase 3C1 decision intelligence foundation
+
+At every bot decision, the engine can build an immutable `DecisionObservation` from authoritative state. Its `DecisionState` includes only the acting player's hole cards and the board revealed at that instant, public stacks/commitments/action context, button/blinds, position, legal actions, total-target bounds, and reopening state. Its `PokerFeatureSet` supplies finite deterministic values: pot odds and required equity are `call / (pot + call)` (zero when `call` is zero); SPR is `effective_stack / pot` (zero when pot is zero); and bet faced is `call / pot` (zero when pot is zero).
+
+Feature categories include canonical made hands, flush/open-ended/gutshot draws, overcards and pair-plus-draw, plus paired/monotone/two-tone/rainbow/connected board texture. The builder neither consumes deck or bot RNG state nor performs equity calculation. An optional `EquityEstimate` can be attached by a future explicit estimator. New strategies can use `decide_decision(DecisionObservation)`; the four original bots retain their legacy `Observation` contract and behavior. This internal layer does not change dataset schema 2.0, history schema 1.0, or API responses.
+
+## Phase 3D2 range intelligence
+
+The optional range layer models an opponent as a normalized weighted distribution over legal two-card hypotheses. It uses public action likelihoods and compact heuristic preflop descriptors, not a GTO chart. River equity is exact across weighted candidates; preflop/flop/turn use a dedicated deterministic Monte Carlo RNG and remove every known card from each sampled runout. Expert and Adaptive do not consume range data yet.
+
+Callers can use `PublicRangeTracker` after actual public engine-history actions, supplying that action's currently revealed board. This is deliberately explicit rather than automatic bot work. Representative diagnostics use 500 Monte Carlo iterations; full legal-range construction and an update are millisecond-scale in the local environment, while equity scales with active combinations/iterations.
+
 ## Statistics
 
 For each player:
@@ -135,3 +153,189 @@ The API accepts at most 10,000 hands per request. The React Simulator tab expose
 Dataset generation is optional and writes one JSON decision record per line. Records include the acting bot's observation, chosen action and target, classification, terminal winner, net chips, reward in BB, and hand ending. The strict validator checks schema, types, target semantics, legal-action consistency, per-hand terminal consistency, privacy boundaries, and that a file contains only one simulation ID.
 
 Schema 1.0 migration and a separate dataset manifest are not supported.
+
+## Phase 3 persistent match mode
+
+Persistent match mode is a separate orchestration mode. It does not change Phase 2 independent simulations.
+
+`MatchConfig` supplies per-player starting stacks, small and big blinds, a maximum hand count, and a deterministic seed. For each hand, `PersistentMatchRunner`:
+
+1. alternates the button, with the button posting the small blind;
+2. creates a fresh `HandEngine` using the carried stacks;
+3. lets the existing engine perform betting, all-in handling, automatic runout, and settlement;
+4. requires exactly one settlement and clean terminal hand state;
+5. records a per-hand summary;
+6. carries the settled ending stacks into the next hand.
+
+The match ends immediately when a player reaches zero chips. Otherwise it ends when `max_hands` is reached. The final winner is Bot A or Bot B according to final stacks; equal stacks at the hand limit produce `tied`. Total match chips remain constant and Bot A/B net results are exact opposites.
+
+Blind posts are capped by available chips. A short-stacked big blind can leave the button with an exact call decision. A short or all-in blind that requires no response triggers unmatched-excess return where needed and automatic board runout. No negative stack or multiway side pot can be created.
+
+The result contains the match ID, seed, bot names, starting and final stacks, hand count, winner, termination reason, net chips, showdown/fold totals, illegal/fallback counts, and per-hand summaries. Each summary records positions, starting/ending stacks, winner, nets, ending type, board, diagnostics, and settlement completion.
+
+Phase 3A2 exposes the same orchestration through:
+
+```text
+POST /api/matches/simulate
+```
+
+and:
+
+```powershell
+.\.venv\Scripts\python.exe -m simulation.cli match --bot-a tight --bot-b aggressive --starting-stack 10000 --small-blind 50 --big-blind 100 --max-hands 100 --seed 42 --equity-iterations 500
+```
+
+Both interfaces use `run_builtin_match`; neither duplicates match rules. Defaults are random/random bots, a 10,000-unit stack per player, 50/100 blinds, 100 maximum hands, seed 0, and 1,000 equity iterations.
+
+Public validation requires supported case-normalized bot names; positive integer stack and blinds; small blind no greater than big blind; 1–10,000 hands; integer seed; and 500, 1,000, or 2,000 equity iterations. Boolean values are not accepted as integers.
+
+The public response omits private hole cards and returns flattened configuration, outcome, aggregate statistics, and per-hand settlement summaries.
+
+Phase 3A3 adds a **Match** tab to the React frontend. Its form exposes both bots, starting stack, blinds, maximum hands, seed, and EquityBot iterations. The result view shows the winner and termination reason, final stacks, nets, showdown/fold totals, illegal/fallback counts, explicit chip-conservation and zero-sum indicators, and every public per-hand summary. The wide hand table scrolls inside its own container on narrow viewports.
+
+The frontend does not change engine or API semantics. Match results are session-only: there is still no match dataset output, database persistence, saved-match browser, or multiway support (generated histories can be replayed in the Replay tab).
+
+## Phase 3B1 action-level history foundation
+
+Every completed `HandEngine` result now provides an internal `HandHistory` using history schema `1.0`. Persistent-match summaries retain the corresponding history internally while their public API representation remains unchanged.
+
+The event stream records hand start, each blind post, every requested/applied action, street starts, incremental public-board reveals, unmatched-excess returns, automatic-runout start, showdown, pot award, and final settlement. Indexes start at zero and are contiguous. Every event carries connected before/after chip and betting snapshots.
+
+Action amounts retain total-target semantics. For example, a raise to 1,200 is recorded as target 1,200 and the amount paid is separately recorded as the difference from the actor's prior street commitment. Short and exact all-in calls, short/full all-in raises, reopening state, legal target bounds, and fallback application are explicit.
+
+Blind history stores both assigned and posted amounts, so a player with 30 chips assigned a 50-chip small blind records a 30-chip all-in post without implying a negative stack. During automatic runout, flop, turn, and river remain separate reveal events rather than appearing as an immediate five-card board.
+
+At showdown, both legitimately revealed hole-card pairs may appear only on the showdown event. Fold-ended histories reveal no hole cards. No event contains future board cards, deck order, remaining-deck contents, or burn cards.
+
+`validate_hand_history` is an internal replay-validation foundation. It checks continuity, conservation, board growth, action evidence, privacy, exactly-once settlement, cleanup, and agreement with the authoritative result. Phase 3B1 does not add a history API, CLI command, file export, persistence, or replay interface.
+
+## Phase 3B2 history interfaces and export
+
+Dedicated interfaces now expose validated histories without changing existing simulation or match responses:
+
+```text
+POST /api/histories/hand
+POST /api/histories/match
+```
+
+The single-hand endpoint accepts built-in bots, independent starting stacks, blinds, button, seed, and EquityBot iterations. The match-history endpoint accepts the same configuration as the existing persistent-match endpoint and returns its public result summary plus one history per completed hand.
+
+The CLI provides:
+
+```text
+history-hand
+history-match
+validate-history <path>
+```
+
+Both generation commands print deterministic JSON and optionally accept `--output` and `--overwrite`. `validate-history` accepts either a `hand_history` document or a `match_history` document, validates every typed history, and returns structured counts, errors, warnings, and schema versions. It exits nonzero for malformed or invalid documents.
+
+Files are ordinary UTF-8 JSON:
+
+- `hand_history`: schema identifier, one history, and its validation summary.
+- `match_history`: schema identifier, unchanged match summary, ordered histories, counts, and aggregate validation.
+
+History schema 1.0 remains distinct from dataset schema 2.0. This foundation can support future replay work, but it does not include event navigation, visualization, server storage, or match resumption.
+
+## Single-hand Replay
+
+## Phase 3C2 opponent-model foundation
+
+Persistent matches retain public-action opponent models. Each future strategy-facing observation optionally includes the other player's snapshot before the current decision; both models update only from the completed hand afterward. The foundation tracks explicit denominators for general actions, public preflop and postflop opportunities, deterministic sizing buckets, Beta(1,1) smoothing, and conservative sample confidence. It uses no hidden cards, future board, deck, or RNG and does not change bot behavior, API output, or dataset schema 2.0.
+
+`Replay` supports local single-hand and persistent-match histories. Persistent Match exposes aggregate validation, completed-hand selection, stack carry-forward checks, and the same event replay UI. Private folded cards and future board cards remain unavailable until legitimate event data reveals them.
+
+## ExpertRuleBot v1
+
+`expert` consumes the privacy-safe `DecisionObservation`: legal actions/bounds, position, stacks, pot odds, SPR, public action context, made-hand/draw/texture features, optional equity, and optional public-history profile. It groups preflop hands into premium, strong, medium playable, speculative, and weak categories; opens/isolates wider in position; tightens facing a 3-bet; and commits premium/strong hands more readily at 20 BB or less. Postflop it value-bets strong made hands, commits stronger pairs at SPR <= 3, continues strong draws at sensible prices, and makes only deterministic position/initiative/dry-board bluffs.
+
+`adaptive` keeps this `expert` result as its control decision, then applies the separate, numeric `ExploitAdjustmentEngine` only when the pre-decision public profile has medium/high confidence. It uses bounded over-fold pressure, calling-station bluff suppression/value sizing, anti-aggression defense, passive initiative, and selective preflop fold-to-raise pressure. Isolated hands have no accumulated profile and retain baseline behavior; persistent matches update profiles only after settlement.
+
+`simulation.adaptive_benchmark` includes long-horizon diagnostics and non-registered public-behavior archetypes for research tests. They use real engine actions and completed histories rather than injected snapshots. The bot retains an in-memory, non-serialized decision trace recording profile age, selected statistic, confidence, baseline/final action, and activation/rejection reason. This is diagnostic evidence only and does not alter API/history response shapes.
+
+The passive diagnostic uses legal check/call behavior to mature the public `aggressive` statistic. A qualifying low-aggression profile may produce the bounded `passive_initiative` adjustment only from an in-position dry-board air check to a 33%-pot bet.
+
+Sizing is target-total and clamped to engine bounds: 60% pot standard value/protection, 85% pot wet-board strong value, 60% pot draw semi-bluffs, and 33% pot selective bluffs. Supplied equity is compared to required equity with a 4% conservative margin; the bot does not force expensive equity computation. Profile adjustments require medium or high confidence: loose-passive reduces bluffs, loose-aggressive widens bluff-catching, tight-passive permits selective pressure, and tight-aggressive avoids marginal aggression. Low-confidence samples create a warning but no change. Internal explanations include action/target, categories, finite odds/SPR, optional equity, adjustment, rationale, reasons, and warnings. `python -m simulation.expert_benchmark` runs 1,000-hand deterministic diagnostic matchups; it is not a strength claim.
+
+`run_mirrored` runs Expert in both seats for each seed and reports seat-specific plus combined accounting. These are seat-aware independent samples, not duplicate-deal pairs: seat swapping does not guarantee identical deck allocations. `run_legality_stress` covers 20 deterministic seeds against every built-in bot and records decisions, illegal/fallback counts, exceptions, and target incidents.
+
+## Phase 3D1 statistical evaluation
+
+The reproducible Expert-versus-Adaptive command is:
+
+```powershell
+cd C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend
+.\.venv\Scripts\python.exe -m simulation.evaluation_cli compare --control expert --treatment adaptive --opponent tight --mode persistent_match --sample-count 100 --base-seed 10000 --max-hands 100 --bootstrap-resamples 2000 --statistics-seed 91001
+```
+
+Add `--output <path>` for explicit evaluation-schema 1.0 JSON. Existing files are refused unless `--overwrite` is supplied. Output includes the complete configuration and seed list, orientations, hand and unit counts, absolute metrics, confidence intervals, raw matched-unit deltas, warnings, and zero-sum status. A caller-sized unpooled matrix is also available:
+
+```powershell
+.\.venv\Scripts\python.exe -m simulation.evaluation_cli matrix --strategies expert adaptive --opponents random tight aggressive equity expert --sample-count 20 --equity-iterations 10
+```
+
+BB/100 is `100 * (total_net_chips / big_blind) / hands_played`; it is zero for no hands and is never calculated from match count. Mean, median, and descriptive per-hand values use hand results. Sample standard deviation and standard error use net BB at the evaluation-unit level: a reset hand in `independent`, a whole match in `persistent_match`. Average winning and losing sizes use that same unit.
+
+Uncertainty uses a deterministic percentile bootstrap, defaulting to 2,000 resamples at 95% confidence with a separate statistics seed. Absolute BB/100 resamples whole units and recalculates the total-net-BB/total-hands ratio. Expert-versus-Adaptive deltas resample corresponding seed/orientation entries and recalculate each strategy's BB/100 before subtracting Expert from Adaptive. This is matched-schedule comparison, not duplicate-deal pairing; divergent actions can produce different trajectories and match lengths.
+
+A delta interval entirely above zero is `positive_estimate_supported`; entirely below zero is `negative_estimate_supported`. An interval containing zero produces a directional uncertain label or `approximately_inconclusive` for a zero estimate. These are neutral finite-sample categories, not proof of superiority, GTO play, or a guaranteed winner. Fewer than 30 evaluation units sets machine-readable `sample_warning` without blocking smoke tests.
+
+Adaptive conclusions should use `persistent_match`; independent mode is only a reset-hand sanity check because it provides no accumulated opponent history. Compare opponents separately. Matrix output deliberately supplies no pooled overall effect, avoiding implicit weighting choices.
+
+## Phase 3D1A short-stack legality correction
+
+Evaluation seed 30002 originally reached match hand 7 on the flop with stacks A/B 50/19,750, pot 200, zero street commitments, no call, and open raising rights. The engine exposed `check`, normal `bet`, and `all_in` even though the normal total-target interval was minimum 100 and maximum 50. RandomBot selected the advertised 100-chip bet, which the authoritative action validator rejected and replaced through fallback.
+
+Normal `bet` and `raise` are now present only when their inclusive total-target interval is nonempty. The same state exposes `check` and the distinct 50-chip `all_in`; it does not convert the all-in into a normal minimum bet or change target-total semantics. Short all-in raises still do not reopen prior action, while a full raise does. The corrected seed applies the 50-chip all-in without fallback and conserves chips.
+
+The Phase 3D1 persistent diagnostic was rerun with 20 seeds, both orientations, Expert and Adaptive against Random, Tight, Aggressive, Equity, and Expert. Across 400 matches and 9,245 hands it recorded zero illegal actions, zero fallbacks, zero exceptions, and zero conservation failures. Adaptive exploit activations still occurred. This is engine-correctness evidence, not a strategy-performance improvement or tuning result.
+
+# Range-aware expert strategy
+
+Use `range_expert` anywhere a bot name is accepted.  A `PublicRangeTracker` is initialized from Hero's known cards and updated immediately after each opponent public action, before the next decision.  It never reconstructs a completed history and never receives unrevealed cards, deck order, future board cards, or future actions.
+
+Flop/turn use one deterministic bounded Monte Carlo estimate per decision (default 500 iterations); river uses exact enumeration.  The seed is a SHA-256 derivation of the configured seed plus stable match/hand/player/street/decision context and does not consume game or bot RNG.  The explanation records equity, method, iterations, range size/effective count/entropy, required equity, margin, gates, and safeguards.
+
+Range adjustments compare range equity with pot-odds required equity using conservative centralized margins.  Near-uniform, high-entropy ranges retain the Expert baseline; concentration merely permits bounded adjustments and is never treated as correctness.
+
+Before every range-aware decision, the tracker synchronizes the newly public flop, turn, or river cards, removes now-impossible candidate combos, renormalizes, and asserts finite/no-collision invariants.  Ordering is: prior public actions, board synchronization, range snapshot/equity, decision, then public-action update.
+
+## Phase 5 duplicate-deal evaluation
+
+Duplicate report schema `1.0` (`report_type` `duplicate_evaluation` or
+`duplicate_tournament`) is separate from evaluation schema 1.0.
+
+- **Unit.** One seed played twice: strategy in seat A (the button), then in
+  seat B, with identical hole cards and board.  Stacks reset every hand.  The
+  pair total removes most card luck; measured variance reductions against
+  unpaired hands range from about 10% to 60% depending on the matchup.
+- **Sessions.** With `session_hands = H > 1` a unit is H consecutive hands
+  played by the same two bot instances with the button alternating and
+  `OpponentModel` profiles growing hand by hand, replayed with seats swapped.
+  This measures learning (e.g. `solver_adaptive`) without card luck.
+- **Statistics.** bb/100 = 100 x net big blinds / hands.  Confidence intervals
+  are deterministic percentile bootstraps over units (default 2,000
+  resamples, 95%).  Tournament pool scores are the unweighted mean of a bot's
+  head-to-head bb/100 against every other bot; seeds are resampled jointly
+  across pairings.
+- **Integrity.** Every hand's history is validated and must be zero-sum; each
+  pair verifies identical deals (`deal_mismatches` must be 0).  Results are
+  identical for any worker count.
+- **Seed sets.** `development` seeds start at 1,000,000 and `holdout` seeds at
+  7,000,000.  Strategy work uses development seeds only; the Phase 5 gate
+  (`win_rate_gate`) is `acceptance_eligible` only on holdout evidence.
+- **Gate.** A candidate passes when every head-to-head interval is above zero,
+  its pool score beats the best other bot with the paired bootstrap interval
+  of the difference above zero, and there are no illegal actions or deal
+  mismatches.  Intervals that include zero are reported as inconclusive,
+  never as wins.
+
+### Slumbot benchmark
+
+`simulation/slumbot.py` replays each Slumbot hand through `HandEngine`
+(200 bb, 50/100).  Our bot sees an ordinary `DecisionObservation`; Slumbot's
+actions are replayed by a proxy seat and its board by a remote deck.  Any
+disagreement is a reported desync, never patched.  Server `winnings` are
+authoritative and cross-checked against the engine's settlement.  Slumbot
+also reports a `baseline_winnings` value; `winnings - baseline_winnings` is
+a much lower-variance estimate than raw winnings.
