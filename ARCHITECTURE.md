@@ -7,14 +7,18 @@ The application is local and stateless:
 ```text
 React/Vite frontend
         +-- Analyzer tab
+        +-- Coach tab (manual entry)
         +-- independent Simulator tab
         +-- persistent Match tab
+        +-- Replay tab
         |
         | JSON over localhost /api
         v
 FastAPI backend
         |
         +-- Analyzer: validation, Treys, NumPy/Monte Carlo
+        |
+        +-- Coach API (replay through HandEngine, solver advice, SQLite hand log)
         |
         +-- Simulator API and CLI
                 |
@@ -25,7 +29,7 @@ FastAPI backend
                 +-- JSONL dataset writer/validator
 ```
 
-Docker Compose runs the FastAPI backend and React/Vite frontend as separate services. Ports 8000 and 5173 are bound to `127.0.0.1`. There is no database and no application persistence beyond explicitly requested dataset or result files.
+Docker Compose runs the FastAPI backend and React/Vite frontend as separate services. Ports 8000 and 5173 are bound to `127.0.0.1`. The only application persistence is the Coach hand log, a local SQLite file (`backend/data/coach.sqlite`, or the `coach-data` Docker volume); everything else is stateless apart from explicitly requested dataset or result files.
 
 ## Kuhn CFR research isolation
 
@@ -51,7 +55,7 @@ FastAPI validates card notation, uniqueness, board length, opponent count, and n
 
 - `simulation.engine.HandEngine` owns cards, stacks, betting state, legal-action validation, street progression, runout, and settlement.
 - `simulation.match.PersistentMatchRunner` is the Phase 3A1 orchestration layer. It creates one clean `HandEngine` per hand and carries only settled stacks into the next hand.
-- `simulation.bots` contains `RandomBot`, `TightBot`, `AggressiveBot`, and `EquityBot`.
+- `simulation.bots` contains `RandomBot`, `TightBot`, `AggressiveBot`, and `EquityBot`, and registers the later strategies under `BOT_TYPES`: `expert`, `adaptive`, `range_expert`, `solver`, and `solver_adaptive`.
 - `Observation` is the bot-facing information boundary. It exposes the acting player's cards, public board, stacks, commitments, legal actions, and target bounds, but not hidden opponent cards, future board cards, deck order, or RNG state.
 - `simulation.decision_state` provides the Phase 3C1 strategy-facing boundary. `DecisionState` is a typed, immutable snapshot of one legitimate player decision; `PokerFeatureSet` is its deterministic derived feature layer; and `DecisionObservation` combines both with optional `EquityEstimate` data. `HandEngine` builds it immediately before each bot decision. Existing bots continue through the legacy `Observation` adapter, while future strategies may implement `decide_decision(DecisionObservation)` without direct engine access.
 - `simulation.statistics` aggregates wins, ties, losses, net chips, net BB, BB/100, showdowns, folds, action counts, and illegal actions.
@@ -138,7 +142,7 @@ Phase 3B2 adds `simulation.history_service` as the only public serialization bou
 
 `POST /api/histories/hand`, `POST /api/histories/match`, and the `history-hand`, `history-match`, and `validate-history` CLI commands all call this service. The existing match summary endpoint still calls its original serializer and does not gain history fields. Dataset schema 2.0 remains a separate decision-record system.
 
-History JSON is request/command output, not server-side persistence. There is no history database, lookup ID endpoint, process-resumption mechanism, or replay frontend.
+History JSON is request/command output, not server-side persistence. There is no history database, lookup ID endpoint, or process-resumption mechanism; the Replay tab renders histories generated on request.
 
 ## Phase 3 persistent match boundary
 
@@ -153,7 +157,7 @@ Persistent match mode is Phase 3 work in progress and remains separate from `Sim
 
 Phase 3A2 exposes this orchestration through `simulation.match_service.run_builtin_match`. That adapter normalizes and validates public parameters, constructs seeded built-in bots, invokes `run_match`, flattens the internal dataclasses into the public snake_case response, and checks aggregate invariants. Both `POST /api/matches/simulate` and `simulation.cli match` call this same adapter.
 
-The match API/CLI layer has no poker-rule implementation. Phase 3A3 adds a presentation-only React Match tab that calls the existing endpoint, performs strict client input checks, and renders aggregate and per-hand public output. It does not calculate poker state, persist matches, or alter the independent Simulator. There is still no match dataset integration, database persistence, saved-match browser, or replay system. Dataset schema 2.0 and retained Phase 2 evidence remain unchanged.
+The match API/CLI layer has no poker-rule implementation. Phase 3A3 adds a presentation-only React Match tab that calls the existing endpoint, performs strict client input checks, and renders aggregate and per-hand public output. It does not calculate poker state, persist matches, or alter the independent Simulator. There is still no match dataset integration, database persistence, or saved-match browser (the separate Replay tab renders generated match histories). Dataset schema 2.0 and retained Phase 2 evidence remain unchanged.
 
 ## Deployment
 

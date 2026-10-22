@@ -6,7 +6,7 @@ Poker Analyzer MVP is a local, educational, offline-first Texas Hold'em analyzer
 
 - **`solver` bot** — preflop charts solved offline plus a real-time range solve of every postflop street (discounted CFR over both players' public ranges). Select it anywhere a bot is chosen.
 - **`solver_adaptive` bot** — the same solver, adjusting to confident reads of its opponent's public tendencies (node locking), learned hand by hand.
-- **Coach tab** — enter your own heads-up hand as it happens, either by typing card notation or clicking a 52-card picker; quick 1/3, 1/2, 3/4, pot, and all-in buttons fill a legal bet/raise size. When it is your turn the solver recommends a play with its full action mix, your equity against the villain's estimated range, and that range's make-up. Log finished hands under an opponent's name to build their profile — the Coach then adjusts to it — and browse, reload, or delete an opponent's hand history from the profile panel.
+- **Coach tab** — enter your own heads-up hand as it happens, either by typing card notation or clicking a 52-card picker; quick 1/3, 1/2, 3/4, pot, and all-in buttons fill a legal bet/raise size. When it is your turn the solver recommends a play with its full action mix, your equity against the villain's estimated range, and that range's make-up. Log finished hands under an opponent's name to build their profile — the Coach then adjusts to it — and browse, reload, or delete an opponent's hand history from the profile panel. Actions can also be entered from the keyboard (F fold, C check/call, B bet/raise, A all-in).
 - **Duplicate-deal evaluation** — every deal is replayed with seats swapped to cancel card luck; learning sessions measure opponent adaptation; a Slumbot bridge benchmarks against a strong outside bot.
 
 The Coach is manual entry for study, review, and practice. Using real-time assistance while playing on a poker site breaks most sites' rules; this project does not automate or assist play on any site.
@@ -40,7 +40,7 @@ Phase 2 adds a deterministic, local-only, heads-up No-Limit Texas Hold'em simula
 - JSONL dataset schema 2.0 generation and strict validation;
 - CLI, API, and React Simulator interfaces.
 
-Built-in bots are `RandomBot`, `TightBot`, `AggressiveBot`, and `EquityBot`. They are baseline research strategies, not claims of optimal or game-theoretic play.
+The original baseline bots are `RandomBot`, `TightBot`, `AggressiveBot`, and `EquityBot`; later phases add `expert`, `adaptive`, `range_expert`, `solver`, and `solver_adaptive`. All are research strategies, not claims of optimal play.
 
 Chip amounts are integer internal units:
 
@@ -79,7 +79,7 @@ npm.cmd install
 npm.cmd run dev
 ```
 
-Open `http://127.0.0.1:5173`. The backend listens on `http://127.0.0.1:8000`.
+Open `http://127.0.0.1:5173`. The backend listens on `http://127.0.0.1:8000`. When running the frontend outside Docker, point Vite at the local backend with `$env:API_PROXY = "http://127.0.0.1:8000"` before `npm.cmd run dev`. Tabs: Analyzer, Coach, Simulator, Match, Replay.
 
 ## Docker
 
@@ -210,13 +210,13 @@ The final Phase 2 backend suite contains 275 passing tests. Retained runtime evi
 - No tournament structure, rake, antes, or ICM.
 - No general side pots beyond heads-up matched-chip settlement and unmatched-excess return.
 - No persistent bankroll across independent hands.
-- No AI-training pipeline in Phase 2.
+- No AI-training pipeline.
 - No schema 1.0 migration, separate dataset manifest, or multiple simulation IDs per dataset file.
 - EquityBot is computationally expensive, especially in long runs.
 - Monte Carlo analysis is approximate and varies unless seeded.
 - The frontend Analyzer has no loading or disabled submission state.
-- Persistent matches have no dataset output, database persistence, saved-match browser, or replay controls; results exist only in the current frontend session or API/CLI response.
-- History JSON can be returned or written explicitly, but there is no server-side history store, lookup endpoint, cross-process resumption, or replay frontend.
+- Persistent matches have no dataset output, database persistence, or saved-match browser; results exist only in the current frontend session or API/CLI response.
+- History JSON can be returned or written explicitly and replayed in the Replay tab, but there is no server-side history store, lookup endpoint, or cross-process resumption. The only stored data is the Coach hand log (local SQLite).
 - Browser verification covers only the local application.
 - No real-money integration, external poker-site automation, automatic clicking, OCR, screen scraping, screenshot card extraction, or hidden-card extraction.
 

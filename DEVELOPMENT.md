@@ -26,8 +26,6 @@ Use that interpreter for all backend commands:
 
 `-p no:cacheprovider` avoids the non-blocking Pytest cache permission warning that can occur under OneDrive.
 
-## Frontend
-
 ## Kuhn CFR research CLI
 
 Run from `backend`; this is not part of the simulator CLI:
@@ -53,6 +51,8 @@ The Phase 4E control is library-only and remains outside the simulator CLI. From
 
 `KuhnExternalSamplingMCCFRTrainer(seed)` owns its own RNG. A logical iteration contains two sequential, individually frozen traversals (Player 0 then Player 1): chance and opponent actions are sampled from their target distributions while traverser actions are enumerated. Diagnostics distinguish logical iterations from total traversals. The counterfactual estimator needs no extra importance division because chance/opponent sampling is the target reach; average-policy accumulation cancels sampled opponent reach but retains chance probability through expectation. It supplies exact Kuhn EV/BR metrics through `convergence_report`; sampled trajectories are reproducible for equal seed/configuration/iterations. `HoldemSubgameExternalSamplingMCCFRTrainer(seed)` applies the same core only to the fixed Phase 4D game. Its scaling report deliberately does not include full-subgame exploitability.
 
+## Frontend
+
 Use Node.js 20 or newer with npm. The Docker image uses Node 20; the accepted host build used Node 24.16.0 and npm 11.13.0.
 
 ```powershell
@@ -64,8 +64,10 @@ npm.cmd run build
 
 Use `npm.cmd` on Windows when PowerShell execution policy blocks `npm.ps1`.
 
-The local frontend has three tabs:
+The local frontend has five tabs:
 
+- **Coach** advises on manually entered heads-up hands (see "Coach locally").
+- **Replay** renders generated single-hand and persistent-match histories.
 - **Analyzer** submits manually entered hand states to `POST /api/analyze`.
 - **Simulator** runs independent hands through `POST /api/simulations/run`; both stacks reset before each hand.
 - **Match** runs stack-persistent matches through `POST /api/matches/simulate`; stacks carry forward until elimination or the configured hand limit.
@@ -195,11 +197,11 @@ The API routes are `POST /api/histories/hand` and `POST /api/histories/match`. T
 
 Keep `simulation.decision_state` a pure, read-only transformation of `HandEngine` state. It must not duplicate betting rules, inspect deck internals, consume RNG, or add fields to existing API/history/dataset serializers. Run the focused decision-state, poker-feature, and privacy suites before the complete backend regression. `DecisionObservation` is the future strategy boundary; legacy bots remain on `Observation` until deliberately migrated.
 
-## Single-hand Replay
-
 ## Phase 3C2 opponent-model development
 
 Keep `simulation.opponent_model` history-derived and deterministic: it must never read engine cards, deck, or RNG. Verify pre-decision profile delivery and post-settlement updates in match tests, then run the full backend regression. Public responses and dataset schema 2.0 remain unchanged.
+
+## Single-hand Replay
 
 `Replay` supports `/api/histories/hand` and `/api/histories/match`. Keep their shared event renderer responsible for event navigation, table state, timeline selection, and privacy filtering; match-only UI should remain limited to request controls, overview, hand selection, and stack progression.
 

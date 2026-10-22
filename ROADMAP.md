@@ -240,7 +240,7 @@ Baseline (development, independent duplicate hands, 84,000 hands): `equity` led 
 
 Slumbot (300 hands each, 200 bb): baseline-adjusted `solver` +131 bb/100 [-18, +321], `expert` -137 [-394, +80]; both inconclusive; 0 desyncs, all settlements verified.
 
-Regression: 770 backend tests pass, `pip check` clean, frontend production build passes, Docker Compose build/run verified (Coach and solver answer inside the container; Coach data persists in the `coach-data` volume).
+Regression (recorded at the first Phase 5 write-up; at release prep the suite is 781 passing): 770 backend tests pass, `pip check` clean, frontend production build passes, Docker Compose build/run verified (Coach and solver answer inside the container; Coach data persists in the `coach-data` volume).
 
 ### Verdict
 

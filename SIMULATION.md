@@ -108,7 +108,7 @@ EquityBot estimates equity against a random unknown opponent. Its result is heur
 
 At every bot decision, the engine can build an immutable `DecisionObservation` from authoritative state. Its `DecisionState` includes only the acting player's hole cards and the board revealed at that instant, public stacks/commitments/action context, button/blinds, position, legal actions, total-target bounds, and reopening state. Its `PokerFeatureSet` supplies finite deterministic values: pot odds and required equity are `call / (pot + call)` (zero when `call` is zero); SPR is `effective_stack / pot` (zero when pot is zero); and bet faced is `call / pot` (zero when pot is zero).
 
-Feature categories include canonical made hands, flush/open-ended/gutshot draws, overcards and pair-plus-draw, plus paired/monotone/two-tone/rainbow/connected board texture. The builder neither consumes deck or bot RNG state nor performs equity calculation. An optional `EquityEstimate` can be attached by a future explicit estimator. New strategies can use `decide_decision(DecisionObservation)`; the four existing bots retain their legacy `Observation` contract and behavior. This internal layer does not change dataset schema 2.0, history schema 1.0, or API responses.
+Feature categories include canonical made hands, flush/open-ended/gutshot draws, overcards and pair-plus-draw, plus paired/monotone/two-tone/rainbow/connected board texture. The builder neither consumes deck or bot RNG state nor performs equity calculation. An optional `EquityEstimate` can be attached by a future explicit estimator. New strategies can use `decide_decision(DecisionObservation)`; the four original bots retain their legacy `Observation` contract and behavior. This internal layer does not change dataset schema 2.0, history schema 1.0, or API responses.
 
 ## Phase 3D2 range intelligence
 
@@ -193,7 +193,7 @@ The public response omits private hole cards and returns flattened configuration
 
 Phase 3A3 adds a **Match** tab to the React frontend. Its form exposes both bots, starting stack, blinds, maximum hands, seed, and EquityBot iterations. The result view shows the winner and termination reason, final stacks, nets, showdown/fold totals, illegal/fallback counts, explicit chip-conservation and zero-sum indicators, and every public per-hand summary. The wide hand table scrolls inside its own container on narrow viewports.
 
-The frontend does not change engine or API semantics. Match results are session-only: there is still no match dataset output, database persistence, saved-match browser, replay UI, or multiway support.
+The frontend does not change engine or API semantics. Match results are session-only: there is still no match dataset output, database persistence, saved-match browser, or multiway support (generated histories can be replayed in the Replay tab).
 
 ## Phase 3B1 action-level history foundation
 
