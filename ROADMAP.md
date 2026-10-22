@@ -315,3 +315,20 @@ Every one of the seven 95% bootstrap intervals has a lower bound above zero, and
 All seven lower bounds are above zero with 0 illegal actions and 0 deal mismatches over 40,320 hands, and every estimate is within 6 bb/100 of the original run.  `adaptive` again equals `expert` exactly (its exploit engine never activates in these sessions).
 
 **PHASE 5 COMPLETE** on both the `b3be891` solver and the merged faster solver at `4987a71`.
+
+### Outside benchmark: Slumbot, 1,000 hands (2026-10-23)
+
+`solver_adaptive` (commit `3a79e0b`, strategy code identical to the Phase 5 verdict) played 1,000 consecutive hands against Slumbot's public API through the existing bridge (200 bb deep, 50/100 blinds, 500 on the button and 500 in the big blind, bot seeds 7,000-7,999; `benchmark-results/phase-5/slumbot-solver-adaptive-long.jsonl`, not tracked by git).  Run and rule stated before starting: report whatever comes out.
+
+| Measure | Result |
+|---|---|
+| Raw winnings | **-148.7 bb/100**, 95% bootstrap CI [-319.5, +18.4] |
+| Baseline-adjusted (Slumbot's own reported baseline subtracted, lower variance) | **-78.4 bb/100**, 95% CI [-202.8, +44.8] |
+| Illegal actions | 0 (no desyncs, 0 settlement mismatches against Slumbot's winnings) |
+| Bot fallbacks to the rule-based bot | 1 of 3,107 decisions (the action was legal) |
+| Decision time (bot compute only) | mean 0.54 s, median 0.55 s, 95th percentile 1.59 s, max 4.1 s |
+| Wall clock | 5.4 s per hand including network |
+
+**Verdict: `solver_adaptive` lost to Slumbot on both point estimates; neither interval excludes zero**, so 1,000 hands cannot tell a small loss from a small win.  A loss is the expected direction against a much stronger opponent, and the raw interval is wide (about ±170 bb/100) because a single hand swings 27 bb (standard deviation).  The result shows the bot plays legal, settlement-consistent poker at 200 bb and is not shown to be competitive with Slumbot.  By seat: -215 bb/100 on the button, -83 in the big blind; by half: -201 then -96.  The earlier 300-hand `solver` run (+131 baseline-adjusted [-18, +321]) was likewise inconclusive and is a reminder of how wide these intervals are.
+
+**Caveat on what was measured.**  The bridge builds a fresh bot for every hand and supplies no opponent profile, so `solver_adaptive` could not learn Slumbot's tendencies across hands and played essentially as `solver`.  This benchmark therefore does not test the opponent-adaptation part of the bot.  Bot compute time here is lower than the 1-3 s quoted elsewhere because most Slumbot decisions are preflop chart lookups or small postflop trees.
