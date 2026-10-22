@@ -199,6 +199,7 @@ class StreetSolve:
     exploitability: float | None
     seconds: float
     locked_nodes: int = 0
+    solver: Any = None  # kept for read-only action values (explain_ev)
 
 
 @dataclass
@@ -214,6 +215,7 @@ class SolverBot(PokerBot):
     exploit = False
     lock_weighting = "confidence"  # or "evidence" (see solver.exploit._weight)
     pool_streets = False  # partial pooling of postflop reads across streets
+    explain_ev = False  # add per-action EV to postflop explanations (read-only; the Coach turns it on)
     iterations = {"flop": 60, "turn": 70, "river": 80}
     flop_runouts = 30
     prune = 5e-3
@@ -329,10 +331,15 @@ class SolverBot(PokerBot):
             probabilities = solve.average[node][:, position]
             choice = self._sample(ds, probabilities)
             action = self._concrete_postflop(ds, tree_node.actions[choice])
+            action_ev = None
+            if solve.solver is not None:
+                values = solve.solver.action_values(tree_node, position)
+                action_ev = [round(float(v), 1) for v in values]
             return action, {"source": "postflop_solve", "street": street, "labels": tree_node.labels,
                             "probabilities": [round(float(p), 4) for p in probabilities], "chosen": tree_node.labels[choice],
                             "range_sizes": [int(len(c)) for c in solve.combos], "solve_seconds": round(solve.seconds, 3),
                             "exploitability": solve.exploitability, "resolved_from_current_state": not on_tree,
+                            **({"action_ev": action_ev} if action_ev is not None else {}),
                             "exploit": {**exploit_info, "locked_nodes": solve.locked_nodes},
                             **self._range_report(board, hero_combo, ranges[opponent])}
         raise ReplayError("unreachable street")
@@ -364,7 +371,8 @@ class SolverBot(PokerBot):
         locks = tree_locks(tree, 1 - hero, root_state.street, profile, self._strength_correlation(), self.lock_weighting, self.pool_streets) if profile is not None else {}
         solver = RangeSolver(tree, (ranges[0][combos[0]], ranges[1][combos[1]]), d, compat, combo_ids=(combos[0], combos[1]), locks=locks)
         result = solver.solve(self.iterations[root_state.street])
-        return StreetSolve(tree, (combos[0], combos[1]), result.average, None, time.perf_counter() - started, len(locks))
+        return StreetSolve(tree, (combos[0], combos[1]), result.average, None, time.perf_counter() - started, len(locks),
+                           solver if self.explain_ev else None)
 
     def _preflop_policy(self, depth: int, opponent: int, locks: dict):
         """Node -> (actions, 1326) strategy: the chart, or a locked re-solve."""
