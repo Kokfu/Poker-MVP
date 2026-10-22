@@ -6,7 +6,7 @@ Poker Analyzer MVP is a local, educational, offline-first Texas Hold'em analyzer
 
 - **`solver` bot** — preflop charts solved offline plus a real-time range solve of every postflop street (discounted CFR over both players' public ranges). Select it anywhere a bot is chosen.
 - **`solver_adaptive` bot** — the same solver, adjusting to confident reads of its opponent's public tendencies (node locking), learned hand by hand.
-- **Coach tab** — enter your own heads-up hand as it happens, either by typing card notation or clicking a 52-card picker; quick 1/3, 1/2, 3/4, pot, and all-in buttons fill a legal bet/raise size. When it is your turn the solver recommends a play with its full action mix, your equity against the villain's estimated range, and that range's make-up. Log finished hands under an opponent's name to build their profile — the Coach then adjusts to it — and browse, reload, or delete an opponent's hand history from the profile panel. Actions can also be entered from the keyboard (F fold, C check/call, B bet/raise, A all-in).
+- **Coach tab** — enter your own heads-up hand as it happens, either by typing card notation or clicking a 52-card picker; quick 1/3, 1/2, 3/4, pot, and all-in buttons fill a legal bet/raise size. When it is your turn the solver recommends a play with its full action mix, your equity against the villain's estimated range, and that range's make-up. Log finished hands under an opponent's name to build their profile — the Coach then adjusts to it — and browse, reload, or delete an opponent's hand history from the profile panel. Each recommendation comes with a one-line reason, the per-action frequency and (postflop) EV, and each opponent's type label with its confidence and sample size; the **Review my hands** view shows your own stats, results, and possible leaks. Actions can also be entered from the keyboard (F fold, C check/call, B bet/raise, A all-in).
 - **Duplicate-deal evaluation** — every deal is replayed with seats swapped to cancel card luck; learning sessions measure opponent adaptation; a Slumbot bridge benchmarks against a strong outside bot.
 
 The Coach is manual entry for study, review, and practice. Using real-time assistance while playing on a poker site breaks most sites' rules; this project does not automate or assist play on any site.
@@ -104,6 +104,7 @@ The configured ports bind to localhost. The frontend proxies `/api` requests to 
 - `POST /api/histories/match`
 - `POST /api/coach/advise` — replay a manually entered spot; returns advice, the villain's legal actions, or the next board cards needed
 - `POST /api/coach/hands` — log a completed hand under an opponent name
+- `GET /api/coach/review[?opponent=name]` — stats (VPIP, PFR, 3-bet, fold-to-raise, fold-to-bet, showdown results), net result, and heuristic leak flags over your logged hands
 - `GET /api/coach/opponents`, `GET /api/coach/opponents/{name}` — logged opponents and their profiles
 - `GET /api/coach/opponents/{name}/hands` — that opponent's logged hands, newest first, each with its `id` and `created_at`
 - `DELETE /api/coach/hands/{id}` — delete one logged hand (404 if the id does not exist)

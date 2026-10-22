@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import CoachReview from "./CoachReview";
 
 type Actor = "hero" | "villain";
 type ActionKind = "fold" | "check" | "call" | "bet" | "raise" | "all_in";
@@ -25,20 +26,33 @@ type Explanation = {
   villain_effective_combos?: number;
   villain_top_classes?: { hand: string; share: number }[];
   villain_range_makeup?: { type: string; share: number }[];
+  action_ev?: number[];
   exploit?: { active: boolean; hands_observed?: number; classification?: string; locked_nodes?: number };
   reason?: string;
+};
+
+type Explain = {
+  chosen: string | null;
+  frequency: number | null;
+  ev: number | null;
+  ev_note?: string;
+  equity?: number | null;
+  options: { label: string; frequency: number; ev?: number }[];
+  opponent_range: { effective_combos: number } | null;
+  reason: string;
 };
 
 type StatRead = { frequency: number; opportunities: number; confidence: string };
 type Profile = {
   hands_observed: number;
   classification: string;
+  label?: { type: string; confidence: string; hands: number; decisions: number; assigned: boolean };
   preflop: Record<string, StatRead>;
   postflop: Record<string, Record<string, StatRead>>;
 };
 
 type CoachResponse =
-  | { status: "hero_to_act"; advice: { action: ActionKind; amount: number | null }; explanation: Explanation; state: SpotState; exploiting: boolean; opponent_profile: Profile | null }
+  | { status: "hero_to_act"; advice: { action: ActionKind; amount: number | null }; explanation: Explanation; explain: Explain | null; state: SpotState; exploiting: boolean; opponent_profile: Profile | null }
   | { status: "villain_to_act"; state: SpotState }
   | { status: "need_board"; street: string; cards_needed: number }
   | { status: "hand_complete"; summary: { showdown: boolean; board: string[]; hero_net?: number } };
@@ -206,6 +220,7 @@ export default function Coach() {
   const [villainCards, setVillainCards] = useState<string[]>([]);
   const [result, setResult] = useState<CoachResponse>();
   const [reviewMode, setReviewMode] = useState(false);
+  const [view, setView] = useState<"play" | "review">("play");
   const [profile, setProfile] = useState<Profile | null>(null);
   const [opponents, setOpponents] = useState<{ name: string; hands: number }[]>([]);
   const [history, setHistory] = useState<HandRecord[]>([]);
@@ -473,6 +488,12 @@ export default function Coach() {
       <p>Enter your hand and the action as it happens. When it is your turn, the solver recommends a play; log finished hands under the opponent's name so the Coach learns their style.</p>
       <p className="muted">Heads-up only. Manual entry for study, review, and practice. Real-time assistance while playing on a poker site breaks most sites' rules.</p>
 
+      <div className="coach-views" role="group" aria-label="Coach view">
+        <button type="button" className={view === "play" ? "" : "secondary"} aria-pressed={view === "play"} onClick={() => setView("play")}>Play a hand</button>
+        <button type="button" className={view === "review" ? "" : "secondary"} aria-pressed={view === "review"} onClick={() => setView("review")}>Review my hands</button>
+      </div>
+
+      {view === "review" ? <CoachReview opponents={opponents} /> : (<>
       <form onSubmit={start}>
         <div className="form-grid">
           <div className="span-2">
@@ -533,15 +554,18 @@ export default function Coach() {
               <div className="coach-advice">
                 <p className="eyebrow">RECOMMENDED</p>
                 <p className="coach-recommendation">{ACTION_TEXT[result.advice.action]}{result.advice.amount ? ` ${result.advice.amount}` : ""}</p>
+                {result.explain?.reason && <p className="coach-reason">{result.explain.reason}</p>}
                 <div className="coach-strategy">
                   {result.explanation.labels.map((label, index) => (
                     <div key={label} className="coach-bar">
                       <span>{describeLabel(label)}</span>
                       <div><i style={{ width: `${Math.round(result.explanation.probabilities[index] * 100)}%` }} /></div>
                       <b>{Math.round(result.explanation.probabilities[index] * 100)}%</b>
+                      {result.explanation.action_ev && <small className="coach-ev" title="Chips you expect to win from here on, counting only chips still to put in (fold = 0)">EV {result.explanation.action_ev[index] >= 0 ? "+" : ""}{Math.round(result.explanation.action_ev[index])}</small>}
                     </div>
                   ))}
                 </div>
+                {result.explain?.ev_note && <p className="muted"><small>{result.explain.ev_note}</small></p>}
                 <p className="muted">Mixed strategy from {result.explanation.source === "postflop_solve" ? "a real-time solve of this street" : result.explanation.source === "preflop_exploit" ? "the preflop chart re-solved for this opponent" : result.explanation.source === "preflop_chart" ? "the preflop chart" : "the fallback rule bot"}.
                   {result.exploiting ? " Adjusted to this opponent's tendencies." : ""}</p>
                 {result.explanation.hero_equity_vs_range !== undefined && (
@@ -587,7 +611,8 @@ export default function Coach() {
             </div>
             {profile ? (
               <>
-                <p><strong>{profile.classification.replace(/_/g, " ")}</strong> · {profile.hands_observed} hands</p>
+                <p><strong>{profile.classification.replace(/_/g, " ")}</strong> · {profile.hands_observed} hands
+                  {profile.label && <small className="muted"> · {profile.label.assigned ? `${profile.label.confidence.replace("_", " ")} confidence, based on ${profile.label.decisions} decisions` : "no label yet (needs 20+ hands)"}</small>}</p>
                 <ul>
                   {Object.entries(profile.preflop).filter(([, read]) => read.opportunities > 0).map(([name, read]) => (
                     <li key={name}><span>{STAT_TEXT[name] ?? name}</span><b>{Math.round(read.frequency * 100)}%</b><small>{read.confidence.replace("_", " ")} ({read.opportunities})</small></li>
@@ -633,6 +658,7 @@ export default function Coach() {
           </aside>
         </div>
       )}
+      </>)}
     </section>
   );
 }

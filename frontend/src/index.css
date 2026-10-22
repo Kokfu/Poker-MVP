@@ -434,3 +434,10 @@ tbody tr:last-child td {
   .coach-bar { grid-template-columns: 90px 1fr 44px; }
   .coach-panel .form-grid { grid-template-columns: 1fr; }
 }
+.coach-views { display: flex; gap: 8px; margin: 14px 0; }
+.coach-reason { margin: 0 0 12px; color: #dfe9ee; }
+.coach-ev { color: #c2cfd6; font-variant-numeric: tabular-nums; grid-column: 2 / 4; text-align: right; }
+.coach-review-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 12px 0; padding: 0; list-style: none; }
+.coach-review-stats li { border: 1px solid #31464a; border-radius: 8px; padding: 10px; background: #0f1a1d; display: grid; gap: 2px; }
+.coach-review-stats b { font-size: 1.3rem; }
+.coach-leak { border-left: 3px solid #e0b25a; padding: 6px 12px; margin: 8px 0; background: #0f1a1d; }
