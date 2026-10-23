@@ -208,3 +208,50 @@ def test_illegal_requests_are_legalized_before_sending():
     fake = FakeSlumbot(seed=5)
     results, summary = run_slumbot_session(lambda i: IllegalBot(), 40, SlumbotClient(fake, token="tok"))
     assert fake.errors == [] and summary["desyncs"] == 0 and summary["settlement_mismatches"] == 0
+
+
+class ProfileBot:
+    """Always checks or calls; records the profile it is shown and the hands it is told about."""
+    def __init__(self):
+        self.shown, self.last_profile, self.completed = [], None, []
+
+    def decide_decision(self, observation):
+        profile = observation.opponent_profile
+        self.shown.append(None if profile is None else profile.hands_observed)
+        self.last_profile = profile
+        return Action("check") if "check" in observation.decision_state.legal_actions else Action("call")
+
+    def observe_completed_hand(self, history, seat):
+        self.completed.append(seat)
+
+
+def test_learning_session_keeps_one_bot_and_a_growing_profile_of_slumbot():
+    fake = FakeSlumbot(seed=11)
+    bots = []
+
+    def factory(index):
+        bots.append(ProfileBot())
+        return bots[-1]
+
+    results, summary = run_slumbot_session(factory, 30, SlumbotClient(fake, token="tok"), learn=True)
+    assert fake.errors == [] and summary["desyncs"] == 0 and summary["settlement_mismatches"] == 0
+    assert len(bots) == 1  # one bot for the whole session
+    bot = bots[0]
+    assert len(bot.completed) == 30 and set(bot.completed) == {"a", "b"}  # told the client seat each hand
+    assert bot.shown[0] == 0 and max(bot.shown) == 29  # a hand's own actions never reach its own profile
+    assert bot.shown == sorted(bot.shown)
+    # The profile describes Slumbot (random legal actions, so it raises), not our check/call bot.
+    assert bot.last_profile.statistics["aggressive"].occurrences > 0
+    assert bot.last_profile.statistics["aggressive"].opportunities == bot.last_profile.decisions_observed
+
+
+def test_default_session_gives_each_hand_a_fresh_bot_and_no_profile():
+    fake = FakeSlumbot(seed=11)
+    bots = []
+
+    def factory(index):
+        bots.append(ProfileBot())
+        return bots[-1]
+
+    run_slumbot_session(factory, 6, SlumbotClient(fake, token="tok"))
+    assert len(bots) == 6 and all(set(bot.shown) == {None} and bot.completed == [] for bot in bots)

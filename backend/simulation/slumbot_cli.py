@@ -22,6 +22,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--equity-iterations", type=int, default=500)
     parser.add_argument("--pause-seconds", type=float, default=0.2)
+    parser.add_argument("--learn", action="store_true", help="keep one bot for the whole session and give it a growing profile of Slumbot")
     parser.add_argument("--output", help="JSONL file for per-hand results (appended)")
     args = parser.parse_args(argv)
     if args.hands <= 0:
@@ -37,7 +38,7 @@ def main(argv: list[str] | None = None) -> int:
 
     _, summary = run_slumbot_session(
         lambda index: BOT_TYPES[args.bot](seed=args.seed + index, equity_iterations=args.equity_iterations),
-        args.hands, SlumbotClient(), pause_seconds=args.pause_seconds, on_hand=record,
+        args.hands, SlumbotClient(), pause_seconds=args.pause_seconds, on_hand=record, learn=args.learn,
     )
     print(json.dumps({"bot": args.bot, **summary}, indent=2, sort_keys=True))
     return 0

@@ -28,6 +28,7 @@ import urllib.request
 from poker_analyzer import FULL_DECK
 from .actions import Action
 from .engine import HandEngine
+from .opponent_model import OpponentModel
 
 SLUMBOT_HOST = "slumbot.com"
 SLUMBOT_STACK = 20_000
@@ -287,7 +288,9 @@ class SlumbotHandResult:
     bot_hole_cards: list[str] = field(default_factory=list)
 
 
-def play_slumbot_hand(client: SlumbotClient, bot, hand_index: int = 0) -> SlumbotHandResult:
+def play_slumbot_hand(client: SlumbotClient, bot, hand_index: int = 0, opponent_model: OpponentModel | None = None) -> SlumbotHandResult:
+    """Play one hand.  With ``opponent_model`` the bot sees the profile built from
+    earlier hands (never the current one) and the finished hand is added to it."""
     started = time.perf_counter()
     response = client.new_hand()
     bridge = _HandBridge(client, response)
@@ -306,6 +309,7 @@ def play_slumbot_hand(client: SlumbotClient, bot, hand_index: int = 0) -> Slumbo
         starting_stacks={"a": SLUMBOT_STACK, "b": SLUMBOT_STACK},
         bb=SLUMBOT_BIG_BLIND, small_blind=SLUMBOT_SMALL_BLIND, button="a",
         hand_id=f"slumbot-{hand_index}", deck=RemoteDeck(bridge, seat_cards),
+        opponent_profile_provider=(lambda player: opponent_model.snapshot() if player == bridge.client_seat else None) if opponent_model is not None else None,
     )
     bridge.engine = engine
     engine.range_trackers.pop(bridge.remote_seat, None)  # its "known cards" are placeholders
@@ -320,6 +324,13 @@ def play_slumbot_hand(client: SlumbotClient, bot, hand_index: int = 0) -> Slumbo
         if not bridge.finished or bridge.applied != len(bridge.tokens):
             raise SlumbotDesync("engine finished before the server")
         engine_net = result["stacks"][bridge.client_seat] - SLUMBOT_STACK
+        if opponent_model is not None:
+            # Slumbot sits in whichever engine seat we do not, so point the model at it for this history.
+            opponent_model.player = bridge.remote_seat
+            opponent_model.update(result["history"])
+            hook = getattr(bot, "observe_completed_hand", None)
+            if hook is not None:
+                hook(result["history"], bridge.client_seat)
     except SlumbotDesync as error:
         desync = str(error)
         _finish_passively(bridge)
@@ -376,12 +387,20 @@ def summarize_slumbot(results: list[SlumbotHandResult], bootstrap_resamples: int
     }
 
 
-def run_slumbot_session(bot_factory: Callable[[int], Any], hands: int, client: SlumbotClient | None = None, pause_seconds: float = 0.0, on_hand: Callable[[SlumbotHandResult], None] | None = None) -> tuple[list[SlumbotHandResult], dict[str, Any]]:
-    """Play ``hands`` sequential hands (one at a time per token, as Slumbot asks)."""
+def run_slumbot_session(bot_factory: Callable[[int], Any], hands: int, client: SlumbotClient | None = None, pause_seconds: float = 0.0, on_hand: Callable[[SlumbotHandResult], None] | None = None, learn: bool = False) -> tuple[list[SlumbotHandResult], dict[str, Any]]:
+    """Play ``hands`` sequential hands (one at a time per token, as Slumbot asks).
+
+    By default every hand gets a fresh bot from ``bot_factory(index)`` and no
+    opponent profile.  With ``learn=True`` one bot (``bot_factory(0)``) plays the
+    whole session and sees a growing profile of Slumbot built from the public
+    actions of the hands already played, as in the local learning sessions.
+    """
     client = client or SlumbotClient()
     results = []
+    session_bot = bot_factory(0) if learn else None
+    model = OpponentModel("b") if learn else None
     for index in range(hands):
-        result = play_slumbot_hand(client, bot_factory(index), index)
+        result = play_slumbot_hand(client, session_bot if learn else bot_factory(index), index, model)
         results.append(result)
         if on_hand:
             on_hand(result)
