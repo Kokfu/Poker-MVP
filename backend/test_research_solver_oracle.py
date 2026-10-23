@@ -77,8 +77,27 @@ def test_river_betting_oracle_converges_and_has_nonnegative_gap():
     assert late / solver.pot < 0.05  # within a few percent of the pot after 40 iterations on a small range
 
 
-def test_analyse_spot_reports_comparable_gaps():
+def test_analyse_spot_reports_gaps_and_a_zero_sum_head_to_head():
     result = analyse_spot(spot(seed=5), oracle_iterations=30, production_iterations=30, river_iterations=30)
     assert result["river_subgames"] > 0 and result["production_gap"] >= -1e-6 and result["oracle_gap"] >= -1e-6
     assert result["root_labels"] and abs(sum(result["root_mix_oracle"]) - 1.0) < 1e-6
     assert 0.0 <= result["root_strategy_distance"] <= 1.0
+    values = result["h2h_seat_values_chips"]
+    for name in ("production_vs_production", "oracle_vs_oracle"):
+        assert sum(values[name]) == pytest.approx(0.0, abs=1.0)  # one profile played by both seats is zero-sum
+    assert result["h2h_production_loss_bb"] == pytest.approx(-result["h2h_production_edge_bb"])
+    assert result["iterations"] == {"oracle": 30, "production": 30, "river": 30}
+    assert result["extra_gap_bb"] == pytest.approx((result["production_gap"] - result["oracle_gap"]) / 100)
+
+
+def test_a_strategy_played_by_both_seats_is_zero_sum_for_the_profile_values():
+    solver = TwoStageSolver(spot(seed=9))
+    for _ in range(10):
+        solver.iterate()
+    policy = solver.final_policy()
+    turn_fn = lambda node: policy[node.index]  # noqa: E731
+    solver.prepare_profile(turn_fn, 10)
+    v0, v1 = solver.profile_values(turn_fn)
+    assert v0 + v1 == pytest.approx(0.0, abs=1.0)
+    # A best response can never do worse than the profile itself.
+    assert solver._profile_value(turn_fn, 0, True) >= v0 - 1e-6 and solver._profile_value(turn_fn, 1, True) >= v1 - 1e-6

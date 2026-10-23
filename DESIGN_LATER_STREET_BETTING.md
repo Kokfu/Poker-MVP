@@ -176,3 +176,54 @@ changed).  Tests: `backend/test_research_solver_oracle.py`.
 - **Not measured by Stage 0.** Flop spots; any bb/100 strength effect; decision
   time of a fix.  A passing gate shows the model is imperfect, not that fixing
   it wins hands.
+
+## 9. Stage 0 amendment (approved by the project owner; recorded before the real run)
+
+**Why.**  A timing run on two real spots (seeds 20000 and 20002, both in the
+calibration set below) took about 27 minutes each, which puts the 200-spot plan
+near 30 hours with the memory free.  It also showed two problems with the
+section 8 protocol: production gaps of 124% and 169% of a 400-chip turn pot,
+because the pots are small and stacks are about 24 times the pot, so
+"percent of the turn pot" is dominated by stack depth; and the production
+profile's rivers were solved for fewer iterations than the oracle's, so part of
+the difference could be river-solver quality rather than the turn strategy.
+Those two spots are the only results seen; no held-out spot has been run.
+
+**Changes (these replace the matching parts of section 8).**
+
+- **Spots:** the first 60 spots in seed order from 20,000 (same capture rule).
+  Spots 1-30 are the calibration set; spots 31-60 are the held-out set.
+- **Iterations:** oracle 80 (joint turn + river), production turn solve 70 (as
+  the bot).  Every profile compared is evaluated with the *same* river
+  treatment: each river subgame solved fresh for 60 iterations against the
+  ranges that profile produces.  (The bot uses 80 on a real river; 60 keeps
+  the run feasible and applies equally to every profile.)
+- **Metrics added.**  (a) *Extra gap in big blinds* = (production minus oracle
+  extended-game exploitability) / 100 chips.  (b) *Head-to-head loss*: the
+  production turn strategy played against the oracle turn strategy, seats
+  swapped, both with the neutral river treatment above, measured as the
+  production side's expected chips per spot below the oracle-versus-oracle
+  value, in big blinds.  This is the closer analogue of a duplicate match
+  against a strong opponent than a worst-case best response.  (c) The share of
+  hands that reach such a turn spot (spots found per hand tried during
+  capture), so a per-spot figure can be turned into a rough per-hand one; the
+  conversion is approximate and labelled as such.  The percent-of-pot figures
+  are still recorded but no longer decide anything.
+- **Gate (fixed now, applied to the 30 held-out spots only).**  Proceed to
+  Stage 1 only if all hold:
+  1. the median head-to-head loss is at least **1.0 bb per spot** (about 25
+     bb/100 if a quarter of hands reach such a spot, the scale at which a fix
+     could show in the primary test);
+  2. the lower bound of the 95% bootstrap interval of the *mean* head-to-head
+     loss (2,000 resamples, statistics seed 91,005) is above **0.5 bb**;
+  3. validity: the median oracle gap (matched river treatment) is at most one
+     third of the median production gap, and no spot failed.
+  If 3 fails the result is **inconclusive** (the oracle is not converged enough
+  to resolve the difference); if 3 holds and 1 or 2 fails, Stage 1 does not
+  proceed.
+- **Calibration set:** only for Stage 1 fitting if the gate passes; it takes no
+  part in the gate.
+- **Reading the result.**  The oracle plays the two-street abstraction, not real
+  opponents, and it shares the production bet menu.  A pass shows that the
+  one-street leaf model costs chips against a better model of the same game;
+  it does not show that fixing it wins bb/100 against the existing bots.

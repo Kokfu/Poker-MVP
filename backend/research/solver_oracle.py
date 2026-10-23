@@ -185,40 +185,52 @@ class TwoStageSolver(RangeSolver):
         super().iterate()
 
     # ----------------------------------------------------------------- evaluation
-    def solve_rivers_for(self, turn_policy: dict[int, np.ndarray], iterations: int) -> None:
-        """Fix the turn strategy and solve every river subgame against the resulting ranges."""
-        reach0, reach1 = self._reaches(0, lambda node: turn_policy[node.index])
-        live = self._set_sub_ranges(reach0, reach1)
-        for key in live:
-            sub = self.subs[key]
-            sub.reset()
-            for _ in range(iterations):
-                sub.iterate()
+    def prepare_profile(self, turn_fn, river_iterations: int | None = None) -> None:
+        """Point the river subgames at the ranges a turn profile produces.
 
-    def profile_exploitability(self, turn_policy: dict[int, np.ndarray]) -> float:
-        """Mean best-response gain of the fixed profile (turn policy + stored river averages), in chips per deal.
-
-        River strategies are each subgame's current average policy; call
-        ``solve_rivers_for`` first for an arbitrary turn policy.
+        With ``river_iterations`` every live subgame is solved fresh against
+        those ranges (the same neutral treatment for every profile compared);
+        without, the stored average strategies are used as they are.
         """
-        reach0, reach1 = self._reaches(0, lambda node: turn_policy[node.index])
+        reach0, reach1 = self._reaches(0, turn_fn)
         self._live = self._set_sub_ranges(reach0, reach1)
-        river_policy = {key: self.subs[key].final_policy() for key in self._live}
-        gains = []
-        for traverser in (0, 1):
-            _, opp = self._reaches(traverser, lambda node: turn_policy[node.index])
-            values = RangeSolver._terminal_values(self, traverser, opp)
-            for leaf in self.river_leaves:
-                values[leaf.index] = 0.0
+        if river_iterations:
             for key in self._live:
                 sub = self.subs[key]
-                policy = river_policy[key]
-                _, sub_opp = sub._reaches(traverser, lambda node, p=policy: p[node.index])
-                sub_values = sub._backward(traverser, sub._terminal_values(traverser, sub_opp), lambda node, p=policy: p[node.index], best_response=True)
-                values[key[0]][self.keep[key[1]][traverser]] += sub_values[sub.tree.root] / RIVER_CARDS_PER_PAIR
-            self._backward(traverser, values, lambda node: turn_policy[node.index], best_response=True)
-            gains.append(float(self.ranges[traverser] @ values[self.tree.root]) / self.deal_mass())
-        return (gains[0] + gains[1]) / 2.0
+                sub.reset()
+                for _ in range(river_iterations):
+                    sub.iterate()
+        self._river_policy = {key: self.subs[key].final_policy() for key in self._live}
+
+    def _profile_value(self, turn_fn, traverser: int, best_response: bool) -> float:
+        """Expected chips per deal for ``traverser`` (or its best response) against the prepared profile."""
+        _, opp = self._reaches(traverser, turn_fn)
+        values = RangeSolver._terminal_values(self, traverser, opp)
+        for leaf in self.river_leaves:
+            values[leaf.index] = 0.0
+        for key in self._live:
+            sub = self.subs[key]
+            policy = self._river_policy[key]
+            river_fn = lambda node, p=policy: p[node.index]  # noqa: E731
+            _, sub_opp = sub._reaches(traverser, river_fn)
+            sub_values = sub._backward(traverser, sub._terminal_values(traverser, sub_opp), river_fn, best_response=best_response)
+            values[key[0]][self.keep[key[1]][traverser]] += sub_values[sub.tree.root] / RIVER_CARDS_PER_PAIR
+        self._backward(traverser, values, turn_fn, best_response=best_response)
+        return float(self.ranges[traverser] @ values[self.tree.root]) / self.deal_mass()
+
+    def profile_values(self, turn_fn) -> tuple[float, float]:
+        """Seat 0 and seat 1 expected chips per deal under the prepared profile."""
+        return self._profile_value(turn_fn, 0, False), self._profile_value(turn_fn, 1, False)
+
+    def profile_exploitability(self, turn_policy: dict[int, np.ndarray]) -> float:
+        """Mean best-response gain of the profile (turn policy + the stored river averages), in chips per deal."""
+        turn_fn = lambda node: turn_policy[node.index]  # noqa: E731
+        self.prepare_profile(turn_fn)
+        return (self._profile_value(turn_fn, 0, True) + self._profile_value(turn_fn, 1, True)) / 2.0
+
+    def solve_rivers_for(self, turn_policy: dict[int, np.ndarray], iterations: int) -> None:
+        """Fix the turn strategy and solve every river subgame against the resulting ranges."""
+        self.prepare_profile(lambda node: turn_policy[node.index], iterations)
 
 
 # ------------------------------------------------------------------- one spot
@@ -229,25 +241,45 @@ def _root_action_mix(solver: RangeSolver, policy: dict[int, np.ndarray]) -> np.n
     return (policy[root.index] * weights).sum(axis=1) / weights.sum()
 
 
-def analyse_spot(spot: TurnSpot, oracle_iterations: int = 150, production_iterations: int = 70, river_iterations: int = 80) -> dict[str, Any]:
-    """Compare the production one-street turn strategy with the two-street oracle on one spot."""
+BIG_BLIND = 100
+
+
+def analyse_spot(spot: TurnSpot, oracle_iterations: int = 80, production_iterations: int = 70, river_iterations: int = 60) -> dict[str, Any]:
+    """Compare the production one-street turn strategy with the two-street oracle on one spot.
+
+    Every profile is evaluated with the same neutral river treatment (each
+    river subgame solved for ``river_iterations`` against the ranges the turn
+    profile produces), so differences come from the turn strategy alone.
+    """
     started = time.perf_counter()
     solver = TwoStageSolver(spot)
     root = solver.tree.nodes[solver.tree.root]
-
-    # Production: one-street solve (showdown-equity leaves), then rivers solved against its ranges.
     production = RangeSolver(solver.tree, solver.ranges, solver.turn_d, solver.turn_compat, combo_ids=solver.combos)
     production_policy = production.solve(production_iterations).average
-    solver.solve_rivers_for(production_policy, river_iterations)
-    production_gap = solver.profile_exploitability(production_policy)
 
-    # Oracle: joint solve; evaluate its own average turn strategy with its own river averages.
     for sub in solver.subs.values():
         sub.reset()
     for _ in range(oracle_iterations):
         solver.iterate()
     oracle_policy = solver.final_policy()
-    oracle_gap = solver.profile_exploitability(oracle_policy)
+    oracle_gap_joint = solver.profile_exploitability(oracle_policy)  # the oracle's own jointly trained rivers
+
+    def profile(fn, best_response: bool):
+        solver.prepare_profile(fn, river_iterations)
+        values = solver.profile_values(fn)
+        gap = (solver._profile_value(fn, 0, True) + solver._profile_value(fn, 1, True)) / 2.0 if best_response else None
+        return values, gap
+
+    production_fn = lambda node: production_policy[node.index]  # noqa: E731
+    oracle_fn = lambda node: oracle_policy[node.index]  # noqa: E731
+    production_seat0 = lambda node: (production_policy if node.player == 0 else oracle_policy)[node.index]  # noqa: E731
+    production_seat1 = lambda node: (oracle_policy if node.player == 0 else production_policy)[node.index]  # noqa: E731
+    (production_v0, production_v1), production_gap = profile(production_fn, True)
+    (oracle_v0, oracle_v1), oracle_gap = profile(oracle_fn, True)
+    (seat0_v0, _), _ = profile(production_seat0, False)
+    (_, seat1_v1), _ = profile(production_seat1, False)
+    # Production's edge against the oracle, averaged over the two seats, in chips per deal (negative = production loses).
+    edge = ((seat0_v0 - oracle_v0) + (seat1_v1 - oracle_v1)) / 2.0
 
     mix_p, mix_o = _root_action_mix(solver, production_policy), _root_action_mix(solver, oracle_policy)
     weights = solver.ranges[root.player]
@@ -255,10 +287,17 @@ def analyse_spot(spot: TurnSpot, oracle_iterations: int = 150, production_iterat
     return {
         "pot": solver.pot, "ranges": [int(len(c)) for c in solver.combos], "turn_nodes": len(solver.tree.nodes),
         "river_leaves": len(solver.river_leaves), "river_subgames": len(solver.subs),
-        "production_gap": production_gap, "oracle_gap": oracle_gap,
+        "iterations": {"oracle": oracle_iterations, "production": production_iterations, "river": river_iterations},
+        "production_gap": production_gap, "oracle_gap": oracle_gap, "oracle_gap_joint_rivers": oracle_gap_joint,
         "production_gap_pct_pot": 100.0 * production_gap / solver.pot,
         "oracle_gap_pct_pot": 100.0 * oracle_gap / solver.pot,
+        "oracle_gap_joint_pct_pot": 100.0 * oracle_gap_joint / solver.pot,
         "extra_gap_pct_pot": 100.0 * (production_gap - oracle_gap) / solver.pot,
+        "extra_gap_bb": (production_gap - oracle_gap) / BIG_BLIND,
+        "h2h_production_edge_bb": edge / BIG_BLIND,
+        "h2h_production_loss_bb": -edge / BIG_BLIND,
+        "h2h_seat_values_chips": {"production_vs_production": [production_v0, production_v1], "oracle_vs_oracle": [oracle_v0, oracle_v1],
+                                   "production_seat0_vs_oracle": seat0_v0, "production_seat1_vs_oracle": seat1_v1},
         "root_labels": list(root.labels), "root_mix_production": [round(float(x), 4) for x in mix_p],
         "root_mix_oracle": [round(float(x), 4) for x in mix_o],
         "root_strategy_distance": float((per_combo * weights).sum() / weights.sum()),
@@ -347,7 +386,7 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--spots-file", required=True)
     run.add_argument("--output", required=True)
     run.add_argument("--workers", type=int, default=6)
-    run.add_argument("--oracle-iterations", type=int, default=150)
+    run.add_argument("--oracle-iterations", type=int, default=80)
     run.add_argument("--limit", type=int)
     args = parser.parse_args(argv)
 
@@ -378,7 +417,7 @@ def main(argv: list[str] | None = None) -> int:
         for result in pool.imap_unordered(_analyse_job, [(row, args.oracle_iterations) for row in rows]):
             handle.write(json.dumps(result, sort_keys=True) + "\n")
             handle.flush()
-            print(f"seed {result['seed']}: production {result['production_gap_pct_pot']:.2f}% oracle {result['oracle_gap_pct_pot']:.2f}% pot ({result['seconds']:.0f}s)", flush=True)
+            print(f"seed {result['seed']}: production gap {result['production_gap_pct_pot']:.1f}% oracle {result['oracle_gap_pct_pot']:.1f}% pot, head-to-head loss {result['h2h_production_loss_bb']:.2f} bb ({result['seconds']:.0f}s)", flush=True)
     return 0
 
 
