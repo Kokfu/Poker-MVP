@@ -140,3 +140,39 @@ holdout seeds.
    use (Coach and bot)?
 3. Should the Coach get a slow "deep" mode later (Option B) even if the bot
    cannot afford it?
+
+## 8. Stage 0 protocol (approved 2026-10-23; fixed before any Stage 0 data)
+
+Code: `backend/research/solver_oracle.py` (research only; nothing in `solver/`
+changed).  Tests: `backend/test_research_solver_oracle.py`.
+
+- **Spots.** The first 200 turn spots, in seed order from seed 20,000, reached by
+  `solver` playing 100 bb hands against `equity`, `expert`, `aggressive`,
+  `tight` and `solver` in rotation (seat alternating by seed).  A spot is
+  the public ranges at the root of the turn, as the production bot holds them.
+  Spots where a player is already all in are skipped.
+- **Games compared.** (a) Production: one-street turn solve, 70 iterations,
+  showdown-equity leaves, same pruning; its river strategies are then solved
+  for 80 iterations against the ranges it produces.  (b) Oracle: joint turn +
+  river CFR with every river card exactly and the production bet menu on both
+  streets, 150 iterations.  All-in turn leaves stay equity leaves in both
+  (nothing more to bet, so equity over the river is exact).
+- **Metric.** Extended-game exploitability of each profile in percent of the
+  turn pot (mean best-response gain of the fixed profile, including best
+  responses on the river).  **Extra gap = production minus oracle**, which
+  removes what the oracle's own residual error contributes.  Also reported:
+  range-weighted total-variation distance between the two turn root strategies
+  and the root action mixes.
+- **Sets.** Spots 1-100 (lowest seeds) are the calibration set Stage 1 may
+  fit on.  Spots 101-200 are the held-out set used for the gate.
+- **Gate (decided now).** Proceed to Stage 1 only if the **median extra gap on
+  the held-out set is at least 1.5% of the pot**.  Below that, the one-street
+  model is already close to the two-street game on these spots and the work
+  stops.
+- **Validity checks reported with the result.** The oracle's own gap must have
+  a median under 1.0% of the pot (otherwise it is too unconverged to resolve a
+  1.5% difference and the gate result is "inconclusive", not "pass" or "fail");
+  zero failed spots; every run's iteration counts as stated.
+- **Not measured by Stage 0.** Flop spots; any bb/100 strength effect; decision
+  time of a fix.  A passing gate shows the model is imperfect, not that fixing
+  it wins hands.
