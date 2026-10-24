@@ -332,3 +332,33 @@ All seven lower bounds are above zero with 0 illegal actions and 0 deal mismatch
 **Verdict: `solver_adaptive` lost to Slumbot on both point estimates; neither interval excludes zero**, so 1,000 hands cannot tell a small loss from a small win.  A loss is the expected direction against a much stronger opponent, and the raw interval is wide (about ±170 bb/100) because a single hand swings 27 bb (standard deviation).  The result shows the bot plays legal, settlement-consistent poker at 200 bb and is not shown to be competitive with Slumbot.  By seat: -215 bb/100 on the button, -83 in the big blind; by half: -201 then -96.  The earlier 300-hand `solver` run (+131 baseline-adjusted [-18, +321]) was likewise inconclusive and is a reminder of how wide these intervals are.
 
 **Caveat on what was measured.**  The bridge builds a fresh bot for every hand and supplies no opponent profile, so `solver_adaptive` could not learn Slumbot's tendencies across hands and played essentially as `solver`.  This benchmark therefore does not test the opponent-adaptation part of the bot.  Bot compute time here is lower than the 1-3 s quoted elsewhere because most Slumbot decisions are preflop chart lookups or small postflop trees.
+
+### Slumbot, 1,000 hands with opponent learning (2026-10-25)
+
+Same bot, same 1,000 hands per run and same bot seeds as the run above, but through the bridge's new learning mode (`run_slumbot_session(learn=True)`, commit `1d392d4`): one `solver_adaptive` instance plays the whole session and sees a growing profile of Slumbot built from the hands already played.  A first attempt died at hand 285 (killed externally, no traceback; its 285 clean hands are kept as `slumbot-solver-adaptive-learning.killed-at-285.jsonl`) and the full run was restarted from hand 1.  `benchmark-results/phase-5/slumbot-solver-adaptive-learning.jsonl` (not tracked by git).
+
+| Measure | No learning (above) | With learning |
+|---|---|---|
+| Raw winnings | -148.7 bb/100, 95% CI [-319.5, +18.4] | **+3.8 bb/100**, 95% CI [-187.8, +191.4] |
+| Baseline-adjusted | -78.4, CI [-202.8, +44.8] | **+80.5**, CI [-3.4, +168.8] |
+| Illegal actions / desyncs / settlement mismatches | 0 / 0 / 0 | 0 / 0 / 0 |
+| Bot fallbacks | 1 of 3,107 decisions | 2 of 2,405 decisions |
+| Decision time, bot compute | mean 0.54 s, p95 1.6 s, max 4.1 s | **mean 2.4 s, median 1.5 s, p95 8.7 s, max 32.5 s** |
+
+**Reading.**  Neither run's interval excludes zero on raw winnings, and the baseline-adjusted learning interval only just includes zero.  Quarter-by-quarter raw results swing by hundreds of bb/100 (+133, -86, -182, +151), which is the noise level of a 1,000-hand sample.  An unpaired bootstrap of the difference between the two runs (exploratory, not pre-registered, each run seen once) gives +159 bb/100 baseline-adjusted [+15, +309] and +152 raw [-91, +396].  That is consistent with learning helping against Slumbot, but it comes from one run per arm and does not establish it.  Learning mode also folds Slumbot out of more hands (2,405 bot decisions against 3,107).  It is **not** evidence that `solver_adaptive` beats Slumbot.
+
+**Cost.**  Learning-mode decisions are much slower than the 1-3 s quoted elsewhere because opponent locks force re-solves at 200 bb: p95 is 8.7 s, above the 6 s limit chosen for any new Stage 1 variant.  That limit would currently not be met by the existing learning bot on this benchmark.
+
+### Stage 0 oracle for later-street betting (2026-10-25)
+
+Protocol: `DESIGN_LATER_STREET_BETTING.md` sections 8-9, amended before the real run.  Code: `backend/research/solver_oracle.py` (research only, production solver untouched); 6 tests.  60 turn spots from solver-versus-bot hands (seeds 20,000 and up; 60 spots in 140 hands, so 43% of hands reach such a spot), 30 calibration and 30 held-out; oracle = joint turn + river CFR over all 44 river cards, 80 iterations; every profile evaluated with the same fresh 60-iteration river solves.  Results: `benchmark-results/stage0/results.jsonl` (not tracked).
+
+| Held-out set (30 spots) | Result |
+|---|---|
+| Head-to-head loss of the production turn strategy against the oracle, seats swapped | median **0.18 bb per spot**, mean 0.32 bb, 95% bootstrap CI of the mean [0.21, 0.46]; 0 of 30 spots favour production |
+| Extended-game exploitability, median | production 37% of the turn pot, oracle 3.3% (extra gap 2.4 bb) |
+| Validity | median oracle gap is 6.5% of the production gap (limit 33%); no failed spots |
+
+**Gate (fixed before the run): median loss at least 1.0 bb per spot AND mean-loss interval lower bound above 0.5 bb AND valid.  Result: FAILED on both loss conditions (0.18 < 1.0 and 0.21 < 0.5).  Stage 1 does not proceed as designed.**  The calibration set agrees (median 0.24 bb).
+
+**Reading.**  The one-street model is demonstrably imperfect (production loses to the oracle in all 60 spots and its exploitability in the two-street game is about ten times the oracle's), but the cost against a strong, non-best-responding opponent is small: about 0.3 bb per spot, roughly 14 bb/100 [9, 20] if applied to the 43% of hands that reach such a spot.  That is a ceiling on turn-model error only, and a fix would recover part of it, which is below what the planned primary test (powered for +20 bb/100) could detect.  The large exploitability figures are worst-case numbers against a perfect best response and overstate the practical cost.  Losses are larger in shallow spots (stack-to-pot under 8: median 0.58 bb, 12 spots) than deep ones (16 or more: median 0.10 bb, 32 spots).  Not measured: flop spots, shorter stacks than 100 bb, or any effect on bb/100.  The first half of the design's expected gain (+10 to +30 bb/100) is not supported by this evidence.

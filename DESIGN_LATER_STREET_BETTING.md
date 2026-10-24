@@ -227,3 +227,38 @@ Those two spots are the only results seen; no held-out spot has been run.
   opponents, and it shares the production bet menu.  A pass shows that the
   one-street leaf model costs chips against a better model of the same game;
   it does not show that fixing it wins bb/100 against the existing bots.
+
+## 10. Stage 0 result (2026-10-25)
+
+60 spots run, 0 failed, 3 workers, median 577 s per spot.  Gate applied exactly as
+fixed in section 9 to the 30 held-out spots.
+
+| | Held-out (30) | Calibration (30) |
+|---|---|---|
+| Head-to-head loss, median | **0.18 bb/spot** | 0.24 |
+| Head-to-head loss, mean [95% bootstrap CI] | 0.32 [0.21, 0.46] | 0.26 [0.20, 0.34] |
+| Spots where production beats the oracle | 0 | 0 |
+| Production gap / oracle gap, median (% of turn pot) | 37.3 / 3.3 | 38.9 / 2.9 |
+| Extra gap, median | 2.44 bb | 2.54 bb |
+
+**Gate: FAILED** (median 0.18 < 1.0 bb; interval lower bound 0.21 < 0.5 bb).
+Validity condition held (oracle median gap 17 chips against production 263,
+ratio 0.065 against a limit of 0.33; no failed spots), so this is a clean fail,
+not "inconclusive".  Per the rule, **Stage 1 does not proceed as designed.**
+
+Other facts: 43% of hands reach such a spot (60 spots in 140 hands), so the
+mean loss converts very roughly to 14 bb/100 [9, 20] as a ceiling on what any
+turn-model fix could recover, before subtracting what a fix would leave
+unrecovered; losses are larger when stacks are shallow relative to the pot
+(stack-to-pot under 8: median 0.58 bb, 12 spots; 8-16: 0.31, 16 spots; 16 and
+over: 0.10, 32 spots).  The sanity checks held: both profiles are zero-sum to
+1e-4 chips, and the no-river-betting reduction test matches the production
+solver.
+
+What this does and does not show.  It shows the one-street leaf model is
+measurably wrong (production loses to a better model of the same game in every
+spot) but cheap against a strong, non-best-responding opponent.  It does not
+measure flop spots, other stack depths, or bb/100.  It contradicts the design's
+prior of +10 to +30 bb/100 for Stage 1, which would be hard to detect with the
+primary test as specified.  Options if this is pursued anyway are listed with
+the open questions in the final report, not decided here.
