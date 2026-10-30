@@ -328,7 +328,11 @@ Duplicate report schema `1.0` (`report_type` `duplicate_evaluation` or
   its pool score beats the best other bot with the paired bootstrap interval
   of the difference above zero, and there are no illegal actions or deal
   mismatches.  Intervals that include zero are reported as inconclusive,
-  never as wins.
+  never as wins.  This is the *original* Phase 5 criterion.  The Phase 5
+  COMPLETE verdict in ROADMAP.md was decided under a revised criterion
+  (per-opponent head-to-head intervals only, no pool-score condition), so
+  `win_rate_gate` does not reproduce that verdict; `solver_adaptive` fails this
+  gate on every holdout run so far.
 
 ### Slumbot benchmark
 
