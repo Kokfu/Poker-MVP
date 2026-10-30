@@ -36,6 +36,8 @@ class RiverSubgame(RangeSolver):
     traverser's counterfactual root values so the turn level can use them.
     """
 
+    _policy_cache = False  # reset() and iterate() below change regrets without the base class knowing
+
     def __init__(self, *args, shared: "RiverSubgame | None" = None, **kwargs):
         super().__init__(*args, **kwargs)
         if shared is not None:  # same river card: reuse the big matrices instead of holding copies per leaf

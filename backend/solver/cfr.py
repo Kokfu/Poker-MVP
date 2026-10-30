@@ -37,11 +37,17 @@ def fit_frequencies(sigma: np.ndarray, reach: np.ndarray, target: np.ndarray, fl
     base = (sigma + floor) / (1.0 + floor * len(sigma))
     scale = np.ones(len(sigma))
     fitted = base
+    # One scratch buffer instead of a temporary per round; each element is
+    # computed exactly as before, so the result is bit-for-bit unchanged.  The
+    # buffer keeps ``base``'s memory layout because NumPy sums a Fortran-ordered
+    # array in a different order than a C-ordered one.
+    weighted = np.empty_like(base, dtype=np.result_type(np.float64, reach.dtype))
     for _ in range(rounds):
         fitted = base * scale[:, None]
-        fitted = fitted / fitted.sum(axis=0, keepdims=True)
-        aggregate = (fitted * reach).sum(axis=1) / total
-        scale = scale * target / np.clip(aggregate, 1e-9, None)
+        fitted /= fitted.sum(axis=0, keepdims=True)
+        np.multiply(fitted, reach, out=weighted)
+        aggregate = weighted.sum(axis=1) / total
+        scale = scale * target / np.maximum(aggregate, 1e-9)
     return fitted
 
 
@@ -114,6 +120,10 @@ class RangeSolver:
         self._uniform = {n.index: np.full((len(n.actions), self.sizes[n.player]), 1.0 / len(n.actions)) for n in self.decisions}
         self._leaf_index = np.array([n.index for n in self.leaves], dtype=np.intp)
         self._fold_index = np.array([n.index for n in self.folds], dtype=np.intp)
+        # A player's current strategies (locks included) depend only on that
+        # player's own regrets, so they are reused until those regrets change.
+        self._regret_version = [0, 0]
+        self._player_cache: list[tuple[int, dict[int, np.ndarray]] | None] = [None, None]
 
     # ------------------------------------------------------------------ core
     def current(self, node: Node) -> np.ndarray:
@@ -206,32 +216,53 @@ class RangeSolver:
                 regret += children - value
                 self.strategy_sum[node.index] *= average_weight
                 self.strategy_sum[node.index] += own[node.index] * sigma
+            self._regret_version[traverser] += 1
+
+    # Subclasses that change regrets outside iterate() must turn the cache off.
+    _policy_cache = True
 
     def policy(self, base) -> dict[int, np.ndarray]:
-        """Strategies for every decision node, with locks applied in tree order."""
-        strategies = {node.index: base(node) for node in self.decisions}
-        if not self.locks:
-            return strategies
-        reach = {self.tree.root: (self.ranges[0], self.ranges[1])}
+        """Strategies for every decision node, with locks applied in tree order.
+
+        For the current strategies a player's strategies (locks included) are a
+        function of that player's own regrets alone: a lock fits a node using
+        only that player's earlier strategies and range.  They are therefore
+        kept until that player's regrets next change, which happens once per
+        iteration instead of once per traverser pass.  The values are exactly
+        the ones recomputing would give.
+        """
+        cacheable = self._policy_cache and base == self.current
+        valid = [cacheable and self._player_cache[p] is not None and self._player_cache[p][0] == self._regret_version[p] for p in (0, 1)]
+        strategies = {}
         for node in self.decisions:
-            own = reach[node.index][node.player]
-            if node.index in self.locks:
-                lock = self.locks[node.index]
-                weight, groups = lock[0], lock[1]
-                strength = lock[2] if len(lock) > 2 else 1.0
+            strategies[node.index] = self._player_cache[node.player][1][node.index] if valid[node.player] else base(node)
+        stale = [p for p in (0, 1) if not valid[p]]
+        if self.locks and stale:
+            # Each player's own reach depends only on that player's strategies.
+            reach = {p: {self.tree.root: self.ranges[p]} for p in stale}
+            for node in self.decisions:
+                player = node.player
+                if player in stale and node.index in self.locks:
+                    own = reach[player][node.index]
+                    lock = self.locks[node.index]
+                    weight, groups = lock[0], lock[1]
+                    strength = lock[2] if len(lock) > 2 else 1.0
+                    sigma = strategies[node.index]
+                    target = group_target(sigma, own, groups)
+                    fitted = fit_frequencies(sigma, own, target)
+                    if strength < 1.0:
+                        # Opponents whose actions do not follow hand strength take
+                        # the observed mix with every hand (flat), not just the best.
+                        fitted = strength * fitted + (1.0 - strength) * target[:, None]
+                    strategies[node.index] = (1 - weight) * sigma + weight * fitted
                 sigma = strategies[node.index]
-                target = group_target(sigma, own, groups)
-                fitted = fit_frequencies(sigma, own, target)
-                if strength < 1.0:
-                    # Opponents whose actions do not follow hand strength take
-                    # the observed mix with every hand (flat), not just the best.
-                    fitted = strength * fitted + (1.0 - strength) * target[:, None]
-                strategies[node.index] = (1 - weight) * sigma + weight * fitted
-            sigma = strategies[node.index]
-            for action, child in enumerate(node.children):
-                pair = list(reach[node.index])
-                pair[node.player] = pair[node.player] * sigma[action]
-                reach[child] = tuple(pair)
+                for q in stale:
+                    here = reach[q][node.index]
+                    for action, child in enumerate(node.children):
+                        reach[q][child] = here * sigma[action] if q == player else here
+        if cacheable:
+            for p in stale:
+                self._player_cache[p] = (self._regret_version[p], {n.index: strategies[n.index] for n in self.decisions if n.player == p})
         return strategies
 
     def final_policy(self) -> dict[int, np.ndarray]:

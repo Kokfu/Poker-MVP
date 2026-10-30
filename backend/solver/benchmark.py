@@ -287,9 +287,20 @@ def _json_default(value):
 def compare(report: dict[str, Any], baseline: dict[str, Any], atol: float = 1e-5) -> list[str]:
     """Human-readable list of equivalence differences; empty means equivalent."""
     problems: list[str] = []
-    base_spots = {(s["hand_seed"], s["hand_number"], s["street"]): s for s in baseline["spots"]}
-    for spot in report["spots"]:
-        key = (spot["hand_seed"], spot["hand_number"], spot["street"])
+
+    def keyed(spots: list[dict[str, Any]]) -> dict[tuple, dict[str, Any]]:
+        # One hand and street can hold several spots (an initial solve and a
+        # re-solve), so the key carries the occurrence number.
+        seen: dict[tuple, int] = {}
+        keyed_spots = {}
+        for spot in spots:
+            key = (spot["hand_seed"], spot["hand_number"], spot["street"])
+            seen[key] = seen.get(key, 0) + 1
+            keyed_spots[key + (seen[key],)] = spot
+        return keyed_spots
+
+    base_spots = keyed(baseline["spots"])
+    for key, spot in keyed(report["spots"]).items():
         base = base_spots.get(key)
         if base is None:
             continue
