@@ -433,3 +433,66 @@ regression reference going forward.
 
 No new dependency was added.  `pip check` passes, and the full backend suite
 (776 tests before this branch, 778 with the two new tests above) passes.
+
+### Learning-mode decision time (branch `perf-learning-mode`)
+
+With an opponent profile the solver applies node locks (`RangeSolver.policy`), and
+a profile of the Slumbot learning run showed that this was the largest
+avoidable cost: of 173 s spent inside solver iterations on a 60-hand learning
+session, 99 s (57%) was `policy`, mostly `fit_frequencies` called twice per
+iteration; the rest was the baseline matrix work (`_terminal_values`, 50 s).
+Locked preflop re-solves (55 s) and equity matrices (15 s) were separate costs.
+
+Change (strategy unchanged): a player's current strategies, opponent-lock fits
+included, depend only on that player's own regrets (a lock fits a node using only
+that player's earlier strategies and range).  Only the traversing player's regrets
+change in a pass, so the second `policy()` call of every iteration now reuses the
+other player's strategies, and the lock pass only walks the stale player's reach.
+`fit_frequencies` also uses one scratch buffer.  Subclasses that change regrets
+outside `iterate()` set `_policy_cache = False` (the research oracle does).
+
+**Equivalence evidence.**
+- `test_solver_policy_cache.py`: `fit_frequencies` is bit-identical to the previous
+  implementation for float64 and float32 and for C- and Fortran-ordered input
+  (NumPy sums these differently, which a first version of the buffer got wrong and
+  the test caught); a locked solve with the cache on has regrets, strategy sums,
+  final policies and exploitability bit-identical to one with it off, for a lock on
+  either player; the average policy is never cached.
+- A deterministic 40-hand learning session against the fake referee (131 decisions,
+  91 with locks, 107 sampled strategies): every probability vector at full float
+  precision, every action and every hand result identical between the code before
+  and after.
+- `python -m solver.benchmark --compare solver/data/benchmark_baseline.json`:
+  30 spots (maximum probability difference exactly 0.0) and 200 fixed hands
+  (actions, winner and chips) identical.  The unmodified code reproduces that
+  baseline exactly too.
+
+**Harness bug found on the way.**  `compare()` keyed spots by `(seed, hand, street)`,
+but a hand and street can hold two spots (an initial solve and a re-solve), so
+2 of 30 spots were compared with each other's counterpart and reported four
+false differences (one as `nan`, because the action counts differ), on any code
+including the original.  It now matches repeated keys by occurrence, with a test.
+
+**Measured effect** (25-hand learning session against the fake referee, 79
+decisions, old and new code alternated three times on an otherwise idle machine):
+
+| | Old | New |
+|---|---|---|
+| Total time | 61.1 / 57.3 / 52.8 s | 44.1 / 44.1 / 41.4 s |
+| Mean decision | 0.66-0.77 s | 0.52-0.55 s |
+| 95th percentile | 2.23-2.49 s | 1.76-1.83 s |
+| Slowest decision | 3.06-3.46 s | 1.93-2.29 s |
+
+About 22% less time overall (best against best) and 25% lower 95th percentile.
+In the profile, `policy` fell from 99.5 s to 51.1 s.  The `_terminal_values` figure
+moved 50 s to 69 s between two runs of identical code, so single timings on this
+machine carry roughly +-30% noise; the alternating runs are what to trust.
+
+**What this does not show.**  The 8.7 s 95th percentile in the real Slumbot learning
+run was not reproduced and is probably overstated: its first 400 hands overlapped
+with other heavy jobs on a machine with about 1 GB of free memory (mean decision
+time fell from 3.7 s to 1.1 s over the session as that load changed), so that
+figure was partly contention.  The fake referee is not Slumbot, so the real
+effect on a clean 1,000-hand Slumbot run is not measured.  Remaining cost is the
+baseline matrix work and locked preflop re-solves; neither could be reduced
+without risking different floating-point results.
