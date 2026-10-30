@@ -381,3 +381,17 @@ Protocol: `DESIGN_LATER_STREET_BETTING.md` sections 8-9, amended before the real
 **Gate (fixed before the run): median loss at least 1.0 bb per spot AND mean-loss interval lower bound above 0.5 bb AND valid.  Result: FAILED on both loss conditions (0.18 < 1.0 and 0.21 < 0.5).  Stage 1 does not proceed as designed.**  The calibration set agrees (median 0.24 bb).
 
 **Reading.**  The one-street model is demonstrably imperfect (production loses to the oracle in all 60 spots and its exploitability in the two-street game is about ten times the oracle's), but the cost against a strong, non-best-responding opponent is small: about 0.3 bb per spot, roughly 14 bb/100 [9, 20] if applied to the 43% of hands that reach such a spot.  That is a ceiling on turn-model error only, and a fix would recover part of it, which is below what the planned primary test (powered for +20 bb/100) could detect.  The large exploitability figures are worst-case numbers against a perfect best response and overstate the practical cost.  Losses are larger in shallow spots (stack-to-pot under 8: median 0.58 bb, 12 spots) than deep ones (16 or more: median 0.10 bb, 32 spots).  Not measured: flop spots, shorter stacks than 100 bb, or any effect on bb/100.  The design's prior of +10 to +30 bb/100 for Stage 1 is not supported by this evidence.
+
+## Autopilot step 3: pre-registered fresh-holdout test of the pool measurement (protocol, written 2026-10-30 before any data)
+
+**Status of what is tested.**  Phase 5 is already COMPLETE under the owner's revised criterion (see "Revised success criterion"); this test cannot change that verdict and a failure here is not a release blocker.  It is an open measurement: does `solver_adaptive` (merged `main`, no strategy changes) score above `equity` in pool score on unused seeds?
+
+**Seeds.**  The step prompt suggested offset 2,000,000 as unused; it is not (5I used it, and the final test used 3,000,000; 5H used 1,000,000).  This test uses holdout seed offset **4,000,000**, never used before.
+
+**Format (identical to the 5H/5I holdout runs).**  Eight bots (`random`, `tight`, `aggressive`, `equity`, `expert`, `adaptive`, `range_expert`, `solver_adaptive`), learning-session tournament, `--pairs 16 --session-hands 60`, 100 equity iterations, stacks 10,000, blinds 50/100, 2,000 bootstrap resamples, statistics seed 91,002, via `python -m simulation.duplicate_cli tournament --seed-set holdout --seed-offset 4000000`.  Result: `benchmark-results/phase-5/session-tournament-holdout4.json`.  Worker count is reduced for memory reasons (does not affect results, which are seeded per pair).
+
+**Pass rule (fixed now).**  Primary quantity: D = pool score of `solver_adaptive` minus pool score of `equity`, with the paired 95% percentile bootstrap interval from `bootstrap_pool_samples`.
+- ABOVE: lower bound of D > 0.  INCONCLUSIVE: interval includes 0.  BELOW: upper bound < 0.
+- Original gate PASSES iff D is ABOVE, every one of the seven head-to-head 95% lower bounds is > 0, and illegal actions and deal mismatches are 0.  Otherwise it does not pass.  (`win_rate_gate`, which compares against the best other bot, is also reported; here that bot is expected to be `equity`.)
+- Also reported, not part of the pass rule: the revised criterion (all seven lower bounds > 0, clean play).
+- No re-runs on these seeds, no strategy changes; a single run is the result whatever it shows.
