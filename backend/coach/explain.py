@@ -25,6 +25,34 @@ def _chips(value: float) -> str:
     return f"{value:+,.0f}"
 
 
+def concretize(explanation: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Relabel preflop options with the amounts actually playable at this table.
+
+    The chart is stored at its own bet sizes; the bot rescales them to the real
+    raise, so the chart label ("raise_750") can differ from the action it
+    returns ("raise 900").  Options that land on the same play are merged."""
+    concrete = (explanation or {}).get("concrete_labels")
+    if not explanation or not concrete or len(concrete) != len(explanation.get("labels") or []):
+        return explanation
+    probabilities, evs = explanation["probabilities"], explanation.get("action_ev")
+    order: list[str] = []
+    merged: dict[str, list[float]] = {}
+    for index, label in enumerate(concrete):
+        if label not in merged:
+            order.append(label)
+            merged[label] = [0.0, 0.0]
+        merged[label][0] += probabilities[index]
+        if evs is not None:
+            merged[label][1] += probabilities[index] * evs[index]
+    result = {key: value for key, value in explanation.items() if key != "concrete_labels"}
+    result["labels"] = order
+    result["probabilities"] = [round(merged[label][0], 4) for label in order]
+    if evs is not None:
+        result["action_ev"] = [round(merged[label][1] / merged[label][0], 1) if merged[label][0] else evs[concrete.index(label)] for label in order]
+    result["chosen"] = concrete[explanation["labels"].index(explanation["chosen"])]
+    return result
+
+
 def build(advice: dict[str, Any], explanation: dict[str, Any] | None) -> dict[str, Any] | None:
     """Structured explanation for the action the solver chose; ``None`` without an explanation."""
     if not explanation:

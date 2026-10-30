@@ -209,9 +209,12 @@ def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store:
         return _hand_complete_payload(spot, payload)
     response: dict[str, Any] = {"status": status, **payload}
     if status == "hero_to_act":
+        response["explanation"] = explain.concretize(response.get("explanation"))
         response["explain"] = explain.build(response["advice"], response.get("explanation")) if "advice" in response else None
         response["state"] = _state(engine.observe(HERO), engine)
         response["exploiting"] = advisor.exploit
+        # exploiting = the opponent model is on; adjusted = it actually changed the strategy (locked nodes).
+        response["adjusted"] = bool(((response["explanation"] or {}).get("exploit") or {}).get("locked_nodes"))
         response["opponent_profile"] = profile_summary(profile_snapshot)
     return response
 

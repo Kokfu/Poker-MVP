@@ -56,7 +56,7 @@ export default function CoachReview({ opponents }: { opponents: { name: string; 
             <li><small>SHOWDOWNS</small><b>{review.results.showdowns}</b><small>{review.results.showdowns_with_known_result} with opponent cards entered</small></li>
             {Object.entries(review.stats).map(([name, stat]) => (
               <li key={name}><small>{(STAT_NAMES[name] ?? name).toUpperCase()}</small><b>{percent(stat.frequency)}</b>
-                <small>{stat.opportunities} chances · {stat.confidence.replace("_", " ")} confidence</small></li>
+                <small>{stat.opportunities} {stat.opportunities === 1 ? "chance" : "chances"} · {stat.confidence.replace("_", " ")} confidence</small></li>
             ))}
           </ul>
           <p className="muted"><small>{review.results.note}{review.results.skipped_hands > 0 && ` ${review.results.skipped_hands} stored hand(s) could not be replayed and were skipped.`}</small></p>
@@ -65,7 +65,7 @@ export default function CoachReview({ opponents }: { opponents: { name: string; 
           {review.leaks.length === 0 && <p className="muted">Nothing stands out. Flags need at least 20 chances for a statistic, so small samples show none.</p>}
           {review.leaks.map((leak) => (
             <div key={`${leak.stat}-${leak.issue}`} className="coach-leak">
-              <strong>{leak.issue}</strong> <small>({percent(leak.frequency)} over {leak.opportunities} chances, {leak.confidence.replace("_", " ")} confidence)</small>
+              <strong>{leak.issue}</strong> <small>({percent(leak.frequency)} over {leak.opportunities} {leak.opportunities === 1 ? "chance" : "chances"}, {leak.confidence.replace("_", " ")} confidence)</small>
               <p>{leak.advice}</p>
             </div>
           ))}

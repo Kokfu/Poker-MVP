@@ -294,7 +294,9 @@ class SolverBot(PokerBot):
             chart_node = chart_tree.nodes[node]
             choice = self._sample(ds, probabilities)
             action = self._concrete_preflop(ds, chart_node, choice, scale)
+            concrete = [self._concrete_preflop(ds, chart_node, i, scale) for i in range(len(chart_node.actions))]
             return action, {"source": "preflop_chart" if not preflop_locks else "preflop_exploit", "depth_bb": depth, "labels": chart_node.labels,
+                            "concrete_labels": [item.type if item.amount is None else f"{item.type}_{item.amount}" for item in concrete],
                             "probabilities": [round(float(p), 4) for p in probabilities], "chosen": chart_node.labels[choice],
                             "exploit": {**exploit_info, "locked_nodes": len(preflop_locks)},
                             **self._range_report((), hero_combo, ranges[opponent])}
