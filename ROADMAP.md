@@ -212,6 +212,8 @@ The reduced control delegates its read-only physical state to the same Phase 4G 
 
 ## Phase 5 — solver bot, opponent learning, and Coach
 
+**Current status (read this first).**  Phase 5 is merged and released (tag `phase-5-complete`, merge commit `40ff212`).  It is COMPLETE **under the revised, owner-set criterion** (every one of the seven existing bots beaten, 95% interval lower bound above zero, 0 illegal actions, 0 deal mismatches; see "Revised success criterion" below).  It is **not** complete under the original criterion, which also required a pool score above `equity`: that gate failed on three holdout tests (the two below plus the 5I test), `solver_adaptive` never showed a pool score above `equity` (best case difference [-108, +51]), and the owner dropped the pool criterion prospectively on 2026-09-29 rather than the bot passing it.  The "PHASE 5 NOT COMPLETE" verdicts further down are the original-criterion results, kept as history and marked *superseded*.  Whether `solver_adaptive` beats `equity` in pool score on fresh seeds remains an open measurement.
+
 Branch `phase-5`.  Implemented and tested:
 
 - **5A evaluation** — duplicate-deal and learning-session evaluation with disjoint development/holdout seed sets, a win-rate gate, and a Slumbot benchmark bridge.
@@ -244,7 +246,7 @@ Regression (recorded at the first Phase 5 write-up; at release prep the suite is
 
 ### Verdict
 
-**PHASE 5 NOT COMPLETE.**  The gate requires every head-to-head interval above zero *and* a pool score above the best other bot.  `solver_adaptive` beats every bot on point estimate and six of eight with intervals above zero, but its pool score (+249) trails `equity` (+299; difference interval [-148, +57], inconclusive), and the `tight` and `range_expert` intervals include zero.  `equity`'s pool lead comes from its larger margin against the two degenerate bots (`aggressive`, `random`).
+**PHASE 5 NOT COMPLETE** *(original criterion; superseded by the revised criterion below, which gives COMPLETE)*.  The gate requires every head-to-head interval above zero *and* a pool score above the best other bot.  `solver_adaptive` beats every bot on point estimate and six of eight with intervals above zero, but its pool score (+249) trails `equity` (+299; difference interval [-148, +57], inconclusive), and the `tight` and `range_expert` intervals include zero.  `equity`'s pool lead comes from its larger margin against the two degenerate bots (`aggressive`, `random`).
 
 Smallest missing evidence: a pool-score win over `equity` and positive intervals against `tight` and `range_expert`, measured on fresh holdout seeds.
 
@@ -252,7 +254,7 @@ Smallest missing evidence: a pool-score win over `equity` and positive intervals
 
 Learns from showdown-revealed cards how strongly an opponent's bets and calls follow hand strength, so node locks treat maniacs' aggression as random rather than strength-ordered.  Development sessions on the same seeds: aggressive +744 (was +612), random +435 (+412), equity +439 (+515), expert +48 (+80) bb/100 — every difference inside noise.  Not merged because it is not shown to avoid losses against sensible opponents; next step is a larger paired evaluation on a fresh holdout range.
 
-Pre-registered fresh-holdout test (holdout seeds offset by 1,000,000, 16 sessions x 60 hands, 53,760 hands, 0 illegal actions/fallbacks/deal mismatches; `benchmark-results/phase-5/session-tournament-holdout2-5h.json`), rule: merge only if the full gate passes.  5H `solver_adaptive` beats **all seven** existing bots with intervals above zero — aggressive +843 [+713, +985], equity +409 [+289, +514], random +381 [+198, +561], expert +110 [+17, +206], adaptive +110 [+16, +205], range_expert +100 [+11, +191], tight +73 [+32, +119] — but its pool score (+289) still trails equity (+316; difference [-108, +51], inconclusive).  Gate not passed.  By decision of the project owner, 5H was merged into `phase-5` as the stronger `solver_adaptive` (774 backend tests pass after the merge); the gate is unchanged, so Phase 5 remains NOT COMPLETE until the pool criterion is met.
+Pre-registered fresh-holdout test (holdout seeds offset by 1,000,000, 16 sessions x 60 hands, 53,760 hands, 0 illegal actions/fallbacks/deal mismatches; `benchmark-results/phase-5/session-tournament-holdout2-5h.json`), rule: merge only if the full gate passes.  5H `solver_adaptive` beats **all seven** existing bots with intervals above zero — aggressive +843 [+713, +985], equity +409 [+289, +514], random +381 [+198, +561], expert +110 [+17, +206], adaptive +110 [+16, +205], range_expert +100 [+11, +191], tight +73 [+32, +119] — but its pool score (+289) still trails equity (+316; difference [-108, +51], inconclusive).  Gate not passed.  By decision of the project owner, 5H was merged into `phase-5` as the stronger `solver_adaptive` (774 backend tests pass after the merge); the gate was unchanged at that point, so Phase 5 remained NOT COMPLETE under the original criterion (later superseded; see "Revised success criterion").
 
 ### Known limitations
 
@@ -268,11 +270,11 @@ Paired A/B on unused development seeds (8 sessions x 60 hands per opponent), cha
 
 **Result of the pre-registered 5I test** (`benchmark-results/phase-5/session-tournament-holdout3-5i.json`; 53,760 hands, 0 illegal actions, 0 fallbacks, 0 deal mismatches): gate **not passed**.  Pool: equity +400 [+330, +477], `solver_adaptive` +344 [+287, +398] (difference [-157, +36], inconclusive), range_expert +114.  `solver_adaptive` head-to-head: aggressive +1,167 [+919, +1,404], random +612 [+483, +740], equity +436 [+345, +520], tight +57 [+16, +105] — all above zero — but expert +49 [-28, +116], adaptive +54 [-17, +115], and range_expert +34 [-45, +108] are inconclusive.  On this seed set `equity` also scored unusually high against every opponent (e.g. +170 against expert versus about +100 on earlier holdout seeds), which illustrates the between-seed-set variance at 16 sessions per pairing.
 
-**Verdict remains PHASE 5 NOT COMPLETE.**  Across three holdout tests `solver_adaptive` has beaten `equity` head-to-head by +333 to +436 bb/100 and every other bot on point estimate, but has not yet shown a pool score above `equity` or consistently clear margins over the expert family.
+**Verdict remains PHASE 5 NOT COMPLETE** *(original criterion; superseded by the revised criterion below)*.  Across three holdout tests `solver_adaptive` has beaten `equity` head-to-head by +333 to +436 bb/100 and every other bot on point estimate, but has not yet shown a pool score above `equity` or consistently clear margins over the expert family.
 
 ### Revised success criterion (decided 2026-09-29, before any new data)
 
-The project owner changed the Phase 5 goal *prospectively*: the pool-score criterion is dominated by how hard a bot exploits the two degenerate baselines (`aggressive`, `random`) and is dropped.  No earlier result is re-scored under the new rule.
+The project owner changed the Phase 5 goal *prospectively*: the pool-score criterion is dominated by how hard a bot exploits the two degenerate baselines (`aggressive`, `random`) and is dropped.  No earlier result is re-scored under the new rule.  Note that this change came after three failed attempts at the original gate; the COMPLETE verdict below is therefore a verdict on the revised, easier-to-state criterion, not a pass of the original one.
 
 **Pre-registered final test (fixed before running):** `solver_adaptive` at commit `6ccd5c3` (no strategy changes) plays each of the seven existing bots (`random`, `tight`, `aggressive`, `equity`, `expert`, `adaptive`, `range_expert`) in duplicate learning sessions on unused holdout seeds: holdout set, seed offset 3,000,000, 48 sessions x 60 hands per opponent (5,760 hands per opponent), statistics seed 91,002, 2,000 bootstrap resamples.
 
@@ -314,7 +316,7 @@ Every one of the seven 95% bootstrap intervals has a lower bound above zero, and
 
 All seven lower bounds are above zero with 0 illegal actions and 0 deal mismatches over 40,320 hands, and every estimate is within 6 bb/100 of the original run.  `adaptive` again equals `expert` exactly (its exploit engine never activates in these sessions).
 
-**PHASE 5 COMPLETE** on both the `b3be891` solver and the merged faster solver at `4987a71`.
+**PHASE 5 COMPLETE** (revised criterion) on both the `b3be891` solver and the merged faster solver at `4987a71`.  The original pool-score criterion is still unmet.
 
 ### Outside benchmark: Slumbot, 1,000 hands (2026-10-23)
 
