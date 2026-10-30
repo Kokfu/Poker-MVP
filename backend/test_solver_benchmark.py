@@ -27,3 +27,15 @@ def test_benchmark_reports_zero_fallbacks_and_illegal_actions():
     assert len(report["spots"]) == CONFIG["spot_count"]
     for spot in report["spots"]:
         assert np.isclose(sum(spot["probabilities"]), 1.0, atol=1e-3)
+
+
+def test_compare_matches_repeated_spots_of_one_hand_and_street_by_occurrence():
+    """A hand and street can hold an initial solve and a re-solve; each must be compared with its own counterpart."""
+    def spot(chosen, probabilities):
+        return {"hand_seed": 1, "hand_number": 2, "street": "river", "chosen": chosen, "probabilities": probabilities}
+
+    first, second = spot("fold", [0.2, 0.3, 0.5]), spot("raise_1250", [0.1, 0.2, 0.3, 0.4])
+    report = {"spots": [first, second], "fixed_hands": []}
+    assert compare(report, {"spots": [first, second], "fixed_hands": []}) == []
+    swapped = compare(report, {"spots": [second, first], "fixed_hands": []})
+    assert len(swapped) == 4 and any("fold" in problem for problem in swapped)
