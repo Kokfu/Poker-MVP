@@ -13,8 +13,9 @@ from typing import Any, Literal
 from poker_analyzer import FULL_DECK
 from simulation.actions import Action
 from simulation.engine import HandEngine
-from simulation.opponent_model import OpponentModel
+from simulation.opponent_model import OpponentModel, confidence_for
 
+from . import explain
 from .store import HandStore
 
 Actor = Literal["hero", "villain"]
@@ -202,11 +203,13 @@ def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store:
         profile_snapshot = model.snapshot() if model.hands_observed else None
     if advisor.exploit and profile_snapshot is None:
         advisor = SolverBot(seed=seed)
+    advisor.explain_ev = True
     status, payload, engine = _replay(spot, advisor, profile_snapshot)
     if status == "hand_complete":
         return _hand_complete_payload(spot, payload)
     response: dict[str, Any] = {"status": status, **payload}
     if status == "hero_to_act":
+        response["explain"] = explain.build(response["advice"], response.get("explanation")) if "advice" in response else None
         response["state"] = _state(engine.observe(HERO), engine)
         response["exploiting"] = advisor.exploit
         response["opponent_profile"] = profile_summary(profile_snapshot)
@@ -231,7 +234,19 @@ def profile_summary(snapshot) -> dict[str, Any] | None:
     streets = {street: {name: {"frequency": round(value.smoothed_frequency, 3), "opportunities": value.opportunities, "confidence": value.confidence}
                         for name, value in values.items() if name in ("bet", "fold_to_bet", "call_vs_bet", "raise_vs_bet")}
                for street, values in snapshot.street_statistics.items()}
-    return {"hands_observed": snapshot.hands_observed, "classification": snapshot.classification, "preflop": stats, "postflop": streets}
+    return {"hands_observed": snapshot.hands_observed, "classification": snapshot.classification, "label": type_label(snapshot), "preflop": stats, "postflop": streets}
+
+
+def type_label(snapshot) -> dict[str, Any]:
+    """The player-type label with how much evidence stands behind it.
+
+    The label is only assigned from 20+ hands and 20+ voluntary-play
+    opportunities; its confidence follows the thinner of the two statistics
+    it rests on (very_low < 5, low < 20, medium < 50, high otherwise).
+    """
+    basis = min(snapshot.statistics["vpip"].opportunities, snapshot.statistics["aggressive"].opportunities)
+    return {"type": snapshot.classification, "confidence": confidence_for(basis), "hands": snapshot.hands_observed,
+            "decisions": basis, "assigned": snapshot.classification != "unknown"}
 
 
 def spot_to_dict(spot: Spot) -> dict[str, Any]:

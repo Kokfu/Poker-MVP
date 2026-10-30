@@ -333,6 +333,12 @@ raises, and when no field is focused `F` folds, `C` checks or calls, `B` bets or
 raises the amount in the box, and `A` goes all-in (shown on each button; "Undo
 last action" reverts a mistaken key).
 
+### Coach explanations and review
+
+`POST /api/coach/advise` returns the solver's raw `explanation` plus an `explain` object built by `coach/explain.py`: the chosen action, its frequency and EV, every option with its frequency and EV, equity against the opponent's estimated range, the range summary, and a one-line `reason`.  EV comes from `RangeSolver.action_values`, a read-only pass over the final strategies, and is switched on only by the Coach (`SolverBot.explain_ev`); simulations and benchmarks leave it off, so bot decisions and speed are unchanged.  EV is the chips you expect to win from here on, counting only chips still to be put in (fold = 0); it is available postflop only because the preflop charts store strategies, not values, and flop and turn values treat the end of the street as equity.  `opponent_profile.label` gives the player-type label with a confidence (from the thinner of its two supporting statistics) and sample size; the label itself stays `unknown` until 20 hands.
+
+`GET /api/coach/review` (`coach/review.py`) replays every logged hand and points `OpponentModel` at your seat, so VPIP, PFR and the other stats use the same definitions as opponent reads.  Results count only hands whose outcome is known (folds, and showdowns with the opponent's cards entered).  Leak flags are rule-of-thumb heuristics gated at 20 opportunities; they do not re-run the solver on your past decisions.
+
 ### Solver performance
 
 `solver/benchmark.py` is a reproducible, fixed-seed benchmark: ~30 solver

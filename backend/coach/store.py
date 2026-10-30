@@ -59,6 +59,15 @@ class HandStore:
             ).fetchall()
         return [{"id": row_id, "created_at": created_at, "spot": json.loads(spot)} for row_id, created_at, spot in rows]
 
+    def all_hands(self, opponent: str | None = None) -> list[dict[str, Any]]:
+        """Every logged hand (optionally one opponent's), oldest first, with its opponent name."""
+        query, args = "SELECT id, opponent, created_at, spot FROM hands", ()
+        if opponent is not None:
+            query, args = query + " WHERE opponent = ?", (normalize_name(opponent),)
+        with self._connect() as connection:
+            rows = connection.execute(query + " ORDER BY id", args).fetchall()
+        return [{"id": row_id, "opponent": name, "created_at": created_at, "spot": json.loads(spot)} for row_id, name, created_at, spot in rows]
+
     def delete_hand(self, hand_id: int) -> bool:
         with self._connect() as connection:
             cursor = connection.execute("DELETE FROM hands WHERE id = ?", (hand_id,))
