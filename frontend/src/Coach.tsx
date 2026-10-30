@@ -52,7 +52,7 @@ type Profile = {
 };
 
 type CoachResponse =
-  | { status: "hero_to_act"; advice: { action: ActionKind; amount: number | null }; explanation: Explanation; explain: Explain | null; state: SpotState; exploiting: boolean; opponent_profile: Profile | null }
+  | { status: "hero_to_act"; advice: { action: ActionKind; amount: number | null }; explanation: Explanation; explain: Explain | null; state: SpotState; exploiting: boolean; adjusted?: boolean; opponent_profile: Profile | null }
   | { status: "villain_to_act"; state: SpotState }
   | { status: "need_board"; street: string; cards_needed: number }
   | { status: "hand_complete"; summary: { showdown: boolean; board: string[]; hero_net?: number } };
@@ -119,6 +119,11 @@ function describeLabel(label: string): string {
   if (label === "all_in") return "All-in";
   if (amount) return `${kind === "bet" ? "Bet" : "Raise to"} ${amount}`;
   return kind[0].toUpperCase() + kind.slice(1);
+}
+
+function foldedText(actions: SpotAction[]): string {
+  const last = actions[actions.length - 1];
+  return last?.action === "fold" ? (last.actor === "hero" ? "You folded." : "Villain folded.") : "Someone folded.";
 }
 
 function describeAction(step: SpotAction): string {
@@ -350,7 +355,7 @@ export default function Coach() {
       const body = await response.json();
       if (!response.ok) throw new Error(describeError(body, "Could not log the hand"));
       setLogged(true);
-      setProfile(body.opponent_profile); setNotice(`Logged. ${opponent.trim()} now has ${body.opponent_profile.hands_observed} hands on record.`);
+      setProfile(body.opponent_profile); setNotice(`Logged. ${opponent.trim()} now has ${body.opponent_profile.hands_observed} ${body.opponent_profile.hands_observed === 1 ? "hand" : "hands"} on record.`);
       loadOpponents(); loadHistory(opponent);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Could not log the hand");
@@ -567,7 +572,7 @@ export default function Coach() {
                 </div>
                 {result.explain?.ev_note && <p className="muted"><small>{result.explain.ev_note}</small></p>}
                 <p className="muted">Mixed strategy from {result.explanation.source === "postflop_solve" ? "a real-time solve of this street" : result.explanation.source === "preflop_exploit" ? "the preflop chart re-solved for this opponent" : result.explanation.source === "preflop_chart" ? "the preflop chart" : "the fallback rule bot"}.
-                  {result.exploiting ? " Adjusted to this opponent's tendencies." : ""}</p>
+                  {(result.adjusted ?? result.exploiting) ? " Adjusted to this opponent's tendencies." : ""}</p>
                 {result.explanation.hero_equity_vs_range !== undefined && (
                   <p>Your equity vs their estimated range: <strong>{Math.round(result.explanation.hero_equity_vs_range * 100)}%</strong></p>
                 )}
@@ -585,7 +590,7 @@ export default function Coach() {
             {result.status === "hand_complete" && (
               <div className="coach-advice">
                 <h3>Hand complete</h3>
-                <p>{result.summary.showdown ? "Showdown." : "Someone folded."} {result.summary.hero_net !== undefined && <strong className={result.summary.hero_net >= 0 ? "positive" : "negative"}>{result.summary.hero_net >= 0 ? "+" : ""}{result.summary.hero_net}</strong>}</p>
+                <p>{result.summary.showdown ? "Showdown." : foldedText(actions)} {result.summary.hero_net !== undefined && <strong className={result.summary.hero_net >= 0 ? "positive" : "negative"}>{result.summary.hero_net >= 0 ? "+" : ""}{result.summary.hero_net}</strong>}</p>
                 {reviewMode ? (
                   <p className="muted">Loaded from hand history for review. Start or press "New hand" to enter a new one.</p>
                 ) : (
@@ -611,7 +616,7 @@ export default function Coach() {
             </div>
             {profile ? (
               <>
-                <p><strong>{profile.classification.replace(/_/g, " ")}</strong> · {profile.hands_observed} hands
+                <p><strong>{profile.classification.replace(/_/g, " ")}</strong> · {profile.hands_observed} {profile.hands_observed === 1 ? "hand" : "hands"}
                   {profile.label && <small className="muted"> · {profile.label.assigned ? `${profile.label.confidence.replace("_", " ")} confidence, based on ${profile.label.decisions} decisions` : "no label yet (needs 20+ hands)"}</small>}</p>
                 <ul>
                   {Object.entries(profile.preflop).filter(([, read]) => read.opportunities > 0).map(([name, read]) => (

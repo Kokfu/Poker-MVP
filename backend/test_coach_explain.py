@@ -167,3 +167,38 @@ def test_review_api(store):
     assert client.get("/api/coach/review", params={"opponent": "Nobody"}).json()["results"]["hands"] == 0
     advice = client.post("/api/coach/advise", json={"hero_cards": ["As", "Kd"]}).json()
     assert advice["explain"]["reason"]
+
+
+# ------------------------------------------------------------ hardening (step 4)
+def test_preflop_labels_match_the_returned_action_when_facing_a_raise(store):
+    # AKo in the big blind facing a 300 raise: the chart's raise size is rescaled to the real raise.
+    result = advise(spot(("villain", "raise", 300), position="big_blind"), store=store)
+    advice, explanation = result["advice"], result["explanation"]
+    assert "concrete_labels" not in explanation
+    assert len(explanation["labels"]) == len(explanation["probabilities"])
+    assert len(set(explanation["labels"])) == len(explanation["labels"])
+    played = advice["action"] if advice["amount"] is None else f"{advice['action']}_{advice['amount']}"
+    assert explanation["chosen"] == played
+    assert result["explain"]["chosen"] == played
+    assert abs(sum(explanation["probabilities"]) - 1) < 0.01
+
+
+def test_concretize_relabels_and_merges_options_that_land_on_the_same_play():
+    raw = {"labels": ["fold", "call", "raise_750", "all_in"], "probabilities": [0.1, 0.2, 0.3, 0.4], "chosen": "raise_750",
+           "concrete_labels": ["fold", "call", "all_in", "all_in"], "action_ev": [0.0, 10.0, 20.0, 40.0]}
+    shown = explain.concretize(raw)
+    assert shown["labels"] == ["fold", "call", "all_in"] and shown["chosen"] == "all_in"
+    assert shown["probabilities"] == [0.1, 0.2, 0.7]
+    assert shown["action_ev"] == [0.0, 10.0, round((0.3 * 20 + 0.4 * 40) / 0.7, 1)]
+    assert "concrete_labels" not in shown
+    assert explain.concretize(None) is None
+    plain = {"labels": ["check"], "probabilities": [1.0], "chosen": "check"}
+    assert explain.concretize(plain) is plain
+
+
+def test_adjusted_flag_only_when_the_opponent_read_changed_the_strategy(store):
+    log_hand(spot(("hero", "fold")), "Fresh", store)  # one hand: the model exists but has nothing confident
+    result = advise(spot(), opponent="Fresh", store=store)
+    locked = (result["explanation"]["exploit"] or {}).get("locked_nodes")
+    assert result["exploiting"] is True and result["adjusted"] is bool(locked)
+    assert advise(spot(), store=store)["adjusted"] is False
