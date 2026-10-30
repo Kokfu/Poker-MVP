@@ -349,6 +349,23 @@ Same bot, same 1,000 hands per run and same bot seeds as the run above, but thro
 
 **Cost.**  Learning-mode decisions are much slower than the 1-3 s quoted elsewhere because opponent locks force re-solves at 200 bb: p95 is 8.7 s, above the 6 s limit chosen for any new Stage 1 variant.  That limit would currently not be met by the existing learning bot on this benchmark.
 
+### Slumbot, clean 1,000-hand learning rerun (2026-10-30)
+
+Same bot, same bot seeds (7,000-7,999), same learning mode, run alone on `main` at `05bab7d` (including the learning-mode speed-up) with no other benchmark running; free RAM was about 0.8 GB at start, so the machine was not truly idle.  `benchmark-results/phase-5/slumbot-learning-clean.jsonl` (not tracked by git).  Slumbot deals different cards each session, so comparisons with earlier runs are unpaired.
+
+| Measure | Earlier learning run | Clean rerun |
+|---|---|---|
+| Raw winnings | +3.8 bb/100, CI [-187.8, +191.4] | **-198.2**, CI [-440.9, +44.5] |
+| Baseline-adjusted | +80.5, CI [-3.4, +168.8] | **+20.2**, CI [-63.5, +104.0] |
+| Desyncs / settlement mismatches | 0 / 0 | 0 / 0 |
+| Bot decisions | 2,405 | 2,420 |
+| Wall time per hand (includes Slumbot latency and 0.2 s pause) | mean 8.7 s, p95 27.7 s, max 73.5 s | **mean 6.2 s, p95 15.9 s, max 43.0 s** |
+| Total session time | 2.4 h | 1.7 h |
+
+The current bridge no longer writes per-decision times or fallback counts, so decision-time p95 and fallbacks are **not measured** in this rerun; only per-hand wall time is.  Per-100-hand mean hand time stayed between 5.0 and 8.0 s with no early-session spike (the earlier run was 11-13 s for its first 400 hands), consistent with the speed-up and with less contention.  No-learning run for reference: mean 5.4 s, p95 10.5 s per hand.
+
+**Reading.**  The learning benefit seen in the earlier run did not reproduce: raw winnings are -198 bb/100 here (the earlier run's raw interval, and this one, both include zero and overlap heavily).  Unpaired bootstrap, clean rerun minus earlier learning run: -202 raw [-507, +105], -60 baseline-adjusted [-179, +60].  Clean rerun minus no-learning run: -50 raw [-339, +244], +99 baseline-adjusted [-49, +251].  Nothing is distinguishable from zero.  The earlier +159 baseline-adjusted learning effect was most likely noise, so the learning benefit against Slumbot is **not established**; the two learning runs average about -97 raw bb/100.  `solver_adaptive` is not shown to beat Slumbot.
+
 ### Stage 0 oracle for later-street betting (2026-10-25)
 
 Protocol: `DESIGN_LATER_STREET_BETTING.md` sections 8-9, amended before the real run.  Code: `backend/research/solver_oracle.py` (research only, production solver untouched); 6 tests.  60 turn spots from solver-versus-bot hands (seeds 20,000 and up; 60 spots in 140 hands, so 43% of hands reach such a spot), 30 calibration and 30 held-out; oracle = joint turn + river CFR over all 44 river cards, 80 iterations; every profile evaluated with the same fresh 60-iteration river solves.  Results: `benchmark-results/stage0/results.jsonl` (not tracked).
