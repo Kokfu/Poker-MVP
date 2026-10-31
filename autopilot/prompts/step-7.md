@@ -1,0 +1,4 @@
+Autopilot step 7 (use the autopilot-step skill). Task: first Slumbot learning run with the restored instrumentation.
+- Check free RAM and stop avoidable heavy processes first; record the figure.
+- Run `slumbot_cli --bot solver_adaptive --learn --hands 1000 --seed 7000` detached (see the step 1 report and ROADMAP "clean 1,000-hand learning rerun"), output `benchmark-results/phase-5/slumbot-learning-instrumented.jsonl` (force-add the jsonl to git at the end; stdout files stay local). Keep waiting on the job with a long-interval Monitor, not frequent polls.
+- Report: bb/100 with 95% CI, bot decision seconds mean/median/p95/max overall and by 100-hand block, count of decisions above 6 s, bot_fallbacks, desyncs. Compare honestly with the step 1 run (same seeds, unpaired). Add a short ROADMAP entry. No code or strategy changes.

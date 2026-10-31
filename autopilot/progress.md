@@ -21,6 +21,8 @@ paired-evidence check; keep commits small; never push, force-push, tag, or delet
 | 4 | Coach hardening: end-to-end UI check in the browser, fix defects, add tests | prompts/step-4.md | [x] done (4fb4440): 3 defects fixed, 817 tests pass |
 | 5 | Settle step 3's weak expert-family result: larger pre-registered run (48 sessions, offset 5,000,000) | prompts/step-5.md | [x] done (ca22b0e): all seven lower bounds > 0; step 3 weakness read as noise |
 | 6 | Restore Slumbot decision-time/fallback logging; Coach pot-during-board-prompt and history result | prompts/step-6.md | [x] done (6b59e09): bridge logging restored, Coach pot+history result, 818 tests pass |
+| 7 | First Slumbot learning run with restored decision-time/fallback logging | prompts/step-7.md | [ ] todo |
+| 8 | Design-only: opponent-model improvement proposal with pre-registered test (wait for owner approval) | prompts/step-8.md | [ ] todo |
 
 ## Log
 (main appends one line per reviewed step: date, step, verdict, branch/commit, caveats)
