@@ -1,0 +1,485 @@
+{
+  "configuration": {
+    "big_blind": 100,
+    "bootstrap_resamples": 2000,
+    "confidence_level": 0.95,
+    "equity_iterations": 100,
+    "pairs": 48,
+    "seed_offset": 5000000,
+    "seed_set": "holdout",
+    "session_hands": 60,
+    "small_blind": 50,
+    "starting_stack": 10000,
+    "statistics_seed": 91002,
+    "workers": 2
+  },
+  "duplicate_schema_version": "1.0",
+  "methodology": {
+    "button": "seat A in both hands; the strategy holds the button cards once and the big-blind cards once",
+    "confidence_method": "deterministic percentile bootstrap over pairs",
+    "holdout_policy": "holdout seeds are reserved for frozen final acceptance runs",
+    "seed_range": [
+      12000000,
+      12002820
+    ],
+    "seed_set": "holdout",
+    "stacks": "reset every hand",
+    "unit": "duplicate pair: one seeded deal played with the strategy in each seat"
+  },
+  "metrics": {
+    "bb_per_100": 78.83159722222223,
+    "confidence_interval": {
+      "confidence_level": 0.95,
+      "lower": 28.219635416666673,
+      "upper": 131.46841145833332
+    },
+    "deal_mismatches": 0,
+    "fallback_actions": 0,
+    "hands": 5760,
+    "illegal_actions": 0,
+    "interpretation": "positive_estimate_supported",
+    "pairs": 48,
+    "seat_a_bb_per_100": 102.02361111111111,
+    "seat_b_bb_per_100": 55.639583333333334,
+    "standard_error_bb_per_100": 27.219958996068158,
+    "unpaired_standard_error_bb_per_100": 27.74428052336569,
+    "variance_reduction": 0.03743958090244781
+  },
+  "opponent": "range_expert",
+  "raw_pairs": [
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 21772,
+      "net_seat_b": 15132,
+      "seed": 12000000
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": -15370,
+      "net_seat_b": -290,
+      "seed": 12000060
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 16196,
+      "net_seat_b": 17963,
+      "seed": 12000120
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": -14273,
+      "net_seat_b": -8204,
+      "seed": 12000180
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 8434,
+      "net_seat_b": -12057,
+      "seed": 12000240
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 9359,
+      "net_seat_b": 34763,
+      "seed": 12000300
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 12725,
+      "net_seat_b": -10688,
+      "seed": 12000360
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 28455,
+      "net_seat_b": 15450,
+      "seed": 12000420
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 26418,
+      "net_seat_b": -2168,
+      "seed": 12000480
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 8956,
+      "net_seat_b": -9798,
+      "seed": 12000540
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 4933,
+      "net_seat_b": -18463,
+      "seed": 12000600
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": -31824,
+      "net_seat_b": 9264,
+      "seed": 12000660
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 13786,
+      "net_seat_b": 18512,
+      "seed": 12000720
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": -5307,
+      "net_seat_b": 29138,
+      "seed": 12000780
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 14978,
+      "net_seat_b": -1702,
+      "seed": 12000840
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 20022,
+      "net_seat_b": 14004,
+      "seed": 12000900
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 19992,
+      "net_seat_b": 2970,
+      "seed": 12000960
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 34951,
+      "net_seat_b": 16844,
+      "seed": 12001020
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": -5307,
+      "net_seat_b": -3509,
+      "seed": 12001080
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 11047,
+      "net_seat_b": 2484,
+      "seed": 12001140
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 7864,
+      "net_seat_b": -25338,
+      "seed": 12001200
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 7232,
+      "net_seat_b": -6737,
+      "seed": 12001260
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 22415,
+      "net_seat_b": 438,
+      "seed": 12001320
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": -20054,
+      "net_seat_b": 15935,
+      "seed": 12001380
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 19906,
+      "net_seat_b": 11865,
+      "seed": 12001440
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": -21773,
+      "net_seat_b": 6549,
+      "seed": 12001500
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 7342,
+      "net_seat_b": -12672,
+      "seed": 12001560
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": -16540,
+      "net_seat_b": 23980,
+      "seed": 12001620
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 15319,
+      "net_seat_b": -3793,
+      "seed": 12001680
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": -7292,
+      "net_seat_b": -18258,
+      "seed": 12001740
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": -7055,
+      "net_seat_b": -28559,
+      "seed": 12001800
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 22310,
+      "net_seat_b": 7640,
+      "seed": 12001860
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 41666,
+      "net_seat_b": -3853,
+      "seed": 12001920
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 7454,
+      "net_seat_b": 2316,
+      "seed": 12001980
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 18872,
+      "net_seat_b": -1419,
+      "seed": 12002040
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 20662,
+      "net_seat_b": -16404,
+      "seed": 12002100
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 15312,
+      "net_seat_b": 18463,
+      "seed": 12002160
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": -21945,
+      "net_seat_b": 11405,
+      "seed": 12002220
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": -37450,
+      "net_seat_b": 11196,
+      "seed": 12002280
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 30508,
+      "net_seat_b": 4719,
+      "seed": 12002340
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": -11311,
+      "net_seat_b": 10358,
+      "seed": 12002400
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": -6005,
+      "net_seat_b": -18660,
+      "seed": 12002460
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 24536,
+      "net_seat_b": -10573,
+      "seed": 12002520
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": -2158,
+      "net_seat_b": 5733,
+      "seed": 12002580
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 2162,
+      "net_seat_b": 20939,
+      "seed": 12002640
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": -12207,
+      "net_seat_b": 6152,
+      "seed": 12002700
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": -10134,
+      "net_seat_b": 20350,
+      "seed": 12002760
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 60,
+      "illegal_actions": 0,
+      "net_seat_a": 24249,
+      "net_seat_b": 18825,
+      "seed": 12002820
+    }
+  ],
+  "report_type": "duplicate_evaluation",
+  "strategy": "solver_adaptive"
+}
