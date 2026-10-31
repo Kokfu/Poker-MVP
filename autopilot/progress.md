@@ -19,7 +19,7 @@ paired-evidence check; keep commits small; never push, force-push, tag, or delet
 | 2 | Reconcile Phase 5 status: ROADMAP says "NOT COMPLETE" (pool gate) while tag `phase-5-complete` exists; fix docs/wording | prompts/step-2.md | [x] done (89ba92c): docs consistent; premise was stale (revised criterion already COMPLETE) |
 | 3 | Pre-registered fresh-holdout test of the pool criterion (`solver_adaptive` vs `equity`) | prompts/step-3.md | [x] done (696eb4e): pool comparison inconclusive, original gate not passed |
 | 4 | Coach hardening: end-to-end UI check in the browser, fix defects, add tests | prompts/step-4.md | [x] done (4fb4440): 3 defects fixed, 817 tests pass |
-| 5 | Settle step 3's weak expert-family result: larger pre-registered run (48 sessions, offset 5,000,000) | prompts/step-5.md | [ ] todo |
+| 5 | Settle step 3's weak expert-family result: larger pre-registered run (48 sessions, offset 5,000,000) | prompts/step-5.md | [x] done (ca22b0e): all seven lower bounds > 0; step 3 weakness read as noise |
 | 6 | Restore Slumbot decision-time/fallback logging; Coach pot-during-board-prompt and history result | prompts/step-6.md | [ ] todo |
 
 ## Log
@@ -28,3 +28,4 @@ paired-evidence check; keep commits small; never push, force-push, tag, or delet
 - 2026-10-30 step 2 accepted: docs only; ROADMAP/SIMULATION now label original-vs-revised criterion; tag kept (optional extra tag is owner's call); holdout pool numbers not re-verified.
 - 2026-10-31 step 3 accepted: seed offset 4M, D=+46 [-37,+120] inconclusive; weaker vs expert family (~0) than earlier holdouts - noise or regression unresolved; larger 48-session run at offset 5M is an owner decision.
 - 2026-10-31 step 4 accepted: preflop label/headline mismatch fixed (display-only), adjusted flag, copy; backend 817 pass, frontend build ok. Open minor: pot hidden during board prompt, history row shows last action only. ALL PLANNED STEPS DONE; main is 6 commits+ ahead of origin, unpushed.
+- 2026-11-01 step 5 accepted: offset 5M, 48 sessions, all 7 lower bounds >0, 0 illegal/mismatch; expert family ~35-40 bb/100 below offset-3M (inside its CI), small real decline not excluded; no multiplicity correction.
