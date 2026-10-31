@@ -253,22 +253,32 @@ class _RemoteSeat:
 class _ClientSeat:
     def __init__(self, bot, bridge: _HandBridge):
         self.bot, self.bridge = bot, bridge
+        self.decision_seconds: list[float] = []  # bot thinking time only, not Slumbot latency
+        self.fallbacks = 0  # requested actions the bridge had to change to a legal one
 
     def __getattr__(self, name):  # range-equity settings, seeds, traces
         return getattr(self.bot, name)
 
     def decide(self, observation) -> Action:
-        return self._send(self.bot.decide(observation), observation)
+        started = time.perf_counter()
+        action = self.bot.decide(observation)
+        self.decision_seconds.append(time.perf_counter() - started)
+        return self._send(action, observation)
 
     def _send(self, action: Action, observation) -> Action:
         applied, incr = to_incr(action, observation)
+        if (applied.type, applied.amount) != (action.type, action.amount) and not (applied.type == action.type == "all_in"):
+            self.fallbacks += 1
         self.bridge.send(incr)
         return applied
 
 
 class _DecisionClientSeat(_ClientSeat):
     def decide_decision(self, observation) -> Action:
-        return self._send(self.bot.decide_decision(observation), observation)
+        started = time.perf_counter()
+        action = self.bot.decide_decision(observation)
+        self.decision_seconds.append(time.perf_counter() - started)
+        return self._send(action, observation)
 
 
 @dataclass
@@ -286,6 +296,8 @@ class SlumbotHandResult:
     decisions: int = 0
     elapsed_seconds: float = 0.0
     bot_hole_cards: list[str] = field(default_factory=list)
+    decision_seconds: list[float] = field(default_factory=list)
+    bot_fallbacks: int = 0
 
 
 def play_slumbot_hand(client: SlumbotClient, bot, hand_index: int = 0, opponent_model: OpponentModel | None = None) -> SlumbotHandResult:
@@ -346,6 +358,7 @@ def play_slumbot_hand(client: SlumbotClient, bot, hand_index: int = 0, opponent_
         desync=desync, decisions=sum(1 for _ in engine._records if _["acting_player"] == bridge.client_seat),
         elapsed_seconds=time.perf_counter() - started,
         bot_hole_cards=list(final.get("bot_hole_cards") or []),
+        decision_seconds=list(client_seat.decision_seconds), bot_fallbacks=client_seat.fallbacks,
     )
 
 
@@ -366,6 +379,11 @@ def _finish_passively(bridge: _HandBridge, limit: int = 20) -> None:
         raise SlumbotProtocolError("desynced hand did not finish")
 
 
+def _percentile(values: list[float], q: float) -> float:
+    ordered = sorted(values)
+    return ordered[int(q * (len(ordered) - 1))] if ordered else 0.0
+
+
 def summarize_slumbot(results: list[SlumbotHandResult], bootstrap_resamples: int = 2_000, statistics_seed: int = 91_003) -> dict[str, Any]:
     played = [r for r in results if r.winnings is not None]
     bb = [r.winnings / SLUMBOT_BIG_BLIND for r in played]
@@ -383,6 +401,9 @@ def summarize_slumbot(results: list[SlumbotHandResult], bootstrap_resamples: int
         "baseline_adjusted_bb_per_100": rate(baseline) if baseline else None,
         "desyncs": sum(r.desync is not None for r in results),
         "settlement_mismatches": sum(r.settlement_verified is False for r in results),
+        "bot_fallbacks": sum(r.bot_fallbacks for r in results),
+        "decision_seconds_max": max((t for r in results for t in r.decision_seconds), default=0.0),
+        "decision_seconds_p95": _percentile([t for r in results for t in r.decision_seconds], 0.95),
         "mean_seconds_per_hand": sum(r.elapsed_seconds for r in results) / len(results) if results else 0.0,
     }
 
