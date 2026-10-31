@@ -34,7 +34,7 @@ def test_big_blind_waits_for_villain_then_board():
     waiting = advise(spot(position="big_blind"))
     assert waiting["status"] == "villain_to_act" and waiting["state"]["to_call"] == 50
     need = advise(spot(("villain", "raise", 250), ("hero", "call"), position="big_blind"))
-    assert need == {"status": "need_board", "street": "flop", "cards_needed": 3}
+    assert need == {"status": "need_board", "street": "flop", "cards_needed": 3, "pot": 500}
     flop = advise(spot(("villain", "raise", 250), ("hero", "call"), board=("7h", "8d", "2c"), position="big_blind"))
     assert flop["status"] == "hero_to_act" and flop["explanation"]["source"] == "postflop_solve"
 
@@ -106,6 +106,7 @@ def test_list_hands_for_opponent_newest_first_with_name_normalization(store):
     assert [hand["spot"]["actions"][0]["amount"] for hand in hands] == [300, 250, 200]
     assert all("id" in hand and "created_at" in hand for hand in hands)
     assert hands[0]["id"] > hands[-1]["id"]
+    assert all(hand["result"] == {"showdown": False, "hero_net": 100} for hand in hands)  # villain folds to the raise: hero wins the big blind
     # extra internal whitespace normalizes to the same stored name
     same = client.get("/api/coach/opponents/Villain%20%20Two/hands")
     assert same.status_code == 200 and len(same.json()) == 3

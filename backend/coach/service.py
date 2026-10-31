@@ -163,6 +163,8 @@ def _replay(spot: Spot, advisor=None, profile=None):
     try:
         result = engine.play()
     except _Stop as stop:
+        if stop.status == "need_board":
+            stop.payload["pot"] = engine.state.pot  # so the UI can keep showing the pot while the board is entered
         return stop.status, stop.payload, engine
     if result["illegal_actions"]:
         raise ValueError(f"illegal entry: {result['illegal_diagnostics'][0]}")
@@ -178,6 +180,18 @@ def _hand_complete_payload(spot: Spot, payload: dict[str, Any]) -> dict[str, Any
     if not showdown or spot.villain_cards:
         summary["hero_net"] = result["stacks"][HERO] - spot.hero_stack
     return {"status": "hand_complete", "summary": summary}
+
+
+def hand_result(spot: Spot) -> dict[str, Any] | None:
+    """Showdown flag and hero's net chips for a stored hand; ``None`` if it no longer replays to the end."""
+    try:
+        status, payload, _ = _replay(spot)
+    except ValueError:
+        return None
+    if status != "hand_complete":
+        return None
+    summary = _hand_complete_payload(spot, payload)["summary"]
+    return {"showdown": summary["showdown"], "hero_net": summary.get("hero_net")}
 
 
 def profile_for(store: HandStore, opponent: str, observer=None):

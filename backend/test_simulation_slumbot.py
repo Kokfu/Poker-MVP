@@ -7,6 +7,7 @@ settlements) is evidence that the bridge maps actions, seats, boards, and
 all-ins correctly.  No network is used.
 """
 import random
+import time
 
 import pytest
 
@@ -15,7 +16,7 @@ from simulation.actions import Action
 from simulation.bots import BOT_TYPES
 from simulation.slumbot import (
     SLUMBOT_BIG_BLIND, SLUMBOT_SMALL_BLIND, SLUMBOT_STACK, SlumbotClient,
-    SlumbotProtocolError, parse_actions, play_slumbot_hand, run_slumbot_session,
+    SlumbotProtocolError, parse_actions, play_slumbot_hand, result_dict, run_slumbot_session,
 )
 
 
@@ -208,6 +209,28 @@ def test_illegal_requests_are_legalized_before_sending():
     fake = FakeSlumbot(seed=5)
     results, summary = run_slumbot_session(lambda i: IllegalBot(), 40, SlumbotClient(fake, token="tok"))
     assert fake.errors == [] and summary["desyncs"] == 0 and summary["settlement_mismatches"] == 0
+    assert summary["bot_fallbacks"] > 0 and summary["bot_fallbacks"] == sum(r.bot_fallbacks for r in results)
+
+
+class SlowBot:
+    """Always checks, calls or folds (never an illegal request) after a fixed delay."""
+    def decide(self, observation):
+        time.sleep(0.01)
+        legal = observation.legal_actions
+        return Action("check" if "check" in legal else "call" if "call" in legal else "fold")
+
+
+def test_decision_time_and_fallbacks_are_recorded_per_hand():
+    fake = FakeSlumbot(seed=7)
+    results, summary = run_slumbot_session(lambda i: SlowBot(), 12, SlumbotClient(fake, token="tok"))
+    assert fake.errors == [] and summary["desyncs"] == 0
+    for r in results:
+        assert len(r.decision_seconds) == r.decisions
+        assert all(t >= 0.009 for t in r.decision_seconds)
+        assert r.bot_fallbacks == 0
+    assert summary["bot_fallbacks"] == 0
+    assert 0.009 <= summary["decision_seconds_p95"] <= summary["decision_seconds_max"] < 6.0
+    assert "decision_seconds" in result_dict(results[0]) and "bot_fallbacks" in result_dict(results[0])
 
 
 class ProfileBot:

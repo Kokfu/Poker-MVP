@@ -54,7 +54,7 @@ type Profile = {
 type CoachResponse =
   | { status: "hero_to_act"; advice: { action: ActionKind; amount: number | null }; explanation: Explanation; explain: Explain | null; state: SpotState; exploiting: boolean; adjusted?: boolean; opponent_profile: Profile | null }
   | { status: "villain_to_act"; state: SpotState }
-  | { status: "need_board"; street: string; cards_needed: number }
+  | { status: "need_board"; street: string; cards_needed: number; pot?: number }
   | { status: "hand_complete"; summary: { showdown: boolean; board: string[]; hero_net?: number } };
 
 type RawSpot = {
@@ -69,7 +69,7 @@ type RawSpot = {
   villain_cards: string[] | null;
 };
 
-type HandRecord = { id: number; created_at: string; spot: RawSpot };
+type HandRecord = { id: number; created_at: string; spot: RawSpot; result?: { showdown: boolean; hero_net: number | null } | null };
 
 const ACTION_TEXT: Record<ActionKind, string> = { fold: "Fold", check: "Check", call: "Call", bet: "Bet", raise: "Raise to", all_in: "All-in" };
 const STAT_TEXT: Record<string, string> = {
@@ -529,6 +529,7 @@ export default function Coach() {
             <div className="coach-table">
               <p><small>BOARD</small><br />{board.length ? board.map((c) => <span key={c} className={`card-token ${"hd".includes(c[1]) ? "red" : ""}`}>{c}</span>) : <span className="muted">No board yet</span>}</p>
               {state && <p><small>POT</small><br /><strong>{state.pot}</strong>{state.to_call > 0 && <span className="muted"> · to call {state.to_call}</span>}</p>}
+              {result.status === "need_board" && result.pot !== undefined && <p><small>POT</small><br /><strong>{result.pot}</strong></p>}
               {reviewMode && <p className="muted eyebrow">REVIEWING A LOGGED HAND</p>}
             </div>
 
@@ -647,6 +648,7 @@ export default function Coach() {
                             <span>{record.spot.hero_cards.join(" ")}{record.spot.board.length > 0 && ` · ${record.spot.board.join(" ")}`}</span>
                             <small>
                               {record.spot.actions.length > 0 && `${describeAction(record.spot.actions[record.spot.actions.length - 1])} · `}
+                              {record.result?.hero_net != null && <><strong className={record.result.hero_net >= 0 ? "positive" : "negative"}>{record.result.hero_net >= 0 ? "+" : ""}{record.result.hero_net}</strong> · </>}
                               {new Date(record.created_at).toLocaleString()}
                             </small>
                           </span>

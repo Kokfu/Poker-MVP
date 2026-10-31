@@ -343,3 +343,10 @@ disagreement is a reported desync, never patched.  Server `winnings` are
 authoritative and cross-checked against the engine's settlement.  Slumbot
 also reports a `baseline_winnings` value; `winnings - baseline_winnings` is
 a much lower-variance estimate than raw winnings.
+
+Each hand result also records `decision_seconds` (one entry per client decision,
+timing only the bot's `decide`/`decide_decision`, not Slumbot latency) and
+`bot_fallbacks` (requested actions the bridge replaced with a legal one before
+sending, e.g. an out-of-range raise).  The session summary adds `bot_fallbacks`,
+`decision_seconds_p95` and `decision_seconds_max`, which is what to check
+against the 6 s per-decision limit.  Instrumentation only; bot behaviour is unchanged.

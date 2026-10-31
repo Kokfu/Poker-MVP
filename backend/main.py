@@ -286,8 +286,10 @@ def coach_review(opponent: str | None = None):
 
 @app.get("/api/coach/opponents/{name}/hands")
 def coach_opponent_hands(name: str):
+    from coach.service import hand_result, spot_from_dict
     from coach.store import HandStore
-    return _coach_call(HandStore().hands_with_meta, name)
+    hands = _coach_call(HandStore().hands_with_meta, name)
+    return [{**hand, "result": hand_result(spot_from_dict(hand["spot"]))} for hand in hands]
 
 
 @app.delete("/api/coach/hands/{hand_id}")
