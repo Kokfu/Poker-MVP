@@ -19,6 +19,8 @@ paired-evidence check; keep commits small; never push, force-push, tag, or delet
 | 2 | Reconcile Phase 5 status: ROADMAP says "NOT COMPLETE" (pool gate) while tag `phase-5-complete` exists; fix docs/wording | prompts/step-2.md | [x] done (89ba92c): docs consistent; premise was stale (revised criterion already COMPLETE) |
 | 3 | Pre-registered fresh-holdout test of the pool criterion (`solver_adaptive` vs `equity`) | prompts/step-3.md | [x] done (696eb4e): pool comparison inconclusive, original gate not passed |
 | 4 | Coach hardening: end-to-end UI check in the browser, fix defects, add tests | prompts/step-4.md | [x] done (4fb4440): 3 defects fixed, 817 tests pass |
+| 5 | Settle step 3's weak expert-family result: larger pre-registered run (48 sessions, offset 5,000,000) | prompts/step-5.md | [ ] todo |
+| 6 | Restore Slumbot decision-time/fallback logging; Coach pot-during-board-prompt and history result | prompts/step-6.md | [ ] todo |
 
 ## Log
 (main appends one line per reviewed step: date, step, verdict, branch/commit, caveats)
