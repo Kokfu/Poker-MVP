@@ -368,6 +368,24 @@ The current bridge no longer writes per-decision times or fallback counts, so de
 
 **Reading.**  The learning benefit seen in the earlier run did not reproduce: raw winnings are -198 bb/100 here (the earlier run's raw interval, and this one, both include zero and overlap heavily).  Unpaired bootstrap, clean rerun minus earlier learning run: -202 raw [-507, +105], -60 baseline-adjusted [-179, +60].  Clean rerun minus no-learning run: -50 raw [-339, +244], +99 baseline-adjusted [-49, +251].  Nothing is distinguishable from zero.  The earlier +159 baseline-adjusted learning effect was most likely noise, so the learning benefit against Slumbot is **not established**; the two learning runs average about -97 raw bb/100.  `solver_adaptive` is not shown to beat Slumbot.
 
+### Slumbot, first learning run with decision-time logging (autopilot step 7, 2026-11-02)
+
+Same bot, seeds (7,000-7,999) and learning mode as the clean rerun, on `main` at `e4a2413` (bridge logging restored in step 6).  `benchmark-results/phase-5/slumbot-learning-instrumented.jsonl` (force-added to git).  A first attempt died at hand 929 when its session ended (partial files kept as `*.killed-at-929.*`, not analysed) and the run was restarted from hand 1.  Free RAM was about 1.2 GB at the first start (about 2.2 GB at the restart; WSL was left running), so the machine was not fully idle.
+
+| Measure | Clean rerun (step 1) | This run |
+|---|---|---|
+| Raw winnings | -198.2, CI [-440.9, +44.5] | **-34.8**, CI [-232.7, +163.1] |
+| Baseline-adjusted | +20.2, CI [-63.5, +104.0] | **+35.1**, CI [-48.6, +118.8] |
+| Desyncs / settlement mismatches / bot fallbacks | 0 / 0 / not logged | 0 / 0 / **0** |
+| Bot decisions | 2,420 | 2,423 |
+| Bot decision time | not logged | **mean 1.41 s, median 1.11 s, p95 4.70 s, max 8.44 s** |
+| Decisions above 6 s | not logged | **55 of 2,423 (2.3%)**, none above 10 s |
+| Wall time per hand | mean 6.2 s, p95 15.9 s | mean 6.4 s, p95 18.7 s, max 22.9 s |
+
+Decision time by 100-hand block (mean / p95 / max, count above 6 s): 2.19/5.82/8.4 (12), 1.90/5.41/7.6 (5), 1.85/4.81/7.0 (9), 1.03/2.84/7.6 (1), 0.80/2.71/6.1 (1), 0.83/2.56/3.8 (0), 0.84/2.68/3.5 (0), 0.81/2.65/6.6 (2), 1.84/6.20/7.9 (13), 1.80/6.61/7.9 (12).  Time is not monotone in session length; it varies with the mix of spots that need re-solves.
+
+**Reading.**  Against the 6 s limit for a new Stage 1 variant, the p95 (4.7 s) is within it but 2.3% of decisions exceed it and the maximum is 8.4 s, and two late blocks have p95 above 6 s.  So a per-decision cap would be violated occasionally; a limit on the 95th percentile would be met.  The earlier p95 of 8.7 s (first learning run) was not reproduced.  Winnings: unpaired bootstrap difference against the clean rerun is +163 raw [-153, +468] and +15 baseline-adjusted [-102, +130]; every interval includes zero, so the learning effect against Slumbot remains **not established** (three learning runs: +4, -198, -35 raw).  No strategy claim.
+
 ### Stage 0 oracle for later-street betting (2026-10-25)
 
 Protocol: `DESIGN_LATER_STREET_BETTING.md` sections 8-9, amended before the real run.  Code: `backend/research/solver_oracle.py` (research only, production solver untouched); 6 tests.  60 turn spots from solver-versus-bot hands (seeds 20,000 and up; 60 spots in 140 hands, so 43% of hands reach such a spot), 30 calibration and 30 held-out; oracle = joint turn + river CFR over all 44 river cards, 80 iterations; every profile evaluated with the same fresh 60-iteration river solves.  Results: `benchmark-results/stage0/results.jsonl` (not tracked).
