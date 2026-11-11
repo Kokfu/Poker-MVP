@@ -21,7 +21,7 @@ paired-evidence check; keep commits small; never push, force-push, tag, or delet
 | 4 | Coach hardening: end-to-end UI check in the browser, fix defects, add tests | prompts/step-4.md | [x] done (4fb4440): 3 defects fixed, 817 tests pass |
 | 5 | Settle step 3's weak expert-family result: larger pre-registered run (48 sessions, offset 5,000,000) | prompts/step-5.md | [x] done (ca22b0e): all seven lower bounds > 0; step 3 weakness read as noise |
 | 6 | Restore Slumbot decision-time/fallback logging; Coach pot-during-board-prompt and history result | prompts/step-6.md | [x] done (6b59e09): bridge logging restored, Coach pot+history result, 818 tests pass |
-| 7 | First Slumbot learning run with restored decision-time/fallback logging | prompts/step-7.md | [ ] todo |
+| 7 | First Slumbot learning run with restored decision-time/fallback logging | prompts/step-7.md | [x] done (58fd341): p95 4.7 s, 55/2423 decisions >6 s, learning effect not established |
 | 8 | Design-only: opponent-model improvement proposal with pre-registered test (wait for owner approval) | prompts/step-8.md | [ ] todo |
 
 ## Log
@@ -32,3 +32,4 @@ paired-evidence check; keep commits small; never push, force-push, tag, or delet
 - 2026-10-31 step 4 accepted: preflop label/headline mismatch fixed (display-only), adjusted flag, copy; backend 817 pass, frontend build ok. Open minor: pot hidden during board prompt, history row shows last action only. ALL PLANNED STEPS DONE; main is 6 commits+ ahead of origin, unpushed.
 - 2026-11-01 step 5 accepted: offset 5M, 48 sessions, all 7 lower bounds >0, 0 illegal/mismatch; expert family ~35-40 bb/100 below offset-3M (inside its CI), small real decline not excluded; no multiplicity correction.
 - 2026-11-01 step 6 accepted: instrumentation only (fallback definition reconstructed, may not match old runs); 818 backend pass, frontend build ok. ALL STEPS 1-6 DONE; unpushed.
+- 2026-11-12 step 7 accepted (numbers re-derived from jsonl): decision p95 4.70 s, max 8.44, 55/2423 >6 s; raw -35 [-233,+163]; three learning runs +4/-198/-35 raw, effect not established.
