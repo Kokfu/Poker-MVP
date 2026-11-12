@@ -66,6 +66,9 @@ Honest expectation: A is a **speed and robustness** change. It should not be sol
 
 **Not claimed.** No Slumbot win-rate result will be used to claim improvement or loss; if the Slumbot raw/adjusted interval includes zero (expected) it is reported as such. One run per arm; no multiplicity correction across eight opponents (same limitation as step 5).
 
+## Approval (recorded in autopilot step 9)
+The owner approved proposal A on 2026-11-12 with the parameters in section 4 unchanged (credible level 90%, minimum margin 0.08, weight multiplier = confidence weight x min(1, distance to interval / 0.10)). In the T1/T2 tests, `base` means `solver_adaptive` at `main` commit `fa3b538` (the commit current when step 9 started; step 9 changes behaviour only when the new option is on, so the default code path stays equal to it). `gated` = `solver_adaptive_gated`.
+
 ## 5. Out of scope / not yet checked
 - Whether locks actually cause the >6 s decisions (hypothesis only; first thing the instrumentation settles).
 - Coach profile storage changes (needed for B, not A).

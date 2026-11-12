@@ -78,4 +78,11 @@ class AdaptiveSolverBot:
         return Implementation(*args, **kwargs)
 
 
-BOT_TYPES={"random":RandomBot,"tight":TightBot,"aggressive":AggressiveBot,"equity":EquityBot,"expert":ExpertRuleBot,"adaptive":ExpertAdaptiveBot,"range_expert":RangeAwareExpertBot,"solver":SolverBot,"solver_adaptive":AdaptiveSolverBot}
+class GatedAdaptiveSolverBot:
+    """Registry entry for ``solver_adaptive`` with deviation-gated locks."""
+    def __new__(cls, *args, **kwargs):
+        from solver.bot import GatedAdaptiveSolverBot as Implementation
+        return Implementation(*args, **kwargs)
+
+
+BOT_TYPES={"random":RandomBot,"tight":TightBot,"aggressive":AggressiveBot,"equity":EquityBot,"expert":ExpertRuleBot,"adaptive":ExpertAdaptiveBot,"range_expert":RangeAwareExpertBot,"solver":SolverBot,"solver_adaptive":AdaptiveSolverBot,"solver_adaptive_gated":GatedAdaptiveSolverBot}
