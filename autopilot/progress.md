@@ -23,7 +23,7 @@ paired-evidence check; keep commits small; never push, force-push, tag, or delet
 | 6 | Restore Slumbot decision-time/fallback logging; Coach pot-during-board-prompt and history result | prompts/step-6.md | [x] done (6b59e09): bridge logging restored, Coach pot+history result, 818 tests pass |
 | 7 | First Slumbot learning run with restored decision-time/fallback logging | prompts/step-7.md | [x] done (58fd341): p95 4.7 s, 55/2423 decisions >6 s, learning effect not established |
 | 8 | Design-only: opponent-model improvement proposal with pre-registered test (wait for owner approval) | prompts/step-8.md | [x] done (d181c86): design only, proposal A awaiting owner approval |
-| 9 | Implement proposal A (gated locks) off-by-default + instrumentation + equivalence tests (OWNER APPROVED 2026-11-12) | prompts/step-9.md | [ ] todo |
+| 9 | Implement proposal A (gated locks) off-by-default + instrumentation + equivalence tests (OWNER APPROVED 2026-11-12) | prompts/step-9.md | [x] done (390ab71): solver_adaptive_gated added, default path byte-identical, 830 tests pass |
 | 10 | Run pre-registered T1 (local paired, offset 6M, ~8-16 h) | prompts/step-10.md | [ ] todo |
 | 11 | Run pre-registered T2 (live Slumbot decision time) | prompts/step-11.md | [ ] todo |
 | 12 | Apply decision rule; adopt or keep base; propose step 13 | prompts/step-12.md | [ ] todo |
@@ -39,3 +39,4 @@ paired-evidence check; keep commits small; never push, force-push, tag, or delet
 - 2026-11-12 step 7 accepted (numbers re-derived from jsonl): decision p95 4.70 s, max 8.44, 55/2423 >6 s; raw -35 [-233,+163]; three learning runs +4/-198/-35 raw, effect not established.
 - 2026-11-12 step 8 accepted (design only). AUTOPILOT ENDED by owner; nothing further queued. Proposal A (deviation-gated locking) needs explicit approval before any build.
 - 2026-11-12 owner approved proposal A and asked autopilot to continue until stopped; steps 9-12 queued. Pushing still needs owner OK.
+- 2026-11-12 step 9 accepted: golden file independently regenerated from fa3b538 (40 hands, cmp identical); full suite 830 pass (re-run by main). Caveats: with pooling on, the Beta interval uses all-streets pooled counts while the compared point is the street-shrunk rate (implementer's reading, now fixed for T1/T2); gate kept 70-90% of locks on Slumbot reads and needs an extra unlocked solve, so T2 latency gates are at risk.
