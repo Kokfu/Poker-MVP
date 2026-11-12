@@ -1,0 +1,4 @@
+Autopilot step 10 (use the autopilot-step skill). Task: run T1 of `DESIGN_OPPONENT_MODEL.md` section 4 exactly as pre-registered (offset 6,000,000, 48 sessions x 60 hands, eight opponents incl. `solver`, base vs gated on identical seeds, 2 workers, statistics seed 91,002, 2,000 resamples).
+- First commit `autopilot/prereg-step-10.md` restating the gates verbatim from the design doc and the exact commands; check that offset 6M is still unused (grep ROADMAP and benchmark-results).
+- Run detached with a long-interval Monitor (30+ min). Expect ~8-16 hours; do NOT end your turn just to report "still running". If a session end kills the run, restart from the beginning and say so.
+- Force-add the result JSONs to git. Report T1a and T1b as pass / fail / inconclusive using the stated rules, per-opponent paired differences with intervals, and any flags (aggressive/random drop > 150). No parameter changes after seeing data.

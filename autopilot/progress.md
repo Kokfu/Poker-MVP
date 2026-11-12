@@ -23,6 +23,10 @@ paired-evidence check; keep commits small; never push, force-push, tag, or delet
 | 6 | Restore Slumbot decision-time/fallback logging; Coach pot-during-board-prompt and history result | prompts/step-6.md | [x] done (6b59e09): bridge logging restored, Coach pot+history result, 818 tests pass |
 | 7 | First Slumbot learning run with restored decision-time/fallback logging | prompts/step-7.md | [x] done (58fd341): p95 4.7 s, 55/2423 decisions >6 s, learning effect not established |
 | 8 | Design-only: opponent-model improvement proposal with pre-registered test (wait for owner approval) | prompts/step-8.md | [x] done (d181c86): design only, proposal A awaiting owner approval |
+| 9 | Implement proposal A (gated locks) off-by-default + instrumentation + equivalence tests (OWNER APPROVED 2026-11-12) | prompts/step-9.md | [ ] todo |
+| 10 | Run pre-registered T1 (local paired, offset 6M, ~8-16 h) | prompts/step-10.md | [ ] todo |
+| 11 | Run pre-registered T2 (live Slumbot decision time) | prompts/step-11.md | [ ] todo |
+| 12 | Apply decision rule; adopt or keep base; propose step 13 | prompts/step-12.md | [ ] todo |
 
 ## Log
 (main appends one line per reviewed step: date, step, verdict, branch/commit, caveats)
@@ -34,3 +38,4 @@ paired-evidence check; keep commits small; never push, force-push, tag, or delet
 - 2026-11-01 step 6 accepted: instrumentation only (fallback definition reconstructed, may not match old runs); 818 backend pass, frontend build ok. ALL STEPS 1-6 DONE; unpushed.
 - 2026-11-12 step 7 accepted (numbers re-derived from jsonl): decision p95 4.70 s, max 8.44, 55/2423 >6 s; raw -35 [-233,+163]; three learning runs +4/-198/-35 raw, effect not established.
 - 2026-11-12 step 8 accepted (design only). AUTOPILOT ENDED by owner; nothing further queued. Proposal A (deviation-gated locking) needs explicit approval before any build.
+- 2026-11-12 owner approved proposal A and asked autopilot to continue until stopped; steps 9-12 queued. Pushing still needs owner OK.
