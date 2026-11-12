@@ -42,7 +42,7 @@ from simulation.expert_bot import ExpertRuleBot
 from .cfr import RangeSolver
 from .combos import CLASS_COMBO_COUNT, COMBO_CLASS, COMBO_COUNT, COMBOS, HAND_CLASSES, card_mask, combo_index
 from .equity import equity_matrix, rank_vector
-from .exploit import locks_key, tree_locks
+from .exploit import gate_locks, locks_key, node_aggregates, tree_locks
 from .showdown import ShowdownModel
 from .preflop import CHART_BB, PreflopCharts, load_charts, load_class_equity
 from .tree import POSTFLOP_MENU, SizeMenu, StreetState, StreetTree
@@ -200,6 +200,8 @@ class StreetSolve:
     seconds: float
     locked_nodes: int = 0
     solver: Any = None  # kept for read-only action values (explain_ev)
+    candidate_locks: int = 0  # locks before the deviation gate
+    unlocked_average: dict[int, np.ndarray] | None = None  # gated mode only
 
 
 @dataclass
@@ -215,14 +217,19 @@ class SolverBot(PokerBot):
     exploit = False
     lock_weighting = "confidence"  # or "evidence" (see solver.exploit._weight)
     pool_streets = False  # partial pooling of postflop reads across streets
+    gated_locks = False  # deviation-gated locking (DESIGN_OPPONENT_MODEL.md, proposal A); off = today's behaviour
     explain_ev = False  # add per-action EV to postflop explanations (read-only; the Coach turns it on)
     iterations = {"flop": 60, "turn": 70, "river": 80}
     flop_runouts = 30
     prune = 5e-3
     postflop_menu: SizeMenu = POSTFLOP_MENU
 
-    def __init__(self, seed: int | None = None, equity_iterations: int = 1000, charts: PreflopCharts | None = None):
+    def __init__(self, seed: int | None = None, equity_iterations: int = 1000, charts: PreflopCharts | None = None,
+                 gated_locks: bool | None = None):
         super().__init__(seed, equity_iterations)
+        if gated_locks is not None:
+            self.gated_locks = bool(gated_locks)
+        self._info: dict[str, Any] = {}
         self.seed_base = 0 if seed is None else seed
         self.charts = charts or load_charts()
         self.fallback = ExpertRuleBot(seed, equity_iterations)
@@ -255,7 +262,7 @@ class SolverBot(PokerBot):
             action = self.fallback.decide_decision(observation)
             explanation = {"source": "fallback", "reason": f"{type(error).__name__}: {error}"}
         self.last_explanation = explanation
-        self.decision_trace.append({"hand_number": ds.hand_number, "street": ds.street, "action": action.type, "target": action.amount, **{k: v for k, v in explanation.items() if k in ("source", "reason", "probabilities", "solve_seconds")}})
+        self.decision_trace.append({"hand_number": ds.hand_number, "street": ds.street, "action": action.type, "target": action.amount, **{k: v for k, v in explanation.items() if k in ("source", "reason", "probabilities", "solve_seconds", "instrumentation")}})
         return action
 
 
@@ -264,6 +271,7 @@ class SolverBot(PokerBot):
         key = (ds.match_id, ds.hand_id, ds.hand_number)
         if self.memory is None or self.memory.key != key:
             self.memory = _HandMemory(key)
+        self._info = {"cache_hit": None, "unlocked_action_differs": None}
         replay = replay_hand(ds)
         hero = replay.current.to_act
         hero_combo = combo_index(ds.hole_cards)
@@ -277,7 +285,12 @@ class SolverBot(PokerBot):
         # Preflop: walk the chart tree, updating ranges with the preflop policy
         # (the stored chart, or a re-solve against confident opponent reads).
         chart_tree = self.charts.trees[depth]
-        preflop_locks = tree_locks(chart_tree, opponent, "preflop", profile, self._strength_correlation(), self.lock_weighting, self.pool_streets) if profile is not None else {}
+        preflop_reads: dict[int, list] | None = {} if self.gated_locks else None
+        preflop_locks = tree_locks(chart_tree, opponent, "preflop", profile, self._strength_correlation(), self.lock_weighting, self.pool_streets, preflop_reads) if profile is not None else {}
+        preflop_candidates = len(preflop_locks)
+        if self.gated_locks and preflop_locks:
+            chart = {n.index: self.charts.strategy(depth, n.index) for n in chart_tree.nodes if n.kind == "decision" and n.player == opponent}
+            preflop_locks = gate_locks(preflop_locks, preflop_reads, node_aggregates(chart_tree, opponent, np.ones(COMBO_COUNT), chart))
         policy = self._preflop_policy(depth, opponent, preflop_locks)
         node = chart_tree.root
         preflop_steps = [s for s in replay.steps if s.street == "preflop"]
@@ -293,12 +306,14 @@ class SolverBot(PokerBot):
             probabilities = policy(node)[:, hero_combo]
             chart_node = chart_tree.nodes[node]
             choice = self._sample(ds, probabilities)
+            self._info["unlocked_action_differs"] = bool(self._pick(ds, self.charts.strategy(depth, node)[:, hero_combo]) != choice)
             action = self._concrete_preflop(ds, chart_node, choice, scale)
             concrete = [self._concrete_preflop(ds, chart_node, i, scale) for i in range(len(chart_node.actions))]
             return action, {"source": "preflop_chart" if not preflop_locks else "preflop_exploit", "depth_bb": depth, "labels": chart_node.labels,
                             "concrete_labels": [item.type if item.amount is None else f"{item.type}_{item.amount}" for item in concrete],
                             "probabilities": [round(float(p), 4) for p in probabilities], "chosen": chart_node.labels[choice],
                             "exploit": {**exploit_info, "locked_nodes": len(preflop_locks)},
+                            "instrumentation": self._instrumentation("preflop", preflop_candidates, len(preflop_locks)),
                             **self._range_report((), hero_combo, ranges[opponent])}
 
         # Postflop streets already completed, then the current street.
@@ -327,11 +342,14 @@ class SolverBot(PokerBot):
                 continue
             if not on_tree or solve.tree.nodes[node].kind != "decision":
                 solve = self._solve(replay.current, board, ranges, hero_combo, hero, profile)
+                self._info["cache_hit"] = False
                 node = solve.tree.root
             tree_node = solve.tree.nodes[node]
             position = int(np.searchsorted(solve.combos[hero], hero_combo))
             probabilities = solve.average[node][:, position]
             choice = self._sample(ds, probabilities)
+            if solve.unlocked_average is not None:
+                self._info["unlocked_action_differs"] = bool(self._pick(ds, solve.unlocked_average[node][:, position]) != choice)
             action = self._concrete_postflop(ds, tree_node.actions[choice])
             action_ev = None
             if solve.solver is not None:
@@ -343,11 +361,13 @@ class SolverBot(PokerBot):
                             "exploitability": solve.exploitability, "resolved_from_current_state": not on_tree,
                             **({"action_ev": action_ev} if action_ev is not None else {}),
                             "exploit": {**exploit_info, "locked_nodes": solve.locked_nodes},
+                            "instrumentation": self._instrumentation(street, solve.candidate_locks, solve.locked_nodes),
                             **self._range_report(board, hero_combo, ranges[opponent])}
         raise ReplayError("unreachable street")
 
     def _street_solve(self, key, root_state, board, ranges, hero_combo, hero, profile=None) -> StreetSolve:
         cached = self.memory.street_solves.get(key)
+        self._info["cache_hit"] = cached is not None
         if cached is None:
             cached = self._solve(root_state, board, ranges, hero_combo, hero, profile)
             self.memory.street_solves[key] = cached
@@ -370,11 +390,25 @@ class SolverBot(PokerBot):
         d = full_d[np.ix_(rows, cols)]
         compat = full_compat[np.ix_(rows, cols)]
         tree = StreetTree(root_state, self.postflop_menu)
-        locks = tree_locks(tree, 1 - hero, root_state.street, profile, self._strength_correlation(), self.lock_weighting, self.pool_streets) if profile is not None else {}
+        opponent = 1 - hero
+        reads: dict[int, list] | None = {} if self.gated_locks else None
+        locks = tree_locks(tree, opponent, root_state.street, profile, self._strength_correlation(), self.lock_weighting, self.pool_streets, reads) if profile is not None else {}
+        candidates = len(locks)
+        unlocked_average = None
+        if self.gated_locks and locks:
+            # Deviation gate: compare each read with the unlocked equilibrium play
+            # at the node; keep (and scale) only the locks that clearly deviate.
+            ranges_here = (ranges[0][combos[0]], ranges[1][combos[1]])
+            unlocked = RangeSolver(tree, ranges_here, d, compat, combo_ids=(combos[0], combos[1]))
+            unlocked_average = unlocked.solve(self.iterations[root_state.street]).average
+            locks = gate_locks(locks, reads, node_aggregates(tree, opponent, ranges_here[opponent], unlocked_average))
+            if not locks:
+                return StreetSolve(tree, (combos[0], combos[1]), unlocked_average, None, time.perf_counter() - started, 0,
+                                   unlocked if self.explain_ev else None, candidates, unlocked_average)
         solver = RangeSolver(tree, (ranges[0][combos[0]], ranges[1][combos[1]]), d, compat, combo_ids=(combos[0], combos[1]), locks=locks)
         result = solver.solve(self.iterations[root_state.street])
         return StreetSolve(tree, (combos[0], combos[1]), result.average, None, time.perf_counter() - started, len(locks),
-                           solver if self.explain_ev else None)
+                           solver if self.explain_ev else None, candidates, unlocked_average)
 
     def _preflop_policy(self, depth: int, opponent: int, locks: dict):
         """Node -> (actions, 1326) strategy: the chart, or a locked re-solve."""
@@ -382,6 +416,7 @@ class SolverBot(PokerBot):
             return lambda node: self.charts.strategy(depth, node)
         key = (depth, opponent, locks_key(locks))
         policy = _PREFLOP_CACHE.get(key)
+        self._info["cache_hit"] = policy is not None
         if policy is None:
             class_d, class_w = load_class_equity()
             counts = CLASS_COMBO_COUNT.astype(float)
@@ -439,7 +474,15 @@ class SolverBot(PokerBot):
         updated[combos] = weights[combos] * solve.average[node][choice]
         return updated
 
+    def _instrumentation(self, street: str, candidates: int, applied: int) -> dict[str, Any]:
+        """Per-decision diagnostics (never read by the strategy)."""
+        return {"street": street, "gated": self.gated_locks, "candidate_locks": candidates, "locks_applied": applied,
+                "cache_hit": self._info.get("cache_hit"), "unlocked_action_differs": self._info.get("unlocked_action_differs")}
+
     def _sample(self, ds, probabilities: np.ndarray) -> int:
+        return self._pick(ds, probabilities)
+
+    def _pick(self, ds, probabilities: np.ndarray) -> int:
         text = f"solver|{self.seed_base}|{ds.match_id}|{ds.hand_id}|{ds.hand_number}|{ds.street}|{len(ds.hand_actions)}"
         rng = random.Random(int.from_bytes(sha256(text.encode()).digest()[:8], "big"))
         p = np.clip(np.asarray(probabilities, dtype=float), 0.0, None)
@@ -490,3 +533,8 @@ class AdaptiveSolverBot(SolverBot):
     against tight and random and stay off."""
     exploit = True
     pool_streets = True
+
+
+class GatedAdaptiveSolverBot(AdaptiveSolverBot):
+    """``solver_adaptive`` with deviation-gated locking (proposal A)."""
+    gated_locks = True
