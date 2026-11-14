@@ -33,6 +33,14 @@ class HandStore:
                 "created_at TEXT NOT NULL, spot TEXT NOT NULL)"
             )
             connection.execute("CREATE INDEX IF NOT EXISTS hands_by_opponent ON hands (opponent)")
+            # Proposal B (bet-size-conditioned reads): a derived cache of the opponent's responses to our
+            # bets by size bucket.  Created if missing; the hands table is untouched, and the cache can
+            # always be rebuilt by replaying the stored hands.
+            connection.execute(
+                "CREATE TABLE IF NOT EXISTS sized_reads (opponent TEXT NOT NULL, street_class TEXT NOT NULL, bucket TEXT NOT NULL, "
+                "opportunities INTEGER NOT NULL, folds INTEGER NOT NULL, calls INTEGER NOT NULL, raises INTEGER NOT NULL, "
+                "PRIMARY KEY (opponent, street_class, bucket))"
+            )
 
     def _connect(self) -> sqlite3.Connection:
         return sqlite3.connect(self.path)
@@ -70,13 +78,36 @@ class HandStore:
 
     def delete_hand(self, hand_id: int) -> bool:
         with self._connect() as connection:
+            row = connection.execute("SELECT opponent FROM hands WHERE id = ?", (hand_id,)).fetchone()
             cursor = connection.execute("DELETE FROM hands WHERE id = ?", (hand_id,))
+            if row is not None:  # the cached sized reads of that opponent are now stale; they are rebuilt on the next log
+                connection.execute("DELETE FROM sized_reads WHERE opponent = ?", (row[0],))
             return cursor.rowcount > 0
 
     def delete_opponent(self, opponent: str) -> int:
+        name = normalize_name(opponent)
         with self._connect() as connection:
-            cursor = connection.execute("DELETE FROM hands WHERE opponent = ?", (normalize_name(opponent),))
+            cursor = connection.execute("DELETE FROM hands WHERE opponent = ?", (name,))
+            connection.execute("DELETE FROM sized_reads WHERE opponent = ?", (name,))
             return cursor.rowcount
+
+    def save_sized_reads(self, opponent: str, cells: dict[str, tuple[int, int, int, int]], street_class: str = "postflop") -> None:
+        """Replace the cached cells (bucket -> (opportunities, folds, calls, raises)) of one opponent."""
+        name = normalize_name(opponent)
+        with self._connect() as connection:
+            connection.execute("DELETE FROM sized_reads WHERE opponent = ? AND street_class = ?", (name, street_class))
+            connection.executemany(
+                "INSERT INTO sized_reads (opponent, street_class, bucket, opportunities, folds, calls, raises) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                [(name, street_class, bucket, *map(int, values)) for bucket, values in sorted(cells.items())],
+            )
+
+    def sized_reads(self, opponent: str, street_class: str = "postflop") -> dict[str, tuple[int, int, int, int]]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT bucket, opportunities, folds, calls, raises FROM sized_reads WHERE opponent = ? AND street_class = ? ORDER BY bucket",
+                (normalize_name(opponent), street_class),
+            ).fetchall()
+        return {bucket: (n, folds, calls, raises) for bucket, n, folds, calls, raises in rows}
 
     def opponents(self) -> list[tuple[str, int]]:
         with self._connect() as connection:

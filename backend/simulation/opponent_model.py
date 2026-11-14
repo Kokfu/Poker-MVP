@@ -19,6 +19,18 @@ BETA = 1
 CONFIDENCE_THRESHOLDS = ((5, "very_low"), (20, "low"), (50, "medium"), (float("inf"), "high"))
 
 
+SIZE_BUCKETS = ("<=0.5", "0.5-1.0", ">1.0")
+
+
+def size_bucket(ratio: float) -> str:
+    """Bucket of a bet/raise: (raise amount) / (pot after the opponent's bet is matched).
+
+    Edges as pre-registered for proposal B (autopilot/prereg-step-13.md): <=0.5, 0.5-1.0, >1.0."""
+    if ratio <= 0.5:
+        return SIZE_BUCKETS[0]
+    return SIZE_BUCKETS[1] if ratio <= 1.0 else SIZE_BUCKETS[2]
+
+
 def confidence_for(opportunities: int) -> Confidence:
     for limit, label in CONFIDENCE_THRESHOLDS:
         if opportunities < limit:
@@ -38,6 +50,21 @@ class OpponentStats:
     def snapshot(self) -> "StatEstimate":
         raw = self.occurrences / self.opportunities if self.opportunities else 0.0
         return StatEstimate(self.opportunities, self.occurrences, raw, (self.occurrences + ALPHA) / (self.opportunities + ALPHA + BETA), confidence_for(self.opportunities))
+
+
+@dataclass
+class SizedStats:
+    """How the modelled player responded to OUR bets/raises of one size bucket (proposal B)."""
+    opportunities: int = 0
+    folds: int = 0
+    calls: int = 0
+    raises: int = 0
+
+    def observe(self, response: str) -> None:
+        self.opportunities += 1
+        self.folds += response == "fold"
+        self.calls += response == "call"
+        self.raises += response == "raise"
 
 
 @dataclass(frozen=True)
@@ -82,9 +109,14 @@ class OpponentProfileSnapshot:
     street_statistics: dict[str, dict[str, StatEstimate]]
     sizing: dict[str, Any]
     classification: PlayerType
+    # Proposal B (bet-size-conditioned reads): bucket -> SizedStats copy.  Read only by bots with
+    # ``sized_reads``; never serialised (kept out of ``as_dict``) and ignored by equality.
+    sized_statistics: dict[str, SizedStats] | None = field(default=None, compare=False)
 
     def as_dict(self) -> dict[str, Any]:
-        return _safe(asdict(self))
+        values = asdict(self)
+        values.pop("sized_statistics", None)
+        return _safe(values)
 
 
 @dataclass
@@ -103,6 +135,7 @@ class OpponentModel:
     street_stats: dict[str, dict[str, OpponentStats]] = field(default_factory=dict)
     sizing: SizingProfile = field(default_factory=SizingProfile)
     street_sizing: dict[str, SizingProfile] = field(default_factory=dict)
+    sized_stats: dict[str, SizedStats] = field(default_factory=dict)  # postflop, pooled over streets (proposal B)
 
     def __post_init__(self) -> None:
         for name in ("fold", "check", "call", "bet", "raise", "all_in", "aggressive", "passive", "vpip", "preflop_raise", "limp", "three_bet", "fold_to_raise", "fold_to_three_bet"):
@@ -115,6 +148,7 @@ class OpponentModel:
         """Consume a completed public history once; no hidden fields are read."""
         events = [event for event in history.events if event.event_type == "action_taken" and event.actor in {"a", "b"} and event.applied_action not in {None, "illegal_action"}]
         self.hands_observed += 1
+        self._observe_sized_responses(events)
         preflop_actions: list[HandHistoryEvent] = []
         street_actions: dict[str, list[HandHistoryEvent]] = {street: [] for street in STREETS}
         for event in events:
@@ -164,10 +198,30 @@ class OpponentModel:
                 self.sizing.observe(fraction)
                 if event.street in STREETS: self.street_sizing[event.street].observe(fraction)
 
+    def _observe_sized_responses(self, events: list[HandHistoryEvent]) -> None:
+        """Proposal B: the modelled player's fold/call/raise against each postflop bet or raise of the
+        other player, bucketed by raise amount / pot after matching the modelled player's own bet."""
+        mine = "a" if self.player == "a" else "b"
+        for index, event in enumerate(events):
+            if event.actor == self.player or event.street not in STREETS:
+                continue
+            if event.applied_action not in {"bet", "raise", "all_in"} or (event.current_highest_bet_after or 0) <= (event.current_highest_bet_before or 0):
+                continue
+            own = event.street_commitment_a_before if mine == "a" else event.street_commitment_b_before
+            other = event.street_commitment_b_before if mine == "a" else event.street_commitment_a_before
+            carried = event.pot_before - own - other
+            ratio = ((event.current_highest_bet_after or 0) - own) / max(carried + 2 * own, 1)
+            reply = next((item for item in events[index + 1:] if item.actor == self.player and item.street == event.street), None)
+            if reply is None:
+                continue
+            raised = reply.applied_action in {"bet", "raise", "all_in"} and (reply.current_highest_bet_after or 0) > (reply.current_highest_bet_before or 0)
+            response = "raise" if raised else "fold" if reply.applied_action == "fold" else "call"
+            self.sized_stats.setdefault(size_bucket(ratio), SizedStats()).observe(response)
+
     def snapshot(self) -> OpponentProfileSnapshot:
         stats = {name: value.snapshot() for name, value in self.stats.items()}
         streets = {street: {name: value.snapshot() for name, value in values.items()} for street, values in self.street_stats.items()}
-        return OpponentProfileSnapshot(self.hands_observed, self.decisions_observed, stats, streets, {"overall": self.sizing.as_dict(), "by_street": {street: profile.as_dict() for street, profile in self.street_sizing.items()}}, self._classification(stats))
+        return OpponentProfileSnapshot(self.hands_observed, self.decisions_observed, stats, streets, {"overall": self.sizing.as_dict(), "by_street": {street: profile.as_dict() for street, profile in self.street_sizing.items()}}, self._classification(stats), {bucket: SizedStats(v.opportunities, v.folds, v.calls, v.raises) for bucket, v in self.sized_stats.items()})
 
     def _classification(self, stats: dict[str, StatEstimate]) -> PlayerType:
         vpip, aggression = stats["vpip"], stats["aggressive"]
