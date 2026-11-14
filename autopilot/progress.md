@@ -31,7 +31,11 @@ paired-evidence check; keep commits small; never push, force-push, tag, or delet
 | 14 | Run cheap offline gate T0 for B (no build) | prompts/step-14.md | [x] done (c038070): T0 passes (+0.126 nats [+0.113,+0.138]); weak gate, B NOT built |
 | 15 | Runnability (fresh-clone check) + docs consolidation | prompts/step-15.md | [x] done (7728e12): fresh clone works; 830 pass; docs only |
 | 16 | Coach learning-loop end-to-end verification + tests | prompts/step-16.md | [x] done (f807d96): 29 tests, 859 pass, no defect found; 3 observations |
-| 17 | Release readiness (notes, hygiene, final suite); no push/tag | prompts/step-17.md | [ ] todo |
+| 17 | Release readiness (notes, hygiene, final suite); no push/tag | prompts/step-17.md | [x] done (45cccce): RELEASE_NOTES.md, hygiene clean except author email in history (owner item); 859 pass |
+| 17a | Diagnose Coach lock oddity (range widens vs tight villain); diagnosis only | prompts/step-17a.md | [x] done (dc4b74c): small real bug (lock strength at preflop unopened SB node), not fixed; fold->call flip mostly intended |
+| 18 | Build proposal B `solver_adaptive_sized` off by default (OWNER APPROVED) | prompts/step-18.md | [ ] todo |
+| 19 | Run pre-registered T1 for B at offset 7M (~40 h) | prompts/step-19.md | [ ] todo |
+| 20 | Apply decision rule for B; write step 21 (strength-fix flag + paired test) | prompts/step-20.md | [ ] todo |
 
 ## Log
 (main appends one line per reviewed step: date, step, verdict, branch/commit, caveats)
@@ -50,3 +54,4 @@ paired-evidence check; keep commits small; never push, force-push, tag, or delet
 - 2026-11-14 step 15 accepted and merged: fresh clone installs/tests (830)/builds/serves Coach per docs; docker build ok (not run); docs-only. Older absolute paths remain in old doc sections.
 - 2026-11-14 step 16 accepted and merged: loop converges (tight/aggressive/equity labelled right after 120 hands), advice direction, persistence, 21 bad inputs -> 422; browser pass ok. Open observation: vs `tight` villain (flop bet 4%) J9 facing a flop bet goes fold 72% -> call 98% and villain range WIDENS 298 -> 783 combos; cause not investigated (queued as step 17a).
 - 2026-11-14 owner (via main chat) approved BUILDING proposal B as in prereg-step-13.md; queued steps 18 (build sized, off by default), 19 (T1 at offset 7M, ~40 h), 20 (decision rule) after 17/17a.
+- 2026-11-14 steps 17, 17a accepted and merged (64d06cb). Step 17: no secrets; owner items: author gmail in pushed history (128 commits), optional tag v0.5.0, absolute paths in old docs. Step 17a: widening comes from tree_locks using the 'facing' strength for the preflop unopened SB node (0.54 instead of 0.89), padding the open range with 46% flat hands; fix = strategy change, deferred behind B so T1 for B stays clean (step 21 candidate). Steps 18-20 prompts written.
