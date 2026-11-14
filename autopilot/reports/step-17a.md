@@ -1,0 +1,20 @@
+# Step 17a report: diagnosis of the "tight villain widens the range / fold -> call" observation
+
+**Verdict: part artefact (a real, small bug that widens the range), part intended-but-size-blind exploit.** Diagnosis only; no strategy or backend code changed, backend suite not run. Branch `autopilot/step-17a` from main 2526592; not merged, not pushed. Repro: `backend\.venv\Scripts\python.exe autopilot\diag-step-17a.py` (about 1 min; `tight` villain, 150 simulated hands, aggressive hero, the step 16 J9 spot). I also committed the untracked `autopilot/prompts/step-17a.md` so the tree is clean.
+
+## 1. Why the villain range WIDENS (298 -> 783 effective combos): bug in the lock `strength`
+- Locks carry a `strength` (hand-strength correlation) used in `solver/cfr.py` `policy`: `fitted = strength*fitted + (1-strength)*flat target`, i.e. `(1-strength)` of the locked action mass goes to ALL hands equally.
+- `solver/exploit.py` `tree_locks` computes `facing = node.state.highest > node.state.commit[player]` and uses `(aggressive + call)/2` when facing, `aggressive` otherwise. The preflop unopened small-blind node (depth 0, player 0) is "facing" the big-blind post, so it gets `(0.893 + 0.195)/2 = 0.54`, although `node_lock` explicitly treats this node as an unopened open/limp/fold decision (`not facing or (depth == 0 and player == 0)`). The two functions disagree.
+- Effect, measured: the tight villain's open-raise lock (31%) is therefore 46% flat, so the raising range is padded with random hands. Villain effective combos entering the flop 392 (cold) -> 1,063 (warm). Overriding only that node's strength to 0.89: 673 entering, 318 at the end; forcing every lock to 1.0: 500 entering, 199 at the end. Cold is 298. So the widening disappears once the strength is consistent. The flop bet lock itself narrows the range as expected (villain keeps 3.1% of its mass on bet_250, vs 29.7% cold).
+
+## 2. Why fold 72% -> call 98%: mostly intended, size-blind, and NOT caused by the widening
+- J9 facing 200 into a 500 pot needs 22.2% equity. Cold equity vs range 0.206 (fold); warm 0.308 (call); with the widening removed the warm equity is still 0.272-0.275 and the advice is still call 98.6-99.2%. So the flip survives the fix; it is driven by the lock making the tight villain's postflop betting range a bluffier/looser mix than the equilibrium bet range (range makeup is near-identical: High Card ~58-60%, Pair ~37-38% in both). I did not pin down exactly why equity rises at a narrower range; hypothesis only: the lock fixes aggregate action masses (bet 4% at weight 0.55) and the resulting bet range keeps cold-like composition. Not verified.
+
+## 3. Warmed advice near-pure (KQo button all-in)
+- Hero's shove faces a villain node locked to fold 53% / call 47%, from the villain's all-streets `fold_to_raise` (about 46%, measured mostly on small raises). A 100 bb shove is read with the fold rate of a 2.5 bb raise: a pure best response against a fixed response is expected, so near-purity is intended; the size-blind read is the known weakness that proposal B (step 18) targets. Several later preflop nodes carry 0.99 call groups (fold 0.01) from very few opportunities; unverified how thin.
+
+## Proposed minimal fix (NOT applied)
+In `tree_locks`, compute `facing` with the same condition as `node_lock` for the preflop unopened small-blind node (depth 0, player 0 -> treat as not facing) so it uses the `aggressive` correlation. Affects only preflop locks at that node (all profiles with a SB open read, including Slumbot learning runs), so it IS a strategy change: needs a paired T1-style test (e.g. 16-48 sessions, `solver_adaptive` vs patched, offset unused), not an equivalence test; add a unit test that `tree_locks` returns the same strength for that node as for an unopened big blind. Since step 18 touches the same path, do the fix before or inside step 18 only if the owner accepts a separate paired test; otherwise note it as a known limitation.
+
+## Caveats
+One simulated tight villain, one spot, one seed; what-if overrides done by wrapping `tree_locks` at run time only. No numbers beyond this repro.
