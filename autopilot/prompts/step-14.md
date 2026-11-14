@@ -1,0 +1,4 @@
+Autopilot step 14 (use the autopilot-step skill). Run gate T0 of `autopilot/prereg-step-13.md` exactly as written: the cheap OFFLINE replay for proposal B (bet-size-conditioned reads). No production code, no live runs, no changes to the pre-registered gates. Read the prereg and `autopilot/reports/step-13.md` first; reuse `autopilot/analyze-step-13.py`.
+- Implement T0 as a script `autopilot/t0-step-14.py` (stdlib + repo helpers), run it on the existing Slumbot logs, save output under `benchmark-results/`. Commit the script BEFORE its output.
+- Report T0 pass/fail mechanically with the numbers and intervals. If T0 fails, say B is dropped; if it passes, say so but do NOT build (the orchestrator decides).
+- Report max ~40 lines, docs/scripts only, no backend suite needed unless you touch backend code.

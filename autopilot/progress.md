@@ -27,7 +27,11 @@ paired-evidence check; keep commits small; never push, force-push, tag, or delet
 | 10 | Run pre-registered T1 (local paired, offset 6M, ~8-16 h) | prompts/step-10.md | [x] done (01e9234): T1a fail, T1b fail (pooled -12.5 [-30.1,+4.8]); pending review/merge |
 | 11 | Run pre-registered T2 (live Slumbot decision time) | prompts/step-11.md | [-] SKIPPED by owner (T1 failed; rule gives keep base) |
 | 12 | Apply decision rule; adopt or keep base; propose step 13 | prompts/step-12.md | [x] done pending review: verdict KEEP BASE, docs only |
-| 13 | Next step proposed by step 12 (see prompt) | prompts/step-13.md | [ ] todo (needs owner OK) |
+| 13 | Offline feasibility of proposal B + pre-registration (owner approved) | prompts/step-13.md | [x] done (4107990): B feasible but build untestable at budget; recommend T0 only |
+| 14 | Run cheap offline gate T0 for B (no build) | prompts/step-14.md | [ ] todo |
+| 15 | Runnability (fresh-clone check) + docs consolidation | prompts/step-15.md | [ ] todo |
+| 16 | Coach learning-loop end-to-end verification + tests | prompts/step-16.md | [ ] todo |
+| 17 | Release readiness (notes, hygiene, final suite); no push/tag | prompts/step-17.md | [ ] todo |
 
 ## Log
 (main appends one line per reviewed step: date, step, verdict, branch/commit, caveats)
@@ -41,3 +45,4 @@ paired-evidence check; keep commits small; never push, force-push, tag, or delet
 - 2026-11-12 step 8 accepted (design only). AUTOPILOT ENDED by owner; nothing further queued. Proposal A (deviation-gated locking) needs explicit approval before any build.
 - 2026-11-12 owner approved proposal A and asked autopilot to continue until stopped; steps 9-12 queued. Pushing still needs owner OK.
 - 2026-11-12 step 9 accepted: golden file independently regenerated from fa3b538 (40 hands, cmp identical); full suite 830 pass (re-run by main). Caveats: with pooling on, the Beta interval uses all-streets pooled counts while the compared point is the street-shrunk rate (implementer's reading, now fixed for T1/T2); gate kept 70-90% of locks on Slumbot reads and needs an extra unlocked solve, so T2 latency gates are at risk.
+- 2026-11-14 steps 10, 12, 13 accepted and merged locally (db597a2): T1 numbers re-checked from t1-analysis.json (pooled -12.5 [-30.1,+4.8]); keep base; step 11 skipped by owner. Owner then authorised a long unattended run: orchestrator follows its own recommendations, merges accepted steps locally, never pushes/tags, and stops only for a decision that needs the owner (push, tag, a ~50 h build of B). Queued steps 14-17.
