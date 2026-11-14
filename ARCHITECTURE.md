@@ -55,7 +55,7 @@ FastAPI validates card notation, uniqueness, board length, opponent count, and n
 
 - `simulation.engine.HandEngine` owns cards, stacks, betting state, legal-action validation, street progression, runout, and settlement.
 - `simulation.match.PersistentMatchRunner` is the Phase 3A1 orchestration layer. It creates one clean `HandEngine` per hand and carries only settled stacks into the next hand.
-- `simulation.bots` contains `RandomBot`, `TightBot`, `AggressiveBot`, and `EquityBot`, and registers the later strategies under `BOT_TYPES`: `expert`, `adaptive`, `range_expert`, `solver`, and `solver_adaptive`.
+- `simulation.bots` contains `RandomBot`, `TightBot`, `AggressiveBot`, and `EquityBot`, and registers the later strategies under `BOT_TYPES`: `expert`, `adaptive`, `range_expert`, `solver`, `solver_adaptive`, and `solver_adaptive_gated` (deviation-gated locks, experimental, never the default; proposal A was rejected in autopilot step 12).
 - `Observation` is the bot-facing information boundary. It exposes the acting player's cards, public board, stacks, commitments, legal actions, and target bounds, but not hidden opponent cards, future board cards, deck order, or RNG state.
 - `simulation.decision_state` provides the Phase 3C1 strategy-facing boundary. `DecisionState` is a typed, immutable snapshot of one legitimate player decision; `PokerFeatureSet` is its deterministic derived feature layer; and `DecisionObservation` combines both with optional `EquityEstimate` data. `HandEngine` builds it immediately before each bot decision. Existing bots continue through the legacy `Observation` adapter, while future strategies may implement `decide_decision(DecisionObservation)` without direct engine access.
 - `simulation.statistics` aggregates wins, ties, losses, net chips, net BB, BB/100, showdowns, folds, action counts, and illegal actions.
@@ -146,7 +146,7 @@ History JSON is request/command output, not server-side persistence. There is no
 
 ## Phase 3 persistent match boundary
 
-Persistent match mode is Phase 3 work in progress and remains separate from `SimulationRunner`:
+Persistent match mode (Phase 3, shipped and used by the Match tab) remains separate from `SimulationRunner`:
 
 - `SimulationRunner` retains Phase 2 independent-hand semantics and starts every hand with fresh equal stacks.
 - `PersistentMatchRunner` accepts per-player starting stacks, small and big blinds, a deterministic seed, and a maximum hand count.
