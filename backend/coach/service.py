@@ -239,7 +239,9 @@ def log_hand(spot: Spot, opponent: str, store: HandStore | None = None) -> dict[
     if status != "hand_complete":
         raise ValueError("only completed hands can be logged; finish entering the actions")
     store.add(opponent, spot_to_dict(spot))
-    return {"logged": True, "opponent_profile": profile_summary(profile_for(store, opponent).snapshot())}
+    model = profile_for(store, opponent)
+    store.save_sized_reads(opponent, {bucket: (v.opportunities, v.folds, v.calls, v.raises) for bucket, v in model.sized_stats.items()})
+    return {"logged": True, "opponent_profile": profile_summary(model.snapshot())}
 
 
 def profile_summary(snapshot) -> dict[str, Any] | None:

@@ -132,6 +132,7 @@ def test_existing_cli_list_bots_still_works():
                 "solver",
                 "solver_adaptive",
                 "solver_adaptive_gated",
+                "solver_adaptive_sized",
             ]
 
 

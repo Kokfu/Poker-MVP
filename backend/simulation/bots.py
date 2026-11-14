@@ -85,4 +85,11 @@ class GatedAdaptiveSolverBot:
         return Implementation(*args, **kwargs)
 
 
-BOT_TYPES={"random":RandomBot,"tight":TightBot,"aggressive":AggressiveBot,"equity":EquityBot,"expert":ExpertRuleBot,"adaptive":ExpertAdaptiveBot,"range_expert":RangeAwareExpertBot,"solver":SolverBot,"solver_adaptive":AdaptiveSolverBot,"solver_adaptive_gated":GatedAdaptiveSolverBot}
+class SizedAdaptiveSolverBot:
+    """Registry entry for ``solver_adaptive`` with bet-size-conditioned reads (proposal B)."""
+    def __new__(cls, *args, **kwargs):
+        from solver.bot import SizedAdaptiveSolverBot as Implementation
+        return Implementation(*args, **kwargs)
+
+
+BOT_TYPES={"random":RandomBot,"tight":TightBot,"aggressive":AggressiveBot,"equity":EquityBot,"expert":ExpertRuleBot,"adaptive":ExpertAdaptiveBot,"range_expert":RangeAwareExpertBot,"solver":SolverBot,"solver_adaptive":AdaptiveSolverBot,"solver_adaptive_gated":GatedAdaptiveSolverBot,"solver_adaptive_sized":SizedAdaptiveSolverBot}

@@ -1,0 +1,524 @@
+[
+ {
+  "street": "flop",
+  "board": "Ts7h3c",
+  "sample_scale": 1.0,
+  "cells": {
+   "<=0.5": 2177,
+   "0.5-1.0": 518,
+   ">1.0": 819
+  },
+  "base": {
+   "locked_nodes": 10,
+   "seconds": 1.15
+  },
+  "sized": {
+   "locked_nodes": 10,
+   "seconds": 1.76,
+   "sized_info": {
+    "facing_nodes": 9,
+    "locked": 9,
+    "thin": 0,
+    "base_facing_locks": 9,
+    "buckets": {
+     "<=0.5": 2177,
+     ">1.0": 819,
+     "0.5-1.0": 518
+    }
+   }
+  }
+ },
+ {
+  "street": "flop",
+  "board": "Kd9s4h",
+  "sample_scale": 1.0,
+  "cells": {
+   "<=0.5": 2177,
+   "0.5-1.0": 518,
+   ">1.0": 819
+  },
+  "base": {
+   "locked_nodes": 10,
+   "seconds": 1.04
+  },
+  "sized": {
+   "locked_nodes": 10,
+   "seconds": 2.0,
+   "sized_info": {
+    "facing_nodes": 9,
+    "locked": 9,
+    "thin": 0,
+    "base_facing_locks": 9,
+    "buckets": {
+     "<=0.5": 2177,
+     ">1.0": 819,
+     "0.5-1.0": 518
+    }
+   }
+  }
+ },
+ {
+  "street": "turn",
+  "board": "Ts7h3c2d",
+  "sample_scale": 1.0,
+  "cells": {
+   "<=0.5": 2177,
+   "0.5-1.0": 518,
+   ">1.0": 819
+  },
+  "base": {
+   "locked_nodes": 10,
+   "seconds": 1.74
+  },
+  "sized": {
+   "locked_nodes": 10,
+   "seconds": 2.3,
+   "sized_info": {
+    "facing_nodes": 9,
+    "locked": 9,
+    "thin": 0,
+    "base_facing_locks": 9,
+    "buckets": {
+     "<=0.5": 2177,
+     ">1.0": 819,
+     "0.5-1.0": 518
+    }
+   }
+  }
+ },
+ {
+  "street": "turn",
+  "board": "Kd9s4hJc",
+  "sample_scale": 1.0,
+  "cells": {
+   "<=0.5": 2177,
+   "0.5-1.0": 518,
+   ">1.0": 819
+  },
+  "base": {
+   "locked_nodes": 10,
+   "seconds": 1.56
+  },
+  "sized": {
+   "locked_nodes": 10,
+   "seconds": 1.96,
+   "sized_info": {
+    "facing_nodes": 9,
+    "locked": 9,
+    "thin": 0,
+    "base_facing_locks": 9,
+    "buckets": {
+     "<=0.5": 2177,
+     ">1.0": 819,
+     "0.5-1.0": 518
+    }
+   }
+  }
+ },
+ {
+  "street": "river",
+  "board": "Ts7h3c2d8s",
+  "sample_scale": 1.0,
+  "cells": {
+   "<=0.5": 2177,
+   "0.5-1.0": 518,
+   ">1.0": 819
+  },
+  "base": {
+   "locked_nodes": 10,
+   "seconds": 1.32
+  },
+  "sized": {
+   "locked_nodes": 10,
+   "seconds": 1.89,
+   "sized_info": {
+    "facing_nodes": 9,
+    "locked": 9,
+    "thin": 0,
+    "base_facing_locks": 9,
+    "buckets": {
+     "<=0.5": 2177,
+     ">1.0": 819,
+     "0.5-1.0": 518
+    }
+   }
+  }
+ },
+ {
+  "street": "river",
+  "board": "Kd9s4hJc2h",
+  "sample_scale": 1.0,
+  "cells": {
+   "<=0.5": 2177,
+   "0.5-1.0": 518,
+   ">1.0": 819
+  },
+  "base": {
+   "locked_nodes": 10,
+   "seconds": 1.29
+  },
+  "sized": {
+   "locked_nodes": 10,
+   "seconds": 1.79,
+   "sized_info": {
+    "facing_nodes": 9,
+    "locked": 9,
+    "thin": 0,
+    "base_facing_locks": 9,
+    "buckets": {
+     "<=0.5": 2177,
+     ">1.0": 819,
+     "0.5-1.0": 518
+    }
+   }
+  }
+ },
+ {
+  "street": "flop",
+  "board": "Ts7h3c",
+  "sample_scale": 0.1,
+  "cells": {
+   "<=0.5": 217,
+   "0.5-1.0": 51,
+   ">1.0": 81
+  },
+  "base": {
+   "locked_nodes": 10,
+   "seconds": 0.95
+  },
+  "sized": {
+   "locked_nodes": 10,
+   "seconds": 1.51,
+   "sized_info": {
+    "facing_nodes": 9,
+    "locked": 9,
+    "thin": 0,
+    "base_facing_locks": 9,
+    "buckets": {
+     "<=0.5": 217,
+     ">1.0": 81,
+     "0.5-1.0": 51
+    }
+   }
+  }
+ },
+ {
+  "street": "flop",
+  "board": "Kd9s4h",
+  "sample_scale": 0.1,
+  "cells": {
+   "<=0.5": 217,
+   "0.5-1.0": 51,
+   ">1.0": 81
+  },
+  "base": {
+   "locked_nodes": 10,
+   "seconds": 1.43
+  },
+  "sized": {
+   "locked_nodes": 10,
+   "seconds": 1.66,
+   "sized_info": {
+    "facing_nodes": 9,
+    "locked": 9,
+    "thin": 0,
+    "base_facing_locks": 9,
+    "buckets": {
+     "<=0.5": 217,
+     ">1.0": 81,
+     "0.5-1.0": 51
+    }
+   }
+  }
+ },
+ {
+  "street": "turn",
+  "board": "Ts7h3c2d",
+  "sample_scale": 0.1,
+  "cells": {
+   "<=0.5": 217,
+   "0.5-1.0": 51,
+   ">1.0": 81
+  },
+  "base": {
+   "locked_nodes": 10,
+   "seconds": 1.18
+  },
+  "sized": {
+   "locked_nodes": 10,
+   "seconds": 1.9,
+   "sized_info": {
+    "facing_nodes": 9,
+    "locked": 9,
+    "thin": 0,
+    "base_facing_locks": 9,
+    "buckets": {
+     "<=0.5": 217,
+     ">1.0": 81,
+     "0.5-1.0": 51
+    }
+   }
+  }
+ },
+ {
+  "street": "turn",
+  "board": "Kd9s4hJc",
+  "sample_scale": 0.1,
+  "cells": {
+   "<=0.5": 217,
+   "0.5-1.0": 51,
+   ">1.0": 81
+  },
+  "base": {
+   "locked_nodes": 10,
+   "seconds": 1.05
+  },
+  "sized": {
+   "locked_nodes": 10,
+   "seconds": 1.64,
+   "sized_info": {
+    "facing_nodes": 9,
+    "locked": 9,
+    "thin": 0,
+    "base_facing_locks": 9,
+    "buckets": {
+     "<=0.5": 217,
+     ">1.0": 81,
+     "0.5-1.0": 51
+    }
+   }
+  }
+ },
+ {
+  "street": "river",
+  "board": "Ts7h3c2d8s",
+  "sample_scale": 0.1,
+  "cells": {
+   "<=0.5": 217,
+   "0.5-1.0": 51,
+   ">1.0": 81
+  },
+  "base": {
+   "locked_nodes": 10,
+   "seconds": 1.13
+  },
+  "sized": {
+   "locked_nodes": 10,
+   "seconds": 1.91,
+   "sized_info": {
+    "facing_nodes": 9,
+    "locked": 9,
+    "thin": 0,
+    "base_facing_locks": 9,
+    "buckets": {
+     "<=0.5": 217,
+     ">1.0": 81,
+     "0.5-1.0": 51
+    }
+   }
+  }
+ },
+ {
+  "street": "river",
+  "board": "Kd9s4hJc2h",
+  "sample_scale": 0.1,
+  "cells": {
+   "<=0.5": 217,
+   "0.5-1.0": 51,
+   ">1.0": 81
+  },
+  "base": {
+   "locked_nodes": 10,
+   "seconds": 1.08
+  },
+  "sized": {
+   "locked_nodes": 10,
+   "seconds": 1.87,
+   "sized_info": {
+    "facing_nodes": 9,
+    "locked": 9,
+    "thin": 0,
+    "base_facing_locks": 9,
+    "buckets": {
+     "<=0.5": 217,
+     ">1.0": 81,
+     "0.5-1.0": 51
+    }
+   }
+  }
+ },
+ {
+  "street": "flop",
+  "board": "Ts7h3c",
+  "sample_scale": 0.005,
+  "cells": {
+   "<=0.5": 10,
+   "0.5-1.0": 2,
+   ">1.0": 4
+  },
+  "base": {
+   "locked_nodes": 10,
+   "seconds": 0.88
+  },
+  "sized": {
+   "locked_nodes": 2,
+   "seconds": 1.34,
+   "sized_info": {
+    "facing_nodes": 9,
+    "locked": 1,
+    "thin": 8,
+    "base_facing_locks": 9,
+    "buckets": {
+     "<=0.5": 10,
+     ">1.0": 4,
+     "0.5-1.0": 2
+    }
+   }
+  }
+ },
+ {
+  "street": "flop",
+  "board": "Kd9s4h",
+  "sample_scale": 0.005,
+  "cells": {
+   "<=0.5": 10,
+   "0.5-1.0": 2,
+   ">1.0": 4
+  },
+  "base": {
+   "locked_nodes": 10,
+   "seconds": 0.86
+  },
+  "sized": {
+   "locked_nodes": 2,
+   "seconds": 1.31,
+   "sized_info": {
+    "facing_nodes": 9,
+    "locked": 1,
+    "thin": 8,
+    "base_facing_locks": 9,
+    "buckets": {
+     "<=0.5": 10,
+     ">1.0": 4,
+     "0.5-1.0": 2
+    }
+   }
+  }
+ },
+ {
+  "street": "turn",
+  "board": "Ts7h3c2d",
+  "sample_scale": 0.005,
+  "cells": {
+   "<=0.5": 10,
+   "0.5-1.0": 2,
+   ">1.0": 4
+  },
+  "base": {
+   "locked_nodes": 10,
+   "seconds": 1.14
+  },
+  "sized": {
+   "locked_nodes": 2,
+   "seconds": 1.57,
+   "sized_info": {
+    "facing_nodes": 9,
+    "locked": 1,
+    "thin": 8,
+    "base_facing_locks": 9,
+    "buckets": {
+     "<=0.5": 10,
+     ">1.0": 4,
+     "0.5-1.0": 2
+    }
+   }
+  }
+ },
+ {
+  "street": "turn",
+  "board": "Kd9s4hJc",
+  "sample_scale": 0.005,
+  "cells": {
+   "<=0.5": 10,
+   "0.5-1.0": 2,
+   ">1.0": 4
+  },
+  "base": {
+   "locked_nodes": 10,
+   "seconds": 1.03
+  },
+  "sized": {
+   "locked_nodes": 2,
+   "seconds": 1.41,
+   "sized_info": {
+    "facing_nodes": 9,
+    "locked": 1,
+    "thin": 8,
+    "base_facing_locks": 9,
+    "buckets": {
+     "<=0.5": 10,
+     ">1.0": 4,
+     "0.5-1.0": 2
+    }
+   }
+  }
+ },
+ {
+  "street": "river",
+  "board": "Ts7h3c2d8s",
+  "sample_scale": 0.005,
+  "cells": {
+   "<=0.5": 10,
+   "0.5-1.0": 2,
+   ">1.0": 4
+  },
+  "base": {
+   "locked_nodes": 10,
+   "seconds": 1.13
+  },
+  "sized": {
+   "locked_nodes": 2,
+   "seconds": 1.63,
+   "sized_info": {
+    "facing_nodes": 9,
+    "locked": 1,
+    "thin": 8,
+    "base_facing_locks": 9,
+    "buckets": {
+     "<=0.5": 10,
+     ">1.0": 4,
+     "0.5-1.0": 2
+    }
+   }
+  }
+ },
+ {
+  "street": "river",
+  "board": "Kd9s4hJc2h",
+  "sample_scale": 0.005,
+  "cells": {
+   "<=0.5": 10,
+   "0.5-1.0": 2,
+   ">1.0": 4
+  },
+  "base": {
+   "locked_nodes": 10,
+   "seconds": 1.13
+  },
+  "sized": {
+   "locked_nodes": 2,
+   "seconds": 1.74,
+   "sized_info": {
+    "facing_nodes": 9,
+    "locked": 1,
+    "thin": 8,
+    "base_facing_locks": 9,
+    "buckets": {
+     "<=0.5": 10,
+     ">1.0": 4,
+     "0.5-1.0": 2
+    }
+   }
+  }
+ }
+]

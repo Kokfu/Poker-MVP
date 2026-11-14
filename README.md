@@ -44,7 +44,7 @@ Phase 2 adds a deterministic, local-only, heads-up No-Limit Texas Hold'em simula
 - JSONL dataset schema 2.0 generation and strict validation;
 - CLI, API, and React Simulator interfaces.
 
-The original baseline bots are `RandomBot`, `TightBot`, `AggressiveBot`, and `EquityBot`; later phases add `expert`, `adaptive`, `range_expert`, `solver`, and `solver_adaptive` (plus `solver_adaptive_gated`, an experimental variant that is off by default and was not adopted; see ROADMAP). All are research strategies, not claims of optimal play.
+The original baseline bots are `RandomBot`, `TightBot`, `AggressiveBot`, and `EquityBot`; later phases add `expert`, `adaptive`, `range_expert`, `solver`, and `solver_adaptive` (plus two experimental variants that are off by default: `solver_adaptive_gated`, not adopted, and `solver_adaptive_sized`, bet-size-conditioned reads, built but untested; see ROADMAP). All are research strategies, not claims of optimal play.
 
 Chip amounts are integer internal units:
 
@@ -126,7 +126,7 @@ The configured ports bind to localhost. The frontend proxies `/api` requests to 
 - `DELETE /api/coach/hands/{id}` — delete one logged hand (404 if the id does not exist)
 - `DELETE /api/coach/opponents/{name}` — delete every logged hand for that opponent
 
-Every registered bot (`random`, `tight`, `aggressive`, `equity`, `expert`, `adaptive`, `range_expert`, `solver`, `solver_adaptive`, `solver_adaptive_gated`) is accepted wherever the API takes a bot name.
+Every registered bot (`random`, `tight`, `aggressive`, `equity`, `expert`, `adaptive`, `range_expert`, `solver`, `solver_adaptive`, `solver_adaptive_gated`, `solver_adaptive_sized`) is accepted wherever the API takes a bot name.
 
 The simulation API accepts 1 through 10,000 hands per request. Representative Analyzer request:
 

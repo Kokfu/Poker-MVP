@@ -42,7 +42,7 @@ from simulation.expert_bot import ExpertRuleBot
 from .cfr import RangeSolver
 from .combos import CLASS_COMBO_COUNT, COMBO_CLASS, COMBO_COUNT, COMBOS, HAND_CLASSES, card_mask, combo_index
 from .equity import equity_matrix, rank_vector
-from .exploit import gate_locks, locks_key, node_aggregates, tree_locks
+from .exploit import gate_locks, locks_key, node_aggregates, sized_locks, sized_needs_aggregates, tree_locks
 from .showdown import ShowdownModel
 from .preflop import CHART_BB, PreflopCharts, load_charts, load_class_equity
 from .tree import POSTFLOP_MENU, SizeMenu, StreetState, StreetTree
@@ -202,6 +202,7 @@ class StreetSolve:
     solver: Any = None  # kept for read-only action values (explain_ev)
     candidate_locks: int = 0  # locks before the deviation gate
     unlocked_average: dict[int, np.ndarray] | None = None  # gated mode only
+    sized_info: dict[str, Any] | None = None  # sized-reads mode only
 
 
 @dataclass
@@ -218,6 +219,7 @@ class SolverBot(PokerBot):
     lock_weighting = "confidence"  # or "evidence" (see solver.exploit._weight)
     pool_streets = False  # partial pooling of postflop reads across streets
     gated_locks = False  # deviation-gated locking (DESIGN_OPPONENT_MODEL.md, proposal A); off = today's behaviour
+    sized_reads = False  # bet-size-conditioned reads (DESIGN_OPPONENT_MODEL.md, proposal B); off = today's behaviour
     explain_ev = False  # add per-action EV to postflop explanations (read-only; the Coach turns it on)
     iterations = {"flop": 60, "turn": 70, "river": 80}
     flop_runouts = 30
@@ -225,10 +227,12 @@ class SolverBot(PokerBot):
     postflop_menu: SizeMenu = POSTFLOP_MENU
 
     def __init__(self, seed: int | None = None, equity_iterations: int = 1000, charts: PreflopCharts | None = None,
-                 gated_locks: bool | None = None):
+                 gated_locks: bool | None = None, sized_reads: bool | None = None):
         super().__init__(seed, equity_iterations)
         if gated_locks is not None:
             self.gated_locks = bool(gated_locks)
+        if sized_reads is not None:
+            self.sized_reads = bool(sized_reads)
         self._info: dict[str, Any] = {}
         self.seed_base = 0 if seed is None else seed
         self.charts = charts or load_charts()
@@ -361,7 +365,7 @@ class SolverBot(PokerBot):
                             "exploitability": solve.exploitability, "resolved_from_current_state": not on_tree,
                             **({"action_ev": action_ev} if action_ev is not None else {}),
                             "exploit": {**exploit_info, "locked_nodes": solve.locked_nodes},
-                            "instrumentation": self._instrumentation(street, solve.candidate_locks, solve.locked_nodes),
+                            "instrumentation": self._instrumentation(street, solve.candidate_locks, solve.locked_nodes, solve.sized_info),
                             **self._range_report(board, hero_combo, ranges[opponent])}
         raise ReplayError("unreachable street")
 
@@ -405,10 +409,25 @@ class SolverBot(PokerBot):
             if not locks:
                 return StreetSolve(tree, (combos[0], combos[1]), unlocked_average, None, time.perf_counter() - started, 0,
                                    unlocked if self.explain_ev else None, candidates, unlocked_average)
+        sized_info = None
+        if self.sized_reads and profile is not None:
+            # Bet-size-conditioned reads: facing-a-bet nodes use the bucket matching their bet size,
+            # shrunk toward the solver's UNLOCKED aggregate (an extra unlocked solve, as the gate needs).
+            cells = getattr(profile, "sized_statistics", None) or {}
+            aggregates = None
+            if sized_needs_aggregates(tree, opponent, cells):
+                ranges_here = (ranges[0][combos[0]], ranges[1][combos[1]])
+                unlocked = RangeSolver(tree, ranges_here, d, compat, combo_ids=(combos[0], combos[1]))
+                unlocked_average = unlocked.solve(self.iterations[root_state.street]).average
+                aggregates = node_aggregates(tree, opponent, ranges_here[opponent], unlocked_average)
+            locks, sized_info = sized_locks(tree, opponent, locks, cells, aggregates, self._strength_correlation(), self.lock_weighting)
+            if aggregates is not None and not locks:
+                return StreetSolve(tree, (combos[0], combos[1]), unlocked_average, None, time.perf_counter() - started, 0,
+                                   unlocked if self.explain_ev else None, candidates, unlocked_average, sized_info)
         solver = RangeSolver(tree, (ranges[0][combos[0]], ranges[1][combos[1]]), d, compat, combo_ids=(combos[0], combos[1]), locks=locks)
         result = solver.solve(self.iterations[root_state.street])
         return StreetSolve(tree, (combos[0], combos[1]), result.average, None, time.perf_counter() - started, len(locks),
-                           solver if self.explain_ev else None, candidates, unlocked_average)
+                           solver if self.explain_ev else None, candidates, unlocked_average, sized_info)
 
     def _preflop_policy(self, depth: int, opponent: int, locks: dict):
         """Node -> (actions, 1326) strategy: the chart, or a locked re-solve."""
@@ -474,10 +493,13 @@ class SolverBot(PokerBot):
         updated[combos] = weights[combos] * solve.average[node][choice]
         return updated
 
-    def _instrumentation(self, street: str, candidates: int, applied: int) -> dict[str, Any]:
+    def _instrumentation(self, street: str, candidates: int, applied: int, sized: dict[str, Any] | None = None) -> dict[str, Any]:
         """Per-decision diagnostics (never read by the strategy)."""
-        return {"street": street, "gated": self.gated_locks, "candidate_locks": candidates, "locks_applied": applied,
+        info = {"street": street, "gated": self.gated_locks, "candidate_locks": candidates, "locks_applied": applied,
                 "cache_hit": self._info.get("cache_hit"), "unlocked_action_differs": self._info.get("unlocked_action_differs")}
+        if self.sized_reads:
+            info["sized"] = sized
+        return info
 
     def _sample(self, ds, probabilities: np.ndarray) -> int:
         return self._pick(ds, probabilities)
@@ -538,3 +560,8 @@ class AdaptiveSolverBot(SolverBot):
 class GatedAdaptiveSolverBot(AdaptiveSolverBot):
     """``solver_adaptive`` with deviation-gated locking (proposal A)."""
     gated_locks = True
+
+
+class SizedAdaptiveSolverBot(AdaptiveSolverBot):
+    """``solver_adaptive`` with bet-size-conditioned reads (proposal B), off in every other bot."""
+    sized_reads = True

@@ -86,3 +86,12 @@ Evidence: step 10 (`autopilot/reports/step-10.md`, offset 6,000,000, 48 sessions
 - Gated was below base on 7 of 8 point estimates; no single interval excludes zero, so the reading is "not shown harmless", not "proven harmful".
 
 T2 (step 11, live Slumbot decision time) was **skipped by owner decision**: the section 4 rule gives keep base whenever T1b fails, so T2 cannot change the outcome. T2a/T2b were therefore never measured, and nothing is claimed about gated decision time. No gate or parameter was changed after seeing data. Proposal B remains unproposed in pre-registered form (needs its own pre-registration and a fresh offset).
+
+
+## 7. Proposal B build (autopilot step 18, owner approved; not tested)
+Built exactly as `autopilot/prereg-step-13.md`; nothing was run for a result. Bot `solver_adaptive_sized` (`SolverBot.sized_reads`, off in every other bot; the golden-file equivalence test still passes unchanged).
+- Statistics: `OpponentModel.sized_stats` (postflop, pooled over streets): for each bet/raise by the other player, the modelled player's reply (fold / call / raise) in the bucket of (raise amount) / (pot after matching the modelled player's own street bet); edges <=0.5, 0.5-1.0, >1.0 (`size_bucket`). Exposed as `OpponentProfileSnapshot.sized_statistics` (ignored by equality, never serialised, so existing outputs are unchanged).
+- Lookup (`solver/exploit.py`): at each opponent facing-a-bet node the bucket of the bet it faces is used; posterior per action group = (k + 20 p_eq) / (n + 20), p_eq = the solver's unlocked aggregate at that node (needs an extra unlocked solve, run only when some bucket has n >= 10, like the gate); n < 10 leaves the node unlocked with no fallback cell. Weight = the base confidence weight of n; strength = base facing formula; non-facing nodes and preflop keep the base locks unchanged.
+- Known base quirk kept on purpose: the preflop unopened small-blind lock-strength inconsistency (step 17a) is NOT fixed here, so sized differs from base only by B.
+- Coach: new table `sized_reads (opponent, street_class, bucket, ...)`, created if missing (old databases untouched); a cache refreshed by `log_hand`, cleared by the delete routes. The Coach's advice path does not use it.
+- Cost: one extra unlocked solve per postflop street solve with a qualifying bucket (sanity: about +0.4-0.9 s per solve on one busy-machine measurement each). Instrumentation: `instrumentation["sized"]` = facing nodes, locked, thin, base facing locks, bucket sample sizes.
