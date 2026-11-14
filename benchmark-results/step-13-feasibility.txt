@@ -1,0 +1,46 @@
+hands used: 4600; fold-settlement mismatches vs reconstruction: 0
+client bets/raises answered by Slumbot: 4853
+
+== ALL STREETS  (n=4853)
+  <=0.5    fold 759/2654=0.29 [0.27,0.30]  call 1518/2654=0.57 [0.55,0.59]  raise 377/2654=0.14 [0.13,0.16]
+  0.5-1.0  fold 595/855=0.70 [0.66,0.73]  call 194/855=0.23 [0.20,0.26]  raise 66/855=0.08 [0.06,0.10]
+  >1.0     fold 1254/1344=0.93 [0.92,0.95]  call 90/1344=0.07 [0.05,0.08]  raise 0/1344=0.00 [0.00,0.00]
+  chi-square homogeneity across buckets: stat=1614.1 df=4 p~0.0000
+
+== preflop  (n=1339)
+  <=0.5    fold 0/477=0.00 [0.00,0.01]  call 375/477=0.79 [0.75,0.82]  raise 102/477=0.21 [0.18,0.25]
+  0.5-1.0  fold 314/337=0.93 [0.90,0.95]  call 0/337=0.00 [0.00,0.01]  raise 23/337=0.07 [0.05,0.10]
+  >1.0     fold 498/525=0.95 [0.93,0.96]  call 27/525=0.05 [0.04,0.07]  raise 0/525=0.00 [0.00,0.01]
+  chi-square homogeneity across buckets: stat=1159.5 df=4 p~0.0000
+
+== flop  (n=2134)
+  <=0.5    fold 469/1337=0.35 [0.33,0.38]  call 706/1337=0.53 [0.50,0.55]  raise 162/1337=0.12 [0.10,0.14]
+  0.5-1.0  fold 140/240=0.58 [0.52,0.64]  call 78/240=0.33 [0.27,0.39]  raise 22/240=0.09 [0.06,0.13]
+  >1.0     fold 526/557=0.94 [0.92,0.96]  call 31/557=0.06 [0.04,0.08]  raise 0/557=0.00 [0.00,0.01]
+  chi-square homogeneity across buckets: stat=560.9 df=4 p~0.0000
+
+== turn  (n=846)
+  <=0.5    fold 174/523=0.33 [0.29,0.37]  call 289/523=0.55 [0.51,0.59]  raise 60/523=0.11 [0.09,0.14]
+  0.5-1.0  fold 87/175=0.50 [0.42,0.57]  call 77/175=0.44 [0.37,0.51]  raise 11/175=0.06 [0.04,0.11]
+  >1.0     fold 130/148=0.88 [0.82,0.92]  call 18/148=0.12 [0.08,0.18]  raise 0/148=0.00 [0.00,0.02]
+  chi-square homogeneity across buckets: stat=141.5 df=4 p~0.0000
+
+== river  (n=534)
+  <=0.5    fold 116/317=0.37 [0.31,0.42]  call 148/317=0.47 [0.41,0.52]  raise 53/317=0.17 [0.13,0.21]
+  0.5-1.0  fold 54/103=0.52 [0.43,0.62]  call 39/103=0.38 [0.29,0.48]  raise 10/103=0.10 [0.05,0.17]
+  >1.0     fold 100/114=0.88 [0.80,0.93]  call 14/114=0.12 [0.07,0.20]  raise 0/114=0.00 [0.00,0.03]
+  chi-square homogeneity across buckets: stat=90.1 df=4 p~0.0000
+
+opportunities per 1,000 hands (all bots pooled, 4600 hands):
+  preflop: <=0.5 104, 0.5-1.0 73, >1.0 114
+  flop: <=0.5 291, 0.5-1.0 52, >1.0 121
+  turn: <=0.5 114, 0.5-1.0 38, >1.0 32
+  river: <=0.5 69, 0.5-1.0 22, >1.0 25
+
+fold rate by bucket per log (postflop only):
+  slumbot-learning-clean: <=0.5 168/537, 0.5-1.0 4/7, >1.0 218/241
+  slumbot-learning-instrumented: <=0.5 231/613, 0.5-1.0 6/11, >1.0 223/235
+  slumbot-solver-adaptive-learning: <=0.5 191/554, 0.5-1.0 3/7, >1.0 240/251
+  slumbot-solver-adaptive-long: <=0.5 132/368, 0.5-1.0 177/317, >1.0 58/71
+  slumbot-expert: <=0.5 3/7, 0.5-1.0 26/70, >1.0 0/0
+  slumbot-solver: <=0.5 34/98, 0.5-1.0 65/106, >1.0 17/21

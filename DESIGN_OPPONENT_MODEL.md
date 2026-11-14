@@ -74,3 +74,15 @@ The owner approved proposal A on 2026-11-12 with the parameters in section 4 unc
 - Coach profile storage changes (needed for B, not A).
 - The expert-family edge being about 35-40 bb/100 lower at 5M than 3M is unresolved; T1 on a third seed set will add one more data point.
 - No tests were run for this design step (only documents were added).
+
+## 6. Verdict (autopilot step 12, applying section 4 mechanically)
+
+**KEEP BASE. Proposal A (`solver_adaptive_gated`) is not adopted; `solver_adaptive` is unchanged and the gated option stays off by default.**
+
+Evidence: step 10 (`autopilot/reports/step-10.md`, offset 6,000,000, 48 sessions x 60 hands, paired, identical seeds, 0 illegal/fallback/mismatch).
+- T1a **fail**: lower bounds of `gated` bb/100 are <= 0 for expert (-3.5), adaptive (-3.4), range_expert (-7.9), solver (-0.7).
+- T1b **fail**: pooled paired difference (tight, equity, expert, range_expert, solver) = -12.5 [-30.1, +4.8]; half-width 17.5 < 40 so not "inconclusive". Pooled lower bound -30.1 < -25 and solver's paired lower bound -77.0 < -60: both clauses breached.
+- Flags: aggressive -105.4 [-236.7, +18.3], random -33.4 [-118.1, +57.4]; both under the 150 flag threshold.
+- Gated was below base on 7 of 8 point estimates; no single interval excludes zero, so the reading is "not shown harmless", not "proven harmful".
+
+T2 (step 11, live Slumbot decision time) was **skipped by owner decision**: the section 4 rule gives keep base whenever T1b fails, so T2 cannot change the outcome. T2a/T2b were therefore never measured, and nothing is claimed about gated decision time. No gate or parameter was changed after seeing data. Proposal B remains unproposed in pre-registered form (needs its own pre-registration and a fresh offset).
