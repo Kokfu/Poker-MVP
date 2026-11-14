@@ -24,9 +24,10 @@ paired-evidence check; keep commits small; never push, force-push, tag, or delet
 | 7 | First Slumbot learning run with restored decision-time/fallback logging | prompts/step-7.md | [x] done (58fd341): p95 4.7 s, 55/2423 decisions >6 s, learning effect not established |
 | 8 | Design-only: opponent-model improvement proposal with pre-registered test (wait for owner approval) | prompts/step-8.md | [x] done (d181c86): design only, proposal A awaiting owner approval |
 | 9 | Implement proposal A (gated locks) off-by-default + instrumentation + equivalence tests (OWNER APPROVED 2026-11-12) | prompts/step-9.md | [x] done (390ab71): solver_adaptive_gated added, default path byte-identical, 830 tests pass |
-| 10 | Run pre-registered T1 (local paired, offset 6M, ~8-16 h) | prompts/step-10.md | [ ] todo |
-| 11 | Run pre-registered T2 (live Slumbot decision time) | prompts/step-11.md | [ ] todo |
-| 12 | Apply decision rule; adopt or keep base; propose step 13 | prompts/step-12.md | [ ] todo |
+| 10 | Run pre-registered T1 (local paired, offset 6M, ~8-16 h) | prompts/step-10.md | [x] done (01e9234): T1a fail, T1b fail (pooled -12.5 [-30.1,+4.8]); pending review/merge |
+| 11 | Run pre-registered T2 (live Slumbot decision time) | prompts/step-11.md | [-] SKIPPED by owner (T1 failed; rule gives keep base) |
+| 12 | Apply decision rule; adopt or keep base; propose step 13 | prompts/step-12.md | [x] done pending review: verdict KEEP BASE, docs only |
+| 13 | Next step proposed by step 12 (see prompt) | prompts/step-13.md | [ ] todo (needs owner OK) |
 
 ## Log
 (main appends one line per reviewed step: date, step, verdict, branch/commit, caveats)
