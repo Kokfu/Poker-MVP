@@ -70,7 +70,7 @@ Retained artifacts:
 
 Phase 2 remains heads-up only. It has no multiway pots, tournament structure, general side-pot model, or persistent bankroll. Dataset schema 1.0 migration and separate manifests are unsupported, and each dataset file accepts one simulation ID. EquityBot and Monte Carlo calculations can be expensive and remain approximate. The built-in bots are research baselines, not optimal poker strategies. The Analyzer frontend has no loading/disabled submission state. Browser verification is local only. There is no real-money integration, external poker-site automation, OCR, screen scraping, hidden-card extraction, or AI-training pipeline.
 
-## Phase 3 — in progress
+## Phase 3 — historical notes (the match runner, histories and evaluation shipped and later phases build on them; the sub-sections say what each part did and did not cover)
 
 ## Phase 4A — Kuhn Poker vanilla CFR foundation
 

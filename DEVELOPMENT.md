@@ -496,3 +496,18 @@ figure was partly contention.  The fake referee is not Slumbot, so the real
 effect on a clean 1,000-hand Slumbot run is not measured.  Remaining cost is the
 baseline matrix work and locked preflop re-solves; neither could be reduced
 without risking different floating-point results.
+
+## Project status and how to resume autopilot
+
+**Status (2026-11-14).** Phase 5 is COMPLETE under the revised, owner-set criterion (ROADMAP "Current status"); the original pool-score criterion is unmet and is kept as history. Bots: `random`, `tight`, `aggressive`, `equity`, `expert`, `adaptive`, `range_expert`, `solver`, `solver_adaptive` (the strongest, adaptive default) and `solver_adaptive_gated` (experimental, off by default). Proposal A (gated locking) failed its pre-registered T1 (pooled paired -12.5 [-30.1, +4.8] bb/100) and was not adopted. Proposal B (bet-size-conditioned reads) passed the offline gate T0 (`autopilot/reports/step-14.md`), which is necessary but weak; a build would cost about 50 h and can only detect gains of roughly 22 bb/100 or more, so it is not built. Live Slumbot runs cannot resolve effects under about 200 bb/100 per 1,000 hands.
+
+**Running things.** Tests: `cd backend; .\.venv\Scripts\python.exe -m pytest -q -p no:cacheprovider` (full suite takes several minutes; a count is recorded in the latest `autopilot/reports/`). Frontend: `cd frontend; npm.cmd ci; npm.cmd run build`. Benchmarks: see "Phase 5 workflows" above (`simulation.duplicate_cli`, `simulation.slumbot_cli`); results go under `benchmark-results/` (mostly git-ignored; force-add what must be kept).
+
+**Coach API smoke test** (backend running on port 8000):
+
+```powershell
+$b = @{ hero_cards = @("As","Kd"); hero_position = "button" } | ConvertTo-Json
+Invoke-RestMethod http://127.0.0.1:8000/api/coach/advise -Method Post -ContentType application/json -Body $b
+```
+
+**Autopilot.** The plan is a table of steps in `autopilot/progress.md`; each step has a prompt in `autopilot/prompts/step-N.md` and is run in its own chat with the project skill `.claude/skills/autopilot-step/SKILL.md` ("autopilot step N"). A step works on branch `autopilot/step-N`, writes `autopilot/reports/step-N.md`, and stops. The orchestrator reviews, merges locally, ticks the table and appends a log line. Standing rules: pre-register gates before data, report failures faithfully, no push/tag/delete without the owner. To resume, open `progress.md`, take the first unticked step and start it the same way. Pre-registrations and gates are in `autopilot/prereg-*.md`.

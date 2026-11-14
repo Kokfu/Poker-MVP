@@ -2,6 +2,10 @@
 
 Poker Analyzer MVP is a local, educational, offline-first Texas Hold'em analyzer and heads-up simulator. It accepts manually entered poker states, performs mathematical analysis, and runs deterministic bot-versus-bot experiments on the local machine. It does not play poker for the user.
 
+## Status (2026-11-14)
+
+Phase 5 is COMPLETE under the owner's revised criterion (see ROADMAP; the original pool-score criterion is still unmet). Opponent-model proposal A (`solver_adaptive_gated`) failed its pre-registered test and is not the default; proposal B (bet-size-conditioned reads) passed only the weak offline gate T0 and is not built. The project status and how to resume the autopilot are in DEVELOPMENT.md ("Project status and how to resume autopilot").
+
 ## Phase 5 at a glance
 
 - **`solver` bot** — preflop charts solved offline plus a real-time range solve of every postflop street (discounted CFR over both players' public ranges). Select it anywhere a bot is chosen.
@@ -40,7 +44,7 @@ Phase 2 adds a deterministic, local-only, heads-up No-Limit Texas Hold'em simula
 - JSONL dataset schema 2.0 generation and strict validation;
 - CLI, API, and React Simulator interfaces.
 
-The original baseline bots are `RandomBot`, `TightBot`, `AggressiveBot`, and `EquityBot`; later phases add `expert`, `adaptive`, `range_expert`, `solver`, and `solver_adaptive`. All are research strategies, not claims of optimal play.
+The original baseline bots are `RandomBot`, `TightBot`, `AggressiveBot`, and `EquityBot`; later phases add `expert`, `adaptive`, `range_expert`, `solver`, and `solver_adaptive` (plus `solver_adaptive_gated`, an experimental variant that is off by default and was not adopted; see ROADMAP). All are research strategies, not claims of optimal play.
 
 Chip amounts are integer internal units:
 
@@ -62,6 +66,18 @@ Phase 3 adds a separate persistent match mode: settled stacks carry between hand
 - Docker Desktop with Docker Compose for the containerized workflow.
 
 ## Local development
+
+The paths below are from the original machine; `cd` into your own clone's `backend` and `frontend` folders instead. First-time setup, tested from a fresh `git clone`:
+
+```powershell
+cd backend
+py -3.11 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pytest -q -p no:cacheprovider   # full suite, takes several minutes
+cd ..\frontend
+npm.cmd ci
+npm.cmd run build
+```
 
 Backend:
 
@@ -110,7 +126,7 @@ The configured ports bind to localhost. The frontend proxies `/api` requests to 
 - `DELETE /api/coach/hands/{id}` — delete one logged hand (404 if the id does not exist)
 - `DELETE /api/coach/opponents/{name}` — delete every logged hand for that opponent
 
-Every registered bot (`random`, `tight`, `aggressive`, `equity`, `expert`, `adaptive`, `range_expert`, `solver`, `solver_adaptive`) is accepted wherever the API takes a bot name.
+Every registered bot (`random`, `tight`, `aggressive`, `equity`, `expert`, `adaptive`, `range_expert`, `solver`, `solver_adaptive`, `solver_adaptive_gated`) is accepted wherever the API takes a bot name.
 
 The simulation API accepts 1 through 10,000 hands per request. Representative Analyzer request:
 
