@@ -1,0 +1,11 @@
+held-out slumbot-learning-clean: hands with cases 545, cases 785
+held-out slumbot-learning-instrumented: hands with cases 588, cases 859
+held-out slumbot-solver-adaptive-learning: hands with cases 585, cases 812
+held-out slumbot-solver-adaptive-long: hands with cases 552, cases 756
+held-out slumbot-expert: hands with cases 38, cases 77
+held-out slumbot-solver: hands with cases 163, cases 225
+
+pooled held-out postflop cases: 3514 in 2471 hands
+mean log-loss (i) size-blind: 0.9271   (ii) bucketed shrunk (m=20): 0.8013
+mean improvement (i)-(ii) per case: +0.1257 nats  95% bootstrap over hands [+0.1130, +0.1383]
+T0 PASS  (rule: lower bound > 0)
