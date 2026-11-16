@@ -28,3 +28,9 @@ Poker Analyzer MVP is a local, educational, offline-first heads-up No-Limit Hold
 
 ## How to run
 See README ("Local development") and DEVELOPMENT.md ("Project status and how to resume autopilot"). In short: `py -3.11 -m venv backend\.venv`, `pip install -r requirements.txt`, `pytest -q -p no:cacheprovider`, `npm ci && npm run build` in `frontend`, then uvicorn on 8000 and Vite on 5173 (or `docker compose up --build`).
+
+
+## Update (2026-11-16, autopilot steps 18-20): proposal B tested and not adopted
+- **Opponent-model proposal B** (`solver_adaptive_sized`, bet-size-conditioned reads) was built (step 18) and pre-registered tested at offset 7,000,000 (step 19) and **failed all three gates**: pooled paired difference vs a fresh `solver_adaptive` -92.4 [-123.4, -62.1] bb/100; large losses versus aggressive (-554), equity (-279) and solver (-123). Verdict KEEP BASE; `solver_adaptive` is unchanged.
+- **Both A and B failed their pre-registered no-harm tests.** `solver_adaptive_gated` (A) and `solver_adaptive_sized` (B) are available as bot types but are **off by default** and not recommended; the Coach does not use them.
+- This supersedes the line above saying B is "not built": it was built (873 backend tests passed at step 18/19) and tested. The T0 gate passed but did not predict strength.

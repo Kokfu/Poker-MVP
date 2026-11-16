@@ -95,3 +95,16 @@ Built exactly as `autopilot/prereg-step-13.md`; nothing was run for a result. Bo
 - Known base quirk kept on purpose: the preflop unopened small-blind lock-strength inconsistency (step 17a) is NOT fixed here, so sized differs from base only by B.
 - Coach: new table `sized_reads (opponent, street_class, bucket, ...)`, created if missing (old databases untouched); a cache refreshed by `log_hand`, cleared by the delete routes. The Coach's advice path does not use it.
 - Cost: one extra unlocked solve per postflop street solve with a qualifying bucket (sanity: about +0.4-0.9 s per solve on one busy-machine measurement each). Instrumentation: `instrumentation["sized"]` = facing nodes, locked, thin, base facing locks, bucket sample sizes.
+
+## 8. Verdict for proposal B (autopilot step 20, applying `autopilot/prereg-step-13.md` mechanically)
+
+**KEEP BASE. Proposal B (`solver_adaptive_sized`) is not adopted; `solver_adaptive` is unchanged, `solver_adaptive_sized` stays available but OFF by default. No production code changed in step 20.**
+
+Evidence: step 19 (`autopilot/reports/step-19.md`, offset 7,000,000, 48 sessions x 60 hands, paired, identical seeds, fresh base arm, 0 illegal/fallback/deal mismatch in all 16 runs; numbers re-read from `benchmark-results/phase-7/t1-analysis.json`).
+- T1a **fail**: lower bounds of `sized` bb/100 are <= 0 for range_expert (-22.0) and solver (-86.6); solver's point estimate is negative (-32.0).
+- T1b **fail**: pooled paired difference (tight, equity, expert, range_expert, solver) = -92.4 [-123.4, -62.1], half-width 30.6 (< 40, so not "inconclusive"). Both clauses breached: pooled lower bound < -20, and single opponents equity (-352.0) and solver (-191.9) have paired lower bounds below -60.
+- T1c **fail**: the whole pooled interval is below zero, so no improvement is claimed.
+- Flag: aggressive paired difference -554.4 [-657.6, -449.6] exceeds the 150 threshold; equity -278.6 [-352.0, -209.7] and solver -123.4 [-191.9, -58.7] are also clearly negative. This is evidence of harm, not just "not shown".
+- Why is not known. Untested hypotheses only: bucket cells pool our bets over all streets and our whole range; thin cells lock quickly; shrinkage toward the unlocked aggregate may pull aggressive/equity opponents toward fold-heavy replies. Nothing was tuned (the pre-registration forbids it).
+
+**Summary of the opponent-model work.** Both changes tried so far failed their pre-registered no-harm tests: A (gated locks, step 10: pooled -12.5 [-30.1, +4.8], not shown harmless) and B (sized reads, step 19: pooled -92.4 [-123.4, -62.1], clearly harmful). `solver_adaptive` stays as the opponent-adapting bot. `solver_adaptive_gated` and `solver_adaptive_sized` remain in the registry, off by default, for further study only. One run per arm per test, no multiplicity correction.
