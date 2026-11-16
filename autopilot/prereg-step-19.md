@@ -1,0 +1,7 @@
+# Step 19 pre-registration (T1 for proposal B), written before any data
+
+Everything is fixed by `autopilot/prereg-step-13.md` (variants, shrinkage m = 20, bucket edges, n < 10 rule, gates T1a / T1b with the tightened pooled bound -20 and single-opponent bound -60, T1c, inconclusive rule, decision rule, power statement, rerun rule). Nothing there is changed. The build under test is `solver_adaptive_sized` as merged from step 18; `base` = `solver_adaptive` (a FRESH arm at this offset).
+
+Concrete run: seed set holdout with `--seed-offset 7000000` (base 7,000,000 + offset 7,000,000 = seeds from 14,000,000; earlier offsets 0-6,000,000 never reach it), 48 sessions x 60 hands, 8 opponents, equity iterations 100, stacks 10,000, blinds 50/100, statistics seed 91,002, 2,000 bootstrap resamples, 2 workers, identical seeds for both arms (asserted in the analysis). 16 sequential `duplicate_cli pair` runs: `autopilot/run-step-19.ps1`, results `benchmark-results/phase-7/t1-<strategy>-<opp>.json`. Analysis `autopilot/analyze-step-19.py` (same paired percentile bootstrap, seed 91,002, as step 10; pooled over tight/equity/expert/range_expert/solver; `adaptive` excluded from the pool and T1a includes all eight opponents).
+
+Decision (prereg-step-13): adopt only if T1a and T1b pass; claim improved strength only if T1c also passes; otherwise base stays. Killed runs restart from the start of that run's file; no parameter changes after data.
