@@ -35,7 +35,8 @@ paired-evidence check; keep commits small; never push, force-push, tag, or delet
 | 17a | Diagnose Coach lock oddity (range widens vs tight villain); diagnosis only | prompts/step-17a.md | [x] done (dc4b74c): small real bug (lock strength at preflop unopened SB node), not fixed; fold->call flip mostly intended |
 | 18 | Build proposal B `solver_adaptive_sized` off by default (OWNER APPROVED) | prompts/step-18.md | [x] done (dfa5169): built, golden file identical, 873 pass; T1 not run |
 | 19 | Run pre-registered T1 for B at offset 7M (~40 h) | prompts/step-19.md | [x] done (7ca8a5a): T1a/T1b/T1c all FAIL, pooled paired -92.4 [-123.4,-62.1]; keep base |
-| 20 | Apply decision rule for B; write step 21 (strength-fix flag + paired test) | prompts/step-20.md | [ ] todo |
+| 20 | Apply decision rule for B; write step 21 (strength-fix flag + paired test) | prompts/step-20.md | [x] done (branch autopilot/step-20): KEEP BASE for B, docs only; step 21 prompt written (recommend not running the paired test) |
+| 21 | Strength-fix flag + short paired test (offset 8M, 24 sessions, five opponents); OPTIONAL | prompts/step-21.md | [ ] todo (optional) |
 
 ## Log
 (main appends one line per reviewed step: date, step, verdict, branch/commit, caveats)

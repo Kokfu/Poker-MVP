@@ -420,3 +420,7 @@ Protocol: `DESIGN_LATER_STREET_BETTING.md` sections 8-9, amended before the real
 
 ### Opponent-model proposal A, gated locking: verdict KEEP BASE (autopilot step 12, 2026-11-14)
 Pre-registered T1 (offset 6,000,000, 48 x 60 hands, paired `solver_adaptive_gated` vs `solver_adaptive`): T1a fail (lower bounds <= 0 for expert, adaptive, range_expert, solver); T1b fail (pooled paired difference -12.5 [-30.1, +4.8] bb/100; solver paired lower bound -77.0). T2 (live Slumbot decision time) skipped by owner decision because the decision rule gives keep base whenever T1b fails. `solver_adaptive` is unchanged; `solver_adaptive_gated` stays available but off by default. Details: `DESIGN_OPPONENT_MODEL.md` section 6, `autopilot/reports/step-10.md`.
+
+
+### Opponent-model proposal B, sized reads: verdict KEEP BASE (autopilot step 20, 2026-11-16)
+Built in step 18 (`solver_adaptive_sized`, off by default), pre-registered T1 in step 19 (offset 7,000,000, 48 x 60 hands, paired vs a fresh `solver_adaptive`): T1a fail (range_expert -22.0, solver -86.6 lower bounds), T1b fail (pooled paired -92.4 [-123.4, -62.1] bb/100; equity -352.0 and solver -191.9 paired lower bounds below -60), T1c fail (whole interval below zero). Aggressive -554 [-657.6, -449.6], equity -279, solver -123: clear harm. **Both A and B failed their pre-registered no-harm tests.** `solver_adaptive` is unchanged; `solver_adaptive_sized` is available but off by default. Details: `DESIGN_OPPONENT_MODEL.md` section 8, `autopilot/reports/step-19.md`.
