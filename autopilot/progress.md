@@ -34,7 +34,7 @@ paired-evidence check; keep commits small; never push, force-push, tag, or delet
 | 17 | Release readiness (notes, hygiene, final suite); no push/tag | prompts/step-17.md | [x] done (45cccce): RELEASE_NOTES.md, hygiene clean except author email in history (owner item); 859 pass |
 | 17a | Diagnose Coach lock oddity (range widens vs tight villain); diagnosis only | prompts/step-17a.md | [x] done (dc4b74c): small real bug (lock strength at preflop unopened SB node), not fixed; fold->call flip mostly intended |
 | 18 | Build proposal B `solver_adaptive_sized` off by default (OWNER APPROVED) | prompts/step-18.md | [x] done (dfa5169): built, golden file identical, 873 pass; T1 not run |
-| 19 | Run pre-registered T1 for B at offset 7M (~40 h) | prompts/step-19.md | [ ] todo |
+| 19 | Run pre-registered T1 for B at offset 7M (~40 h) | prompts/step-19.md | [x] done (7ca8a5a): T1a/T1b/T1c all FAIL, pooled paired -92.4 [-123.4,-62.1]; keep base |
 | 20 | Apply decision rule for B; write step 21 (strength-fix flag + paired test) | prompts/step-20.md | [ ] todo |
 
 ## Log
@@ -56,3 +56,4 @@ paired-evidence check; keep commits small; never push, force-push, tag, or delet
 - 2026-11-14 owner (via main chat) approved BUILDING proposal B as in prereg-step-13.md; queued steps 18 (build sized, off by default), 19 (T1 at offset 7M, ~40 h), 20 (decision rule) after 17/17a.
 - 2026-11-14 steps 17, 17a accepted and merged (64d06cb). Step 17: no secrets; owner items: author gmail in pushed history (128 commits), optional tag v0.5.0, absolute paths in old docs. Step 17a: widening comes from tree_locks using the 'facing' strength for the preflop unopened SB node (0.54 instead of 0.89), padding the open range with 46% flat hands; fix = strategy change, deferred behind B so T1 for B stays clean (step 21 candidate). Steps 18-20 prompts written.
 - 2026-11-14 step 18 accepted and merged: golden-file test and 14 sized tests re-run by main (15 pass); suite 873 per step. Caveats: stat always collected in OpponentModel (not exposed unless sized); solver-prior part of B untestable offline; one extra solve per qualifying postflop street (latency unmeasured live). Next: step 19 (T1 at 7M, ~40 h).
+- 2026-11-16 step 19 accepted and merged: pooled paired -92.4 [-123.4,-62.1] re-read from t1-analysis.json; large harm vs aggressive (-554), equity (-279), solver (-123); 0 restarts, 0 illegal/fallback/mismatch; 873 pass. B not adopted. Both A and B failed pre-registered no-harm tests.
