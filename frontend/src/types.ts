@@ -8,6 +8,7 @@ export type Analysis = {
   loss_rate: number;
   equity: number;
   required_equity: number;
+  opponents?: number;
   final_pot_if_call: number;
   calculation_method: string;
   iterations: number;

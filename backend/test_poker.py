@@ -37,7 +37,7 @@ def test_duplicate_cards_between_hero_and_board_are_rejected():
     assert client.post("/api/analyze", json={**BASE, "board_cards": ["As", "8s", "3d"]}).status_code == 422
 
 
-@pytest.mark.parametrize("opponents", [0, 2, 3])
+@pytest.mark.parametrize("opponents", [0, 9, -1])
 def test_invalid_opponent_counts_are_rejected(opponents):
     assert client.post("/api/analyze", json={**BASE, "opponents": opponents}).status_code == 422
 
@@ -196,3 +196,28 @@ def test_api_analyze_valid_request_has_expected_fields():
 
 def test_api_analyze_invalid_request_returns_validation_error():
     assert client.post("/api/analyze", json={**BASE, "iterations": 1}).status_code == 422
+
+
+def test_one_opponent_keeps_the_heads_up_calculation():
+    river = {**BASE, "board_cards": ["Js", "8s", "3d", "2c", "Kh"]}
+    body = client.post("/api/analyze", json=river).json()
+    exact = calculate_equity(["As", "Qs"], ["Js", "8s", "3d", "2c", "Kh"], 10000)
+    assert body["opponents"] == 1 and body["calculation_method"] == "exact_enumeration"
+    assert body["equity"] == exact["equity"] and body["iterations"] == exact["hands_checked"]
+
+
+@pytest.mark.parametrize("opponents", [2, 4, 8])
+def test_more_opponents_lower_equity_and_raise_no_errors(opponents):
+    heads_up = client.post("/api/analyze", json=BASE).json()
+    body = client.post("/api/analyze", json={**BASE, "opponents": opponents}).json()
+    assert body["opponents"] == opponents and body["calculation_method"] == "monte_carlo"
+    assert body["iterations"] == 10000
+    assert abs(body["win_rate"] + body["tie_rate"] + body["loss_rate"] - 1) < 1e-9
+    assert body["equity"] < heads_up["equity"] - 0.05
+    assert f"{opponents} random hands" in body["disclaimer"]
+
+
+def test_multiway_river_uses_sampling_and_split_pots():
+    board = ["As", "Ks", "Qs", "Js", "Ts"]  # royal flush on board: everyone splits
+    body = client.post("/api/analyze", json={**BASE, "hero_cards": ["2c", "3d"], "board_cards": board, "opponents": 3}).json()
+    assert body["tie_rate"] == 1.0 and abs(body["equity"] - 0.25) < 1e-9

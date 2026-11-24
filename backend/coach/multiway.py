@@ -8,39 +8,11 @@ heads-up solver path.
 """
 from __future__ import annotations
 
-import random
 from typing import Any
 
-from poker_analyzer import EVALUATOR, FULL_DECK, detect_draws, starting_hand_label
+from poker_analyzer import EVALUATOR, FULL_DECK, detect_draws, multiway_equity, starting_hand_label  # noqa: F401 (re-exported)
 
-MIN_OPPONENTS, MAX_OPPONENTS = 1, 8
 DEFAULT_ITERATIONS = 20_000
-
-
-def multiway_equity(hero: list[str], board: list[str], opponents: int, iterations: int = DEFAULT_ITERATIONS,
-                    seed: int | None = None) -> dict[str, float]:
-    """Hero's share of the pot against ``opponents`` random hands (ties split evenly)."""
-    if not MIN_OPPONENTS <= opponents <= MAX_OPPONENTS:
-        raise ValueError(f"opponents must be {MIN_OPPONENTS}-{MAX_OPPONENTS}")
-    unseen = [card for card in FULL_DECK if card not in set(hero) | set(board)]
-    rng = random.Random(seed)
-    missing = 5 - len(board)
-    draw = 2 * opponents + missing
-    wins = ties = 0
-    share = 0.0
-    for _ in range(iterations):
-        deal = rng.sample(unseen, draw)
-        final_board = board + deal[:missing]
-        hero_score = EVALUATOR.score(hero, final_board)
-        others = [EVALUATOR.score(deal[missing + 2 * i: missing + 2 * i + 2], final_board) for i in range(opponents)]
-        best_other = min(others)  # lower score = stronger hand
-        if hero_score < best_other:
-            wins += 1
-            share += 1.0
-        elif hero_score == best_other:
-            ties += 1
-            share += 1.0 / (others.count(hero_score) + 1)
-    return {"equity": share / iterations, "win_rate": wins / iterations, "tie_rate": ties / iterations}
 
 
 def advise_multiway(hero: list[str], board: list[str], opponents: int, pot: float, to_call: float,

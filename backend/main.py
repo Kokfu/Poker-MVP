@@ -47,7 +47,7 @@ class AnalyzeRequest(BaseModel):
     def valid_game(self):
         if len(self.hero_cards) != 2: raise ValueError("Hero cards must contain exactly 2 cards.")
         if len(self.board_cards) not in (0, 3, 4, 5): raise ValueError("Board cards must contain 0, 3, 4, or 5 cards.")
-        if self.opponents != 1: raise ValueError("MVP supports exactly 1 opponent.")
+        if not 1 <= self.opponents <= 8: raise ValueError("Opponents must be between 1 and 8.")
         if len(set(self.hero_cards + self.board_cards)) != len(self.hero_cards + self.board_cards): raise ValueError("Duplicate cards are not allowed.")
         if self.amount_to_call >= self.hero_stack: raise ValueError("All-in call scenarios are outside the MVP scope.")
         return self
@@ -55,7 +55,7 @@ class AnalyzeRequest(BaseModel):
 @app.get("/api/health")
 def health(): return {"status":"OK"}
 @app.post("/api/analyze")
-def analyze_hand(request: AnalyzeRequest): return analyze(request.hero_cards, request.board_cards, request.pot, request.amount_to_call, request.iterations)
+def analyze_hand(request: AnalyzeRequest): return analyze(request.hero_cards, request.board_cards, request.pot, request.amount_to_call, request.iterations, request.opponents)
 
 class SimulationRequest(BaseModel):
     bot_a: BotName

@@ -113,7 +113,7 @@ The configured ports bind to localhost. The frontend proxies `/api` requests to 
 ## API
 
 - `GET /api/health`
-- `POST /api/analyze`
+- `POST /api/analyze` — equity and pot-odds check; `opponents` is 1-8 (1 = the original heads-up calculation, exact on the river; 2-8 = Monte Carlo against that many random hands, ties split)
 - `POST /api/simulations/run`
 - `POST /api/matches/simulate`
 - `POST /api/histories/hand`

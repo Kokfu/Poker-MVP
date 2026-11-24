@@ -20,6 +20,7 @@ export default function App() {
     amount_to_call: "40",
     hero_stack: "850",
     iterations: "50000",
+    opponents: "1",
     position: "",
     action_history: "",
   });
@@ -44,7 +45,7 @@ export default function App() {
         body: JSON.stringify({
           hero_cards: cards.slice(0, 2),
           board_cards: board,
-          opponents: 1,
+          opponents: +form.opponents,
           pot: +form.pot,
           amount_to_call: +form.amount_to_call,
           hero_stack: +form.hero_stack,

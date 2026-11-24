@@ -529,6 +529,8 @@ code { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-siz
 .deck-card:not(:disabled):hover { background: var(--surface-raised); }
 .deck-card.is-chosen { background: var(--accent-soft); border-color: var(--accent); }
 .deck-card:disabled { opacity: 0.22; }
+.field-hint { display: block; margin-top: 6px; }
+section > .field { margin-bottom: 16px; }
 .card-done { margin: -4px 0 0; font-size: 0.85rem; }
 
 /* ---------- Coach ---------- */

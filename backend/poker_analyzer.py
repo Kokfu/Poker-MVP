@@ -153,9 +153,43 @@ def calculate_equity(hero: list[str], board: list[str], iterations: int, seed: i
         else: losses += 1
     return {"win_rate":wins/total, "tie_rate":ties/total, "loss_rate":losses/total, "equity":(wins+ties/2)/total, "calculation_method":method, "hands_checked":total}
 
-def analyze(hero: list[str], board: list[str], pot: float, call: float, iterations: int) -> dict:
-    started = time.perf_counter(); result = calculate_equity(hero, board, iterations)
+MIN_OPPONENTS, MAX_OPPONENTS = 1, 8
+
+def multiway_equity(hero: list[str], board: list[str], opponents: int, iterations: int = 20_000,
+                    seed: int | None = None) -> dict[str, float]:
+    """Hero's share of the pot against ``opponents`` random hands (ties split evenly)."""
+    if not MIN_OPPONENTS <= opponents <= MAX_OPPONENTS:
+        raise ValueError(f"opponents must be {MIN_OPPONENTS}-{MAX_OPPONENTS}")
+    unseen = [card for card in FULL_DECK if card not in set(hero) | set(board)]
+    rng = random.Random(seed)
+    missing = 5 - len(board)
+    draw = 2 * opponents + missing
+    wins = ties = 0
+    share = 0.0
+    for _ in range(iterations):
+        deal = rng.sample(unseen, draw)
+        final_board = board + deal[:missing]
+        hero_score = EVALUATOR.score(hero, final_board)
+        others = [EVALUATOR.score(deal[missing + 2 * i: missing + 2 * i + 2], final_board) for i in range(opponents)]
+        best_other = min(others)  # lower score = stronger hand
+        if hero_score < best_other:
+            wins += 1
+            share += 1.0
+        elif hero_score == best_other:
+            ties += 1
+            share += 1.0 / (others.count(hero_score) + 1)
+    return {"equity": share / iterations, "win_rate": wins / iterations, "tie_rate": ties / iterations,
+            "loss_rate": (iterations - wins - ties) / iterations}
+
+
+def analyze(hero: list[str], board: list[str], pot: float, call: float, iterations: int, opponents: int = 1) -> dict:
+    started = time.perf_counter()
+    if opponents == 1:  # the accepted heads-up path, unchanged
+        result = calculate_equity(hero, board, iterations)
+    else:
+        result = multiway_equity(hero, board, opponents, iterations)
+        result.update({"calculation_method": "monte_carlo", "hands_checked": iterations})
     final, required = pot_odds(pot, call); street = street_for(board); made = None if not board else EVALUATOR.category(hero, board)
-    result.update({"street":street, "hand_label":starting_hand_label(hero) if not board else made, "made_hand":made, "draws":detect_draws(hero, board), "required_equity":required, "final_pot_if_call":final, "iterations":iterations if street != "River" else result["hands_checked"], "recommendation":recommendation(result["equity"], required, call), "elapsed_ms":round((time.perf_counter()-started)*1000), "disclaimer":"This recommendation is a basic educational heuristic and does not account for rake, opponent ranges, tournament ICM, player tendencies, or future-street strategy."})
+    result.update({"street":street, "hand_label":starting_hand_label(hero) if not board else made, "made_hand":made, "draws":detect_draws(hero, board), "required_equity":required, "final_pot_if_call":final, "opponents":opponents, "iterations":result["hands_checked"] if opponents == 1 and street == "River" else iterations, "recommendation":recommendation(result["equity"], required, call), "elapsed_ms":round((time.perf_counter()-started)*1000), "disclaimer":"This recommendation is a basic educational heuristic and does not account for rake, opponent ranges, tournament ICM, player tendencies, or future-street strategy." + ("" if opponents == 1 else f" Equity is measured against {opponents} random hands; players who stay in a pot usually hold better than random, so real equity is often lower.")})
     result["explanation"] = "A free action is available, so checking is the educational baseline." if call == 0 else ("Your estimated equity is above the required equity based on the pot odds." if result["equity"] >= required else "Your estimated equity is below the required equity based on the pot odds.")
     return result
