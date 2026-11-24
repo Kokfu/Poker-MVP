@@ -1,0 +1,56 @@
+F..............................                                          [100%]
+================================== FAILURES ===================================
+______ test_live_coach_multiple_streets_preserve_raw_policy_and_profile _______
+
+    def test_live_coach_multiple_streets_preserve_raw_policy_and_profile():
+        name = "tight_passive"
+        spot = coach_spot(name)
+        prefixes = coach_prefixes(spot)
+        store = FixtureStore(name)
+        baseline, _ = run_coach(prefixes, name, store, False)
+        traced, contexts = run_coach(prefixes, name, store, True)
+        compare_arms(baseline, traced)
+>       assert [row["input"]["street"] for row in traced["decisions"]] == ["preflop", "flop", "turn", "river"]
+E       AssertionError: assert [] == ['preflop', '...urn', 'river']
+E
+E         Right contains 4 more items, first extra item: 'preflop'
+E         Use -v to get more diff
+
+test_research_holdem_phase_4v.py:26: AssertionError
+============================== warnings summary ===============================
+.venv\Lib\site-packages\eval7\rangestring.py:149
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:149: PyparsingDeprecationWarning: 'setName' deprecated - use 'set_name'
+    suitedness = pyparsing.Word("os", exact=1).setName("suitedness")
+
+.venv\Lib\site-packages\eval7\rangestring.py:150
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:150: PyparsingDeprecationWarning: 'setName' deprecated - use 'set_name'
+    card = pyparsing.Word(ranks_str, suits_str, exact=2).setName("card")
+
+.venv\Lib\site-packages\eval7\rangestring.py:152
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:152: PyparsingDeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    hand.setParseAction(lambda s, loc, toks: ''.join(toks))
+
+.venv\Lib\site-packages\eval7\rangestring.py:160
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:160: PyparsingDeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    decimal.setParseAction(lambda s, loc, toks: ''.join(toks))
+
+.venv\Lib\site-packages\eval7\rangestring.py:167
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:167: PyparsingDeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    handtype.setParseAction(lambda s, loc, toks: ''.join(toks))
+
+.venv\Lib\site-packages\eval7\rangestring.py:175
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:175: PyparsingDeprecationWarning: 'delimitedList' deprecated - use 'DelimitedList'
+    hand_group_list = pyparsing.Group(pyparsing.delimitedList(handtype_group))
+
+.venv\Lib\site-packages\eval7\rangestring.py:180
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:180: PyparsingDeprecationWarning: 'delimitedList' deprecated - use 'DelimitedList'
+    handrange = pyparsing.Optional(pyparsing.delimitedList(
+
+.venv\Lib\site-packages\starlette\formparsers.py:12
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\starlette\formparsers.py:12: PendingDeprecationWarning: Please use `import python_multipart` instead.
+    import multipart
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED test_research_holdem_phase_4v.py::test_live_coach_multiple_streets_preserve_raw_policy_and_profile
+1 failed, 30 passed, 8 warnings in 22.68s

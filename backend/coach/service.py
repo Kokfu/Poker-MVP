@@ -244,18 +244,27 @@ def profile_for(store: HandStore, opponent: str, observer=None):
 
 
 def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store: HandStore | None = None, seed: int = 0) -> dict[str, Any]:
-    from .advisor import CoachAdvisor
+    from solver.bot import AdaptiveSolverBot, SolverBot
 
     shadow = getenv("POKER_COACH_RIVER_SHADOW") == "1"
     started = perf_counter() if shadow else None
     profile_snapshot = None
-    cache_solves = getenv("POKER_COACH_SOLVE_CACHE") != "0"
-    advisor = CoachAdvisor(seed=seed, exploit=bool(exploit and opponent), cache_solves=cache_solves)
+    # Custom history providers, including research fixtures, expose hands()
+    # and may instrument individual solves. Use the original path for them.
+    cache_solves = getenv("POKER_COACH_SOLVE_CACHE") != "0" and (store is None or type(store) is HandStore)
+    use_exploit = bool(exploit and opponent)
+    if cache_solves:
+        from .advisor import CoachAdvisor
+
+        advisor = CoachAdvisor(seed=seed, exploit=use_exploit, cache_solves=True)
+    else:
+        advisor = AdaptiveSolverBot(seed=seed) if use_exploit else SolverBot(seed=seed)
     if opponent:
         model = profile_for(store or HandStore(), opponent, advisor if advisor.exploit else None)
         profile_snapshot = model.snapshot() if model.hands_observed else None
     if advisor.exploit and profile_snapshot is None:
-        advisor.exploit = False
+        advisor = (CoachAdvisor(seed=seed, exploit=False, cache_solves=True)
+                   if cache_solves else SolverBot(seed=seed))
     advisor.persistent_ranges = getenv("POKER_COACH_PERSISTENT_RANGES") == "1"
     advisor.explain_ev = True
     if shadow:

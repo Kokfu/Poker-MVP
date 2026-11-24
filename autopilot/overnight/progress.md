@@ -2,11 +2,11 @@
 
 ## Morning summary
 
-- Done in setup: clean baseline `5da9913`, overnight branch created.
-- Failed: no tasks attempted yet.
-- Decisions for the owner: use synthetic Coach data in temporary SQLite files.
-- Exact commands: see task entries as work is validated.
-- Branch: `overnight/2026-11-25`.
+- Done: model audit and 336-hand sizing screen, exact Coach caches, one-click recent sizing, a 24-hand resumable simulation, and a browser-tested practice table.
+- Failed: aggregate latency p95 still exceeds both targets. The single full backend run is collecting its final results after two compatibility failures surfaced.
+- Decisions for the owner: keep size interpolation opt-in. Use synthetic temporary databases and the localhost browser for verification.
+- Exact commands: see the task entries and AUTONOMOUS_AGENT.md.
+- Branch: overnight/2026-11-25.
 
 ## Decisions for the owner
 
@@ -60,3 +60,10 @@
 - Tests: python -m pytest -q -p no:cacheprovider test_practice_table.py test_simulation_decision_privacy.py test_simulation_history_privacy.py test_simulation_short_stack_legality.py, 33 passed, 8 warnings, 3.10 s. Final frontend type check, 2 Node tests and production build passed.
 - Result: one loopback browser hand through a bot raise and flop bet, then fold settlement and hand 2. The bot seat was labelled and the console had zero errors. The scratch origin received a browser storage-clear response and the test server was stopped. A separate LAN device was unavailable.
 - Next: try Practice table from the existing LAN launcher. Tables live in one server process and end on restart. Full backend regression runs once in the background with output to autopilot/overnight/full-backend.log.
+
+### 02:35 +08:00 · regression follow-up for Coach custom providers · done
+
+- Commits: this entry and the compatibility correction.
+- Tests: python -m pytest -q -p no:cacheprovider test_research_holdem_phase_4v.py test_research_holdem_phase_4w.py test_coach_advice_cache.py test_solver_phase_4h.py. First recovery attempt 30 passed, 1 failed, 8 warnings, 22.68 s. Final focused run 31 passed, 8 warnings, 35.40 s.
+- Result: preserve the previous solver factory and hands() contract when a caller supplies a custom history provider. This restores the research trace hooks while retaining exact caching on the SQLite path.
+- Next: let the single already-running full suite finish and record its original result separately from the successful recheck.
