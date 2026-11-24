@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 
 const RANKS = ["A", "K", "Q", "J", "T", "9", "8", "7", "6", "5", "4", "3", "2"];
 const SUITS = ["s", "h", "d", "c"] as const;
@@ -33,18 +33,71 @@ type Props = {
   usedCards: Set<string>;
   /** Only the first `limit` slots are open (e.g. the board before the turn is known). */
   limit?: number;
+  /** Listen for typed cards (rank then suit, e.g. "a" "s") anywhere on the page. Only one input should listen at a time. */
+  keyboard?: boolean;
 };
+
+/** Keys that start a card: ranks, plus "1"/"0" for a ten ("10"). */
+const RANK_KEYS: Record<string, string> = Object.fromEntries([
+  ...RANKS.map((rank) => [rank, rank]), ["1", "T"], ["0", "T"],
+]);
+
+/** True when a key press belongs to a text field rather than to the page-wide shortcuts. */
+export function isTypingTarget(target: EventTarget | null): boolean {
+  const element = target as HTMLElement | null;
+  return !!element && (["INPUT", "TEXTAREA", "SELECT"].includes(element.tagName) || element.isContentEditable);
+}
+
+/** Short display name for a card, e.g. "A♠" or "10♥". */
+export function shortCard(card: string): string {
+  return `${card[0] === "T" ? "10" : card[0]}${SUIT_SYMBOL[card[1]] ?? card[1]}`;
+}
 
 /**
  * Click-to-pick card entry: a row of slots and the 52-card deck below it.
  * Clicking a deck card fills the active slot and moves to the next empty one;
  * clicking a filled slot selects it so the next pick replaces it.
  */
-export function CardInput({ label, slots, cards, onChange, usedCards, limit = slots.length }: Props) {
+export function CardInput({ label, slots, cards, onChange, usedCards, limit = slots.length, keyboard = false }: Props) {
   // `cards` is always a dense list; the next empty slot is cards.length.
   const nextEmpty = (count: number) => (count < Math.min(limit, slots.length) ? count : null);
   const [active, setActive] = useState<number | null>(() => nextEmpty(cards.length));
+  const [pendingRank, setPendingRank] = useState<string | null>(null);
+  const [flash, setFlash] = useState("");
   const filled = cards.length;
+
+  // Layout effect: the listener is in place before the next key press, even when keys arrive in a fast burst.
+  useLayoutEffect(() => {
+    if (!keyboard) { setPendingRank(null); return; }
+    function onKey(event: KeyboardEvent) {
+      if (event.ctrlKey || event.metaKey || event.altKey || isTypingTarget(event.target)) return;
+      const key = event.key;
+      if (key === "Backspace" || key === "Escape") {
+        if (pendingRank) { event.preventDefault(); setPendingRank(null); return; }
+        if (key === "Backspace" && cards.length > 0) { event.preventDefault(); remove(cards.length - 1); setFlash(""); }
+        return;
+      }
+      const suit = key.toLowerCase();
+      if (pendingRank && (SUITS as readonly string[]).includes(suit)) {
+        event.preventDefault();
+        const card = pendingRank + suit;
+        setPendingRank(null);
+        if (cards.includes(card)) { setFlash(`${shortCard(card)} is already picked.`); return; }
+        if (usedCards.has(card)) { setFlash(`${shortCard(card)} is already in use in this hand.`); return; }
+        if (active === null) return;
+        setFlash("");
+        pick(card);
+        return;
+      }
+      // "10": the "0" after a "1" just confirms the ten.
+      if (key === "0" && pendingRank === "T") { event.preventDefault(); return; }
+      const rank = RANK_KEYS[key.toUpperCase()];
+      if (rank && active !== null) { event.preventDefault(); setPendingRank(rank); setFlash(""); }
+    }
+    // Capture phase, so the card being typed wins over page shortcuts that share keys (A, C, Backspace).
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  });
 
   useEffect(() => {
     // Keep the active slot valid when cards change from outside (new hand, loaded hand, Clear).
@@ -114,7 +167,7 @@ export function CardInput({ label, slots, cards, onChange, usedCards, limit = sl
                 <button
                   key={card}
                   type="button"
-                  className={`deck-card suit-${suit}${chosen ? " is-chosen" : ""}`}
+                  className={`deck-card suit-${suit}${chosen ? " is-chosen" : ""}${pendingRank === rank && !unavailable ? " is-pending" : ""}`}
                   disabled={unavailable}
                   aria-pressed={chosen}
                   aria-label={cardName(card)}
@@ -128,6 +181,14 @@ export function CardInput({ label, slots, cards, onChange, usedCards, limit = sl
           </div>
         ))}
       </div>}
+      {keyboard && active !== null && (
+        <p className="card-type-hint" aria-live="polite">
+          {pendingRank
+            ? <><b>{pendingRank === "T" ? "10" : pendingRank}</b> … now the suit: <kbd>s</kbd> <kbd>h</kbd> <kbd>d</kbd> <kbd>c</kbd></>
+            : <>Or type it: rank then suit, e.g. <kbd>A</kbd><kbd>s</kbd> <kbd>T</kbd><kbd>d</kbd>{filled > 0 && <> · <kbd>⌫</kbd> removes the last card</>}</>}
+          {flash && <span className="card-type-flash"> {flash}</span>}
+        </p>
+      )}
       {active === null && filled > 0 && <p className="muted card-done">Select a card above to change it.</p>}
     </fieldset>
   );

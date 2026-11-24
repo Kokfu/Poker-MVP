@@ -587,6 +587,24 @@ section > .field { margin-bottom: 16px; }
 .data-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); }
 .data-list .danger { padding: 5px 12px; }
 
+/* Keyboard-first entry: key caps, typed-card hint, one-key "I did this" */
+kbd { display: inline-block; min-width: 1.4em; padding: 0 5px; margin: 0 1px; border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: 4px; font: 600 0.72rem/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; text-align: center; color: var(--text-2); background: var(--surface); vertical-align: 0.1em; }
+.primary kbd { margin-left: 8px; color: var(--accent-ink); background: transparent; border-color: color-mix(in srgb, var(--accent-ink) 45%, transparent); }
+.link-button kbd { margin-left: 4px; }
+.kbd-inline { margin-left: 6px; }
+.kbd-help { margin: 2px 0 0; font-size: 0.8rem; color: var(--text-2); line-height: 1.9; }
+.card-type-hint { margin: 2px 0 0; font-size: 0.85rem; color: var(--text-2); }
+.card-type-hint b { color: var(--accent-strong); font-size: 1rem; }
+.card-type-flash { color: var(--danger); }
+.deck-card.is-pending { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.coach-follow { justify-self: start; font-size: 1.05rem; padding: 12px 20px; }
+.coach-quick-sizes button.chip b { margin-left: 4px; font-variant-numeric: tabular-nums; }
+.coach-amount input.is-typed { border-color: var(--accent); }
+.coach-details { margin-top: 6px; border-top: 1px solid var(--line); padding-top: 10px; }
+.coach-details > summary { cursor: pointer; color: var(--text-2); font-size: 0.88rem; margin-bottom: 8px; }
+.speed-options { display: flex; flex-wrap: wrap; gap: 4px 20px; margin: 4px 0 0; padding: 8px 12px 0; border: 1px solid var(--line); border-radius: 8px; }
+.speed-options legend { padding: 0 6px; font-size: 0.8rem; color: var(--text-2); }
+
 @media (max-width: 700px) {
   main { padding: 20px 16px 48px; }
   section { padding: 16px; }

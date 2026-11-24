@@ -13,6 +13,23 @@ Phase 5 is COMPLETE under the owner's revised criterion (see ROADMAP; the origin
 - **Coach tab** — enter your own heads-up hand as it happens by clicking cards in a four-colour 52-card deck; quick 1/3, 1/2, 3/4, pot, and all-in buttons fill a legal bet/raise size. When it is your turn the solver recommends a play with its full action mix, your equity against the villain's estimated range, and that range's make-up. Log finished hands under an opponent's name to build their profile — the Coach then adjusts to it — and browse, reload, or delete an opponent's hand history from the profile panel. Each recommendation comes with a one-line reason, the per-action frequency and (postflop) EV, and each opponent's type label with its confidence and sample size; the **Review** view shows your own stats, results, and possible leaks. Choose **Opponents 2-8** for a multiway pot: the Coach then gives equity-and-pot-odds advice against that many random hands (no solver, no opponent tracking). The **Saved data** view shows where logged hands are stored (`backend/data/coach.sqlite`, or `COACH_DB_PATH`) and deletes one opponent or everything. Actions can also be entered from the keyboard (F fold, C check/call, B bet/raise, A all-in).
 - **Duplicate-deal evaluation** — every deal is replayed with seats swapped to cancel card luck; learning sessions measure opponent adaptation; a Slumbot bridge benchmarks against a strong outside bot.
 
+### Fast entry in the Coach
+
+Every step of a hand can be entered from the keyboard (on a phone, the same steps are one tap each):
+
+| Step | Keys |
+| --- | --- |
+| Cards (yours, board, their shown cards) | rank then suit, e.g. `a` `s` = A♠, `t` `d` or `1` `0` `d` = 10♦; `Backspace` removes the last card |
+| Start the hand / add a street | automatic once the cards are in (turn off under **Speed**) |
+| You followed the advice | `Enter` |
+| Fold / check or call / bet or raise / all-in | `F` / `C` / `B` / `A` |
+| A bet or raise of a given total | type the number, then `Enter` (or click a size chip: one click records it) |
+| Undo (steps back through cards too) | `Z` |
+| Next hand | `N`; the finished hand is saved to the opponent's profile and stacks carry over |
+| Flip position before the hand | `P` |
+
+Blinds, stacks, opponent name and the Speed options are remembered in the browser between visits.
+
 The Coach is manual entry for study, review, and practice. Using real-time assistance while playing on a poker site breaks most sites' rules; this project does not automate or assist play on any site.
 
 ## Analyzer

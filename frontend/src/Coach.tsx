@@ -1,8 +1,8 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import CoachReview from "./CoachReview";
 import CoachData from "./CoachData";
 import CoachMultiway from "./CoachMultiway";
-import { CardInput, PlayingCard } from "./CardInput";
+import { CardInput, PlayingCard, isTypingTarget } from "./CardInput";
 
 type Actor = "hero" | "villain";
 type ActionKind = "fold" | "check" | "call" | "bet" | "raise" | "all_in";
@@ -156,24 +156,67 @@ function quickSizes(state: SpotState, actor: Actor): { label: string; amount: nu
   return [...sized, { label: "All-in", amount: maximum_target }];
 }
 
+/** Table settings remembered between visits, so a new session starts where the last one left off. */
+type Prefs = {
+  blinds: { small: string; big: string };
+  stacks: { hero: string; villain: string };
+  opponent: string;
+  exploit: boolean;
+  players: number;
+  autoContinue: boolean;
+  autoSave: boolean;
+  carryStacks: boolean;
+  showDetails: boolean;
+};
+const PREFS_KEY = "coach.prefs.v1";
+
+function loadPrefs(): Partial<Prefs> {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(PREFS_KEY) ?? "{}");
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function blurFocus() {
+  const focused = document.activeElement as HTMLElement | null;
+  if (focused && focused !== document.body) focused.blur();
+}
+
+function defaultAmount(result: CoachResponse): string {
+  if (result.status === "hero_to_act") return result.advice.amount ? String(result.advice.amount) : String(result.state.minimum_target ?? "");
+  if (result.status === "villain_to_act") return String(result.state.minimum_target ?? "");
+  return "";
+}
+
 export default function Coach() {
+  const [prefs] = useState(loadPrefs);
   const [heroCards, setHeroCards] = useState<string[]>([]);
   const [handNumber, setHandNumber] = useState(0);
   const [logged, setLogged] = useState(false);
   const [position, setPosition] = useState<"button" | "big_blind">("button");
-  const [blinds, setBlinds] = useState({ small: "50", big: "100" });
-  const [stacks, setStacks] = useState({ hero: "10000", villain: "10000" });
-  const [opponent, setOpponent] = useState("");
-  const [exploit, setExploit] = useState(true);
+  const [blinds, setBlinds] = useState(prefs.blinds ?? { small: "50", big: "100" });
+  const [stacks, setStacks] = useState(prefs.stacks ?? { hero: "10000", villain: "10000" });
+  const [opponent, setOpponent] = useState(prefs.opponent ?? "");
+  const [exploit, setExploit] = useState(prefs.exploit ?? true);
+  const [autoContinue, setAutoContinue] = useState(prefs.autoContinue ?? true);
+  const [autoSave, setAutoSave] = useState(prefs.autoSave ?? true);
+  const [carryStacks, setCarryStacks] = useState(prefs.carryStacks ?? true);
+  const [showDetails, setShowDetails] = useState(prefs.showDetails ?? false);
   const [board, setBoard] = useState<string[]>([]);
   const [boardDraft, setBoardDraft] = useState<string[]>([]);
   const [actions, setActions] = useState<SpotAction[]>([]);
+  /** Earlier (actions, board) snapshots of this hand, newest last, so Undo can step back through cards too. */
+  const [past, setPast] = useState<{ actions: SpotAction[]; board: string[] }[]>([]);
   const [amount, setAmount] = useState("");
+  /** True once the user typed the bet size themselves, so digit keys append instead of replacing the suggestion. */
+  const [typed, setTyped] = useState(false);
   const [villainCards, setVillainCards] = useState<string[]>([]);
   const [result, setResult] = useState<CoachResponse>();
   const [reviewMode, setReviewMode] = useState(false);
   const [view, setView] = useState<"play" | "review" | "data">("play");
-  const [players, setPlayers] = useState(1);
+  const [players, setPlayers] = useState(prefs.players ?? 1);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [opponents, setOpponents] = useState<{ name: string; hands: number }[]>([]);
   const [history, setHistory] = useState<HandRecord[]>([]);
@@ -223,18 +266,24 @@ export default function Coach() {
 
   useEffect(() => { loadOpponents(); }, []);
 
-  async function evaluate(nextActions = actions, nextBoard = board) {
+  useEffect(() => {
+    if (reviewMode) return; // a reviewed hand's blinds and stacks are not the live table's
+    const next: Prefs = { blinds, stacks, opponent, exploit, players, autoContinue, autoSave, carryStacks, showDetails };
+    try { window.localStorage.setItem(PREFS_KEY, JSON.stringify(next)); } catch { /* storage is optional */ }
+  }, [blinds, stacks, opponent, exploit, players, autoContinue, autoSave, carryStacks, showDetails, reviewMode]);
+
+  async function evaluate(nextActions = actions, nextBoard = board, options: { hero?: string[]; remember?: boolean } = {}) {
     setError(""); setNotice(""); setLoading(true);
     try {
       const response = await fetch("/api/coach/advise", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...spot, actions: nextActions, board: nextBoard, opponent: opponent.trim() || null, exploit }),
+        body: JSON.stringify({ ...spot, hero_cards: options.hero ?? heroCards, actions: nextActions, board: nextBoard, opponent: opponent.trim() || null, exploit }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(describeError(body, "Coach request failed"));
-      setActions(nextActions); setBoard(nextBoard); setResult(body);
-      if (body.status === "hero_to_act") setAmount(body.advice.amount ? String(body.advice.amount) : String(body.state.minimum_target ?? ""));
-      if (body.status === "villain_to_act") setAmount(String(body.state.minimum_target ?? ""));
+      if (options.remember && result) setPast((current) => [...current, { actions, board }]);
+      setActions(nextActions); setBoard(nextBoard); setBoardDraft([]); setResult(body);
+      setAmount(defaultAmount(body)); setTyped(false);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Coach request failed");
     } finally {
@@ -242,10 +291,11 @@ export default function Coach() {
     }
   }
 
-  function beginHand() {
-    setError(""); setBoardDraft([]); setVillainCards([]); setReviewMode(false); setLogged(false);
+  function beginHand(hero = heroCards) {
+    setError(""); setBoardDraft([]); setVillainCards([]); setReviewMode(false); setLogged(false); setPast([]);
     loadProfile(opponent); loadHistory(opponent);
-    evaluate([], []);
+    blurFocus();
+    evaluate([], [], { hero });
   }
 
   function start(event: FormEvent) {
@@ -254,57 +304,103 @@ export default function Coach() {
     beginHand();
   }
 
-  function newHand() {
-    setHeroCards([]); setBoard([]); setBoardDraft([]); setVillainCards([]); setActions([]);
-    setResult(undefined); setReviewMode(false); setLogged(false); setError(""); setNotice(""); setAmount("");
-    setPosition((current) => (current === "button" ? "big_blind" : "button"));
-    setHandNumber((current) => current + 1);
+  function pickHeroCards(next: string[]) {
+    setHeroCards(next);
+    if (autoContinue && next.length === 2 && heroCards.length < 2 && !loading) beginHand(next);
   }
 
-  function act(actor: Actor, action: ActionKind) {
-    if ((action === "bet" || action === "raise") && state) {
-      const total = Number(amount);
+  async function saveHand() {
+    const response = await fetch("/api/coach/hands", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...spot, opponent: opponent.trim(), villain_cards: villainCards.length === 2 ? villainCards : null }),
+    });
+    const body = await response.json();
+    if (!response.ok) throw new Error(describeError(body, "Could not log the hand"));
+    setProfile(body.opponent_profile);
+    loadOpponents(); loadHistory(opponent);
+    const count: number = body.opponent_profile.hands_observed;
+    return `${opponent.trim()} now has ${count} ${count === 1 ? "hand" : "hands"} on record.`;
+  }
+
+  async function newHand() {
+    if (loading) return;
+    const finished = result?.status === "hand_complete" && !reviewMode ? result : null;
+    let savedNote = "";
+    let saveError = "";
+    if (finished && autoSave && !logged && opponent.trim()) {
+      setLoading(true);
+      try { savedNote = `Saved last hand. ${await saveHand()}`; }
+      catch (requestError) { saveError = `Last hand was not saved: ${requestError instanceof Error ? requestError.message : "unknown error"}`; }
+      finally { setLoading(false); }
+    }
+    const net = finished?.summary.hero_net;
+    if (finished && carryStacks && typeof net === "number") {
+      const hero = +stacks.hero + net;
+      const villain = +stacks.villain - net;
+      if (hero > 0 && villain > 0) setStacks({ hero: String(hero), villain: String(villain) });
+    }
+    setHeroCards([]); setBoard([]); setBoardDraft([]); setVillainCards([]); setActions([]); setPast([]);
+    setResult(undefined); setReviewMode(false); setLogged(false); setAmount(""); setTyped(false);
+    setError(saveError); setNotice(savedNote);
+    setPosition((current) => (current === "button" ? "big_blind" : "button"));
+    setHandNumber((current) => current + 1);
+    blurFocus();
+  }
+
+  function act(actor: Actor, action: ActionKind, size?: number) {
+    const sized = action === "bet" || action === "raise";
+    const total = size ?? Number(amount);
+    if (sized && state) {
       const high = effectiveMaximum(state, actor);
-      if (!amount.trim() || !Number.isInteger(total) || total < (state.minimum_target ?? 0) || total > high) {
+      if ((size === undefined && !amount.trim()) || !Number.isInteger(total) || total < (state.minimum_target ?? 0) || total > high) {
         setError(`Enter a whole-number total between ${state.minimum_target} and ${high} to ${action}.`);
         return;
       }
     }
-    const step: SpotAction = { actor, action, amount: action === "bet" || action === "raise" ? Math.round(+amount) : null };
-    evaluate([...actions, step]);
+    blurFocus();
+    evaluate([...actions, { actor, action, amount: sized ? Math.round(total) : null }], board, { remember: true });
+  }
+
+  function followAdvice() {
+    if (result?.status !== "hero_to_act") return;
+    act("hero", result.advice.action, result.advice.amount ?? undefined);
   }
 
   function undo() {
-    if (!actions.length) return;
-    const trimmed = actions.slice(0, -1);
-    evaluate(trimmed, board);
+    if (loading || reviewMode) return;
+    const previous = past[past.length - 1];
+    if (previous) {
+      setPast(past.slice(0, -1));
+      evaluate(previous.actions, previous.board);
+      return;
+    }
+    if (result) {
+      // Nothing left to undo in this hand: go back to the cards so a mistyped card can be fixed.
+      setResult(undefined); setActions([]); setBoard([]); setBoardDraft([]); setError(""); setNotice("");
+    }
+  }
+
+  function submitBoard(cards: string[]) {
+    if (result?.status !== "need_board") return;
+    const needed = result.cards_needed - board.length;
+    if (cards.length !== needed) {
+      setError(`Enter exactly ${needed} card${needed > 1 ? "s" : ""}.`);
+      return;
+    }
+    evaluate(actions, [...board, ...cards], { remember: true });
   }
 
   function addBoard(event: FormEvent) {
     event.preventDefault();
-    if (result?.status !== "need_board") return;
-    const needed = result.cards_needed - board.length;
-    if (boardDraft.length !== needed) {
-      setError(`Enter exactly ${needed} card${needed > 1 ? "s" : ""}.`);
-      return;
-    }
-    evaluate(actions, [...board, ...boardDraft]);
-    setBoardDraft([]);
+    submitBoard(boardDraft);
   }
 
   async function logHand() {
     if (!opponent.trim()) { setError("Enter the opponent's name to log this hand."); return; }
     setError(""); setLoading(true);
     try {
-      const response = await fetch("/api/coach/hands", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...spot, opponent: opponent.trim(), villain_cards: villainCards.length === 2 ? villainCards : null }),
-      });
-      const body = await response.json();
-      if (!response.ok) throw new Error(describeError(body, "Could not log the hand"));
+      setNotice(`Logged. ${await saveHand()}`);
       setLogged(true);
-      setProfile(body.opponent_profile); setNotice(`Logged. ${opponent.trim()} now has ${body.opponent_profile.hands_observed} ${body.opponent_profile.hands_observed === 1 ? "hand" : "hands"} on record.`);
-      loadOpponents(); loadHistory(opponent);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Could not log the hand");
     } finally {
@@ -328,7 +424,7 @@ export default function Coach() {
       setStacks({ hero: String(record.spot.hero_stack), villain: String(record.spot.villain_stack) });
       setBlinds({ small: String(record.spot.small_blind), big: String(record.spot.big_blind) });
       setPosition(record.spot.hero_position);
-      setResult(body); setReviewMode(true); setLogged(false); setError(""); setNotice("");
+      setResult(body); setReviewMode(true); setLogged(false); setError(""); setNotice(""); setPast([]);
     } catch (requestError) {
       setHistoryError(requestError instanceof Error ? requestError.message : "Could not load this hand");
     } finally {
@@ -380,15 +476,43 @@ export default function Coach() {
   const usedForBoard = new Set([...heroCards, ...villainCards, ...board]);
   const usedForVillain = new Set([...heroCards, ...board]);
 
-  useEffect(() => {
-    if (!result || (result.status !== "hero_to_act" && result.status !== "villain_to_act") || loading) return;
-    const actor: Actor = result.status === "hero_to_act" ? "hero" : "villain";
-    const legal = result.state.legal_actions;
+  // Page-wide keyboard flow. Card typing lives in CardInput (capture phase), so a key it used arrives here already handled.
+  useLayoutEffect(() => {
+    if (view !== "play" || players > 1) return;
     function onKey(event: KeyboardEvent) {
-      if (event.ctrlKey || event.metaKey || event.altKey) return;
-      const target = event.target as HTMLElement | null;
-      if (target && (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable)) return;
-      const choice = ACTION_KEYS[event.key.toUpperCase()]?.find((candidate) => legal.includes(candidate));
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || isTypingTarget(event.target) || loading) return;
+      const key = event.key;
+      const onButton = (event.target as HTMLElement | null)?.tagName === "BUTTON";
+      if (!result) {
+        if (key === "Enter" && !onButton && heroCards.length === 2) { event.preventDefault(); beginHand(); }
+        else if (key === "p" || key === "P") { event.preventDefault(); setPosition((current) => (current === "button" ? "big_blind" : "button")); }
+        return;
+      }
+      if ((key === "n" || key === "N") && result.status === "hand_complete") { event.preventDefault(); newHand(); return; }
+      if (key === "Backspace" || key === "z" || key === "Z") {
+        if (key === "Backspace" && typed && amount) { event.preventDefault(); setAmount(amount.slice(0, -1)); return; }
+        if (!reviewMode) { event.preventDefault(); undo(); }
+        return;
+      }
+      if (result.status !== "hero_to_act" && result.status !== "villain_to_act") return;
+      const actor: Actor = result.status === "hero_to_act" ? "hero" : "villain";
+      const legal = result.state.legal_actions;
+      const sizedAction = legal.find((candidate) => candidate === "bet" || candidate === "raise");
+      if (/^[0-9]$/.test(key)) {
+        if (!sizedAction) return;
+        event.preventDefault();
+        setAmount(typed ? amount + key : key); setTyped(true); setError("");
+        return;
+      }
+      if (key === "Escape" && typed) { event.preventDefault(); setAmount(defaultAmount(result)); setTyped(false); return; }
+      if (key === "Enter") {
+        if (onButton) return;
+        event.preventDefault();
+        if (typed && sizedAction) act(actor, sizedAction);
+        else if (actor === "hero") followAdvice();
+        return;
+      }
+      const choice = ACTION_KEYS[key.toUpperCase()]?.find((candidate) => legal.includes(candidate));
       if (!choice) return;
       event.preventDefault();
       act(actor, choice);
@@ -399,31 +523,15 @@ export default function Coach() {
 
   function actionButtons(actor: Actor) {
     if (!state) return null;
-    const sized = state.legal_actions.some((a) => a === "bet" || a === "raise");
+    const sizedAction = state.legal_actions.find((a) => a === "bet" || a === "raise");
+    const advice = actor === "hero" && result?.status === "hero_to_act" ? result.advice : null;
     return (
       <div className="coach-actions">
-        {sized && (
-          <div className="coach-size-row">
-            <label className="coach-amount">Total this street
-              <input
-                inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key !== "Enter") return;
-                  e.preventDefault();
-                  const sizedAction = state.legal_actions.find((a) => a === "bet" || a === "raise");
-                  if (sizedAction && !loading) act(actor, sizedAction);
-                }}
-              />
-              <small>{state.minimum_target} – {effectiveMaximum(state, actor)}</small>
-            </label>
-            <div className="coach-quick-sizes" role="group" aria-label="Quick bet sizes">
-              {quickSizes(state, actor).map((size) => (
-                <button key={size.label} type="button" className="chip" disabled={loading} onClick={() => setAmount(String(size.amount))}>
-                  {size.label}
-                </button>
-              ))}
-            </div>
-          </div>
+        {advice && (
+          <button type="button" className="primary coach-follow" disabled={loading} onClick={followAdvice}>
+            I did this: {ACTION_TEXT[advice.action]}{advice.amount ? ` ${advice.amount}` : ""}{advice.action === "call" ? ` ${state.to_call}` : ""}
+            <kbd aria-hidden="true">Enter</kbd>
+          </button>
         )}
         <div className="coach-action-row">
         {state.legal_actions.map((action) => (
@@ -433,6 +541,40 @@ export default function Coach() {
           </button>
         ))}
         </div>
+        {sizedAction && (
+          <div className="coach-size-row">
+            <label className="coach-amount">{actor === "hero" ? "Your" : "Their"} total this street
+              <input
+                inputMode="numeric" value={amount} className={typed ? "is-typed" : ""}
+                onChange={(e) => { setAmount(e.target.value); setTyped(true); }}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return;
+                  e.preventDefault();
+                  if (!loading) act(actor, sizedAction);
+                }}
+              />
+              <small>{state.minimum_target} – {effectiveMaximum(state, actor)}</small>
+            </label>
+            <div className="coach-quick-sizes" role="group" aria-label={`One click: ${ACTION_TEXT[sizedAction].toLowerCase()} this size`}>
+              {quickSizes(state, actor).map((size) => (
+                <button key={size.label} type="button" className="chip" disabled={loading} title={`${ACTION_TEXT[sizedAction]} ${size.amount}`} onClick={() => act(actor, sizedAction, size.amount)}>
+                  {size.label} <b>{size.amount}</b>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <p className="kbd-help">
+          {[
+            actor === "hero" && <><kbd>Enter</kbd> I did what the Coach said</>,
+            state.legal_actions.includes("fold") && <><kbd>F</kbd> fold</>,
+            state.legal_actions.includes("call") ? <><kbd>C</kbd> call</> : state.legal_actions.includes("check") && <><kbd>C</kbd> check</>,
+            sizedAction && <><kbd>B</kbd> {sizedAction}</>,
+            state.legal_actions.includes("all_in") && <><kbd>A</kbd> all-in</>,
+            sizedAction && <>type a number, then <kbd>Enter</kbd>, to {sizedAction} that total</>,
+            <><kbd>Z</kbd> undo</>,
+          ].filter(Boolean).map((item, index) => <span key={index}>{index > 0 && " · "}{item}</span>)}
+        </p>
       </div>
     );
   }
@@ -471,10 +613,10 @@ export default function Coach() {
       {players > 1 ? <CoachMultiway key={players} opponents={players} /> : (<>
       {!result ? (
       <form onSubmit={start} className="coach-setup">
-        <CardInput key={handNumber} label="Your cards" slots={["Card 1", "Card 2"]} cards={heroCards} onChange={setHeroCards} usedCards={usedForHero} />
+        <CardInput key={handNumber} label="Your cards" slots={["Card 1", "Card 2"]} cards={heroCards} onChange={pickHeroCards} usedCards={usedForHero} keyboard />
         <div className="setup-row">
           <div className="field">
-            <span className="field-label" id="position-label">Your position</span>
+            <span className="field-label" id="position-label">Your position <kbd className="kbd-inline">P</kbd></span>
             <div className="segmented" role="radiogroup" aria-labelledby="position-label">
               {([["button", "Button / SB"], ["big_blind", "Big blind"]] as const).map(([key, text]) => (
                 <button key={key} type="button" role="radio" aria-checked={position === key} className={position === key ? "is-on" : ""} onClick={() => setPosition(key)}>{text}</button>
@@ -492,8 +634,14 @@ export default function Coach() {
           </label>
           <label className="coach-toggle"><input type="checkbox" checked={exploit} onChange={(e) => setExploit(e.target.checked)} />Adjust advice to this opponent</label>
         </div>
+        <fieldset className="speed-options">
+          <legend>Speed</legend>
+          <label className="coach-toggle"><input type="checkbox" checked={autoContinue} onChange={(e) => setAutoContinue(e.target.checked)} />Go on as soon as the cards are in</label>
+          <label className="coach-toggle"><input type="checkbox" checked={autoSave} onChange={(e) => setAutoSave(e.target.checked)} />Save each hand when I start the next</label>
+          <label className="coach-toggle"><input type="checkbox" checked={carryStacks} onChange={(e) => setCarryStacks(e.target.checked)} />Carry stacks over to the next hand</label>
+        </fieldset>
         <div className="coach-form-actions">
-          <button className="primary" disabled={loading || heroCards.length !== 2}>{loading ? "Thinking…" : heroCards.length === 2 ? "Start hand" : `Pick ${2 - heroCards.length} more card${heroCards.length === 1 ? "" : "s"}`}</button>
+          <button className="primary" disabled={loading || heroCards.length !== 2}>{loading ? "Thinking…" : heroCards.length === 2 ? <>Start hand <kbd>Enter</kbd></> : `Pick ${2 - heroCards.length} more card${heroCards.length === 1 ? "" : "s"}`}</button>
         </div>
         {error && <p className="error" role="alert">{error}</p>}
       </form>
@@ -522,7 +670,7 @@ export default function Coach() {
                 {actions.map((step, index) => <li key={index}>{describeAction(step)}</li>)}
               </ol>
             )}
-            {!reviewMode && actions.length > 0 && <button type="button" className="link-button" onClick={undo} disabled={loading}>Undo last action</button>}
+            {!reviewMode && <button type="button" className="link-button" onClick={undo} disabled={loading}>{past.length > 0 ? "Undo last step" : "Back to my cards"} <kbd>Z</kbd></button>}
 
             {error && <p className="error" role="alert">{error}</p>}
 
@@ -537,9 +685,13 @@ export default function Coach() {
                     key={`${result.street}-${board.length}`}
                     label={`Deal the ${result.street}`}
                     slots={Array(needed).fill(slotName)}
-                    cards={boardDraft} onChange={setBoardDraft} usedCards={usedForBoard}
+                    cards={boardDraft} usedCards={usedForBoard} keyboard={!loading}
+                    onChange={(next) => {
+                      setBoardDraft(next);
+                      if (autoContinue && next.length === needed && boardDraft.length < needed && !loading) submitBoard(next);
+                    }}
                   />
-                  <button className="primary" disabled={loading || boardDraft.length !== needed}>{boardDraft.length === needed ? `Add ${result.street}` : `Pick ${needed - boardDraft.length} more`}</button>
+                  <button className="primary" disabled={loading || boardDraft.length !== needed}>{loading ? "Thinking…" : boardDraft.length === needed ? `Add ${result.street}` : `Pick ${needed - boardDraft.length} more`}</button>
                 </form>
               );
             })()}
@@ -548,6 +700,9 @@ export default function Coach() {
               <div className="coach-advice">
                 <h3 className="coach-recommendation">Recommended: {ACTION_TEXT[result.advice.action]}{result.advice.amount ? ` ${result.advice.amount}` : ""}</h3>
                 {result.explain?.reason && <p className="coach-reason">{result.explain.reason}</p>}
+                {actionButtons("hero")}
+                <details className="coach-details" open={showDetails} onToggle={(e) => setShowDetails(e.currentTarget.open)}>
+                <summary>Why: strategy mix, equity and their likely range</summary>
                 {result.explain && <CoachStrategy options={result.explain.options} />}
                 {result.explain?.ev_note && <p className="muted"><small>{result.explain.ev_note}</small></p>}
                 {result.explanation.source !== "fallback" && (
@@ -563,8 +718,7 @@ export default function Coach() {
                 {result.explanation.villain_top_classes && (
                   <p className="coach-range"><small>MOST LIKELY VILLAIN HANDS</small><br />{result.explanation.villain_top_classes.slice(0, 10).map((item) => `${item.hand} ${Math.round(item.share * 100)}%`).join(" · ")}</p>
                 )}
-                <h3>What did you do?</h3>
-                {actionButtons("hero")}
+                </details>
               </div>
             )}
 
@@ -573,13 +727,24 @@ export default function Coach() {
                 <h3>Hand complete</h3>
                 <p>{result.summary.showdown ? "Showdown." : foldedText(actions)} {result.summary.hero_net !== undefined && <strong className={result.summary.hero_net >= 0 ? "positive" : "negative"}>{result.summary.hero_net >= 0 ? "+" : ""}{result.summary.hero_net}</strong>}</p>
                 {reviewMode ? (
-                  <p className="muted">Loaded from hand history for review. Start or press "New hand" to enter a new one.</p>
+                  <p className="muted">Loaded from hand history for review. Press <kbd>N</kbd> or "New hand" to enter a new one.</p>
                 ) : (
                   <>
                     {result.summary.showdown && (
-                      <CardInput label="Their shown cards (optional)" slots={["Card 1", "Card 2"]} cards={villainCards} onChange={setVillainCards} usedCards={usedForVillain} />
+                      <CardInput label="Their shown cards (optional)" slots={["Card 1", "Card 2"]} cards={villainCards} onChange={setVillainCards} usedCards={usedForVillain} keyboard />
                     )}
-                    <button type="button" className="primary" onClick={logHand} disabled={loading || logged || !opponent.trim()}>{logged ? "Hand logged" : opponent.trim() ? `Log hand vs ${opponent.trim()}` : "Enter an opponent name to log"}</button>
+                    <div className="coach-form-actions">
+                      <button type="button" className="primary" onClick={newHand} disabled={loading}>Next hand <kbd>N</kbd></button>
+                      {opponent.trim() && !autoSave && (
+                        <button type="button" className="secondary" onClick={logHand} disabled={loading || logged}>{logged ? "Hand logged" : `Log hand vs ${opponent.trim()}`}</button>
+                      )}
+                    </div>
+                    <p className="muted"><small>
+                      {!opponent.trim() ? "Add an opponent name before the hand to save hands and learn their style."
+                        : logged ? "This hand is saved."
+                        : autoSave ? `Saved to ${opponent.trim()}'s profile when you start the next hand.`
+                        : "Not saved unless you log it."}
+                    </small></p>
                   </>
                 )}
               </div>
