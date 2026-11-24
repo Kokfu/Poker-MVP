@@ -304,3 +304,34 @@ def coach_delete_hand(hand_id: int):
 def coach_delete_opponent(name: str):
     from coach.store import HandStore
     return {"deleted": _coach_call(HandStore().delete_opponent, name)}
+
+
+@app.get("/api/coach/storage")
+def coach_storage():
+    from coach.store import HandStore
+    return HandStore().summary()
+
+
+@app.delete("/api/coach/hands")
+def coach_delete_all(confirm: Literal["delete-all"]):
+    from coach.store import HandStore
+    return {"deleted": HandStore().delete_all()}
+
+
+class CoachMultiwayRequest(BaseModel):
+    hero_cards: list[str]
+    board: list[str] = Field(default_factory=list)
+    opponents: StrictInt = Field(ge=1, le=8)
+    pot: float = Field(ge=0, le=100_000_000)
+    to_call: float = Field(default=0, ge=0, le=100_000_000)
+
+    @field_validator("hero_cards", "board", mode="before")
+    @classmethod
+    def normalize_cards(cls, cards):
+        return [_normalize_card(card) for card in cards] if isinstance(cards, list) else cards
+
+
+@app.post("/api/coach/multiway")
+def coach_multiway(request: CoachMultiwayRequest):
+    from coach.multiway import advise_multiway
+    return _coach_call(advise_multiway, request.hero_cards, request.board, request.opponents, request.pot, request.to_call)

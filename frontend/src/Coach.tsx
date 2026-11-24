@@ -1,5 +1,8 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import CoachReview from "./CoachReview";
+import CoachData from "./CoachData";
+import CoachMultiway from "./CoachMultiway";
+import { CardInput, PlayingCard } from "./CardInput";
 
 type Actor = "hero" | "villain";
 type ActionKind = "fold" | "check" | "call" | "bet" | "raise" | "all_in";
@@ -90,19 +93,10 @@ const STAT_TEXT: Record<string, string> = {
   fold_to_bet: "Folds to a bet", call_vs_bet: "Calls a bet", raise_vs_bet: "Raises a bet",
 };
 
+const OPPONENT_COUNTS = [1, 2, 3, 4, 5, 6, 7, 8];
 const POSTFLOP_STREETS = ["flop", "turn", "river"] as const;
 const ACTION_KEYS: Record<string, ActionKind[]> = { F: ["fold"], C: ["check", "call"], B: ["bet", "raise"], A: ["all_in"] };
 const KEY_FOR_ACTION: Record<ActionKind, string> = { fold: "F", check: "C", call: "C", bet: "B", raise: "B", all_in: "A" };
-const RANKS = ["A", "K", "Q", "J", "T", "9", "8", "7", "6", "5", "4", "3", "2"];
-const SUITS = ["s", "h", "d", "c"] as const;
-const SUIT_SYMBOL: Record<string, string> = { s: "♠", h: "♥", d: "♦", c: "♣" };
-const SUIT_NAME: Record<string, string> = { s: "spades", h: "hearts", d: "diamonds", c: "clubs" };
-const RANK_NAME: Record<string, string> = {
-  A: "ace", K: "king", Q: "queen", J: "jack", T: "ten", "9": "nine", "8": "eight",
-  "7": "seven", "6": "six", "5": "five", "4": "four", "3": "three", "2": "two",
-};
-const RED_SUITS = new Set(["h", "d"]);
-
 const FIELD_LABELS: Record<string, string> = {
   small_blind: "Small blind", big_blind: "Big blind", hero_stack: "Your stack", villain_stack: "Villain stack",
   opponent: "Opponent name", hero_cards: "Your cards", board: "Board", villain_cards: "Villain's cards",
@@ -120,10 +114,6 @@ function describeError(body: { detail?: unknown } | null, fallback: string): str
     else label = FIELD_LABELS[String(path[0])] ?? path.join(".");
     return label ? `${label}: ${message}` : message;
   }).join("; ");
-}
-
-function parseCards(text: string): string[] {
-  return text.split(/[\s,]+/).filter(Boolean).map((card) => card.length === 2 ? card[0].toUpperCase() + card[1].toLowerCase() : card);
 }
 
 function describeLabel(label: string): string {
@@ -166,61 +156,6 @@ function quickSizes(state: SpotState, actor: Actor): { label: string; amount: nu
   return [...sized, { label: "All-in", amount: maximum_target }];
 }
 
-function CardPicker({ selected, onToggle, disabled, max }: { selected: string[]; onToggle: (card: string) => void; disabled: Set<string>; max: number }) {
-  return (
-    <div className="card-picker" role="group" aria-label="Card picker">
-      {RANKS.map((rank) => SUITS.map((suit) => {
-        const card = rank + suit;
-        const isSelected = selected.includes(card);
-        const isDisabled = !isSelected && (disabled.has(card) || selected.length >= max);
-        return (
-          <button
-            key={card} type="button"
-            className={`card-cell${RED_SUITS.has(suit) ? " red" : ""}${isSelected ? " selected" : ""}`}
-            aria-pressed={isSelected} aria-label={`${RANK_NAME[rank]} of ${SUIT_NAME[suit]}`}
-            disabled={isDisabled} onClick={() => onToggle(card)}
-          >
-            {rank}{SUIT_SYMBOL[suit]}
-          </button>
-        );
-      }))}
-    </div>
-  );
-}
-
-function CardField({ label, cards, onChange, max, usedCards, placeholder, autoFocus }: {
-  label: string; cards: string[]; onChange: (cards: string[]) => void; max: number; usedCards: Set<string>; placeholder?: string; autoFocus?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const [text, setText] = useState(cards.join(" "));
-  const joined = cards.join(" ");
-  useEffect(() => { setText(joined); }, [joined]);
-
-  function commitText(value: string) {
-    setText(value);
-    onChange(parseCards(value).slice(0, max));
-  }
-
-  function toggle(card: string) {
-    if (cards.includes(card)) onChange(cards.filter((c) => c !== card));
-    else if (cards.length < max) onChange([...cards, card]);
-  }
-
-  return (
-    <div className="card-field">
-      <label>{label}
-        <div className="card-field-row">
-          <input value={text} onChange={(e) => commitText(e.target.value)} placeholder={placeholder} autoFocus={autoFocus} />
-          <button type="button" className="secondary card-field-toggle" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
-            {open ? "Hide" : "Pick"}
-          </button>
-        </div>
-      </label>
-      {open && <CardPicker selected={cards} onToggle={toggle} disabled={usedCards} max={max} />}
-    </div>
-  );
-}
-
 export default function Coach() {
   const [heroCards, setHeroCards] = useState<string[]>([]);
   const [handNumber, setHandNumber] = useState(0);
@@ -237,7 +172,8 @@ export default function Coach() {
   const [villainCards, setVillainCards] = useState<string[]>([]);
   const [result, setResult] = useState<CoachResponse>();
   const [reviewMode, setReviewMode] = useState(false);
-  const [view, setView] = useState<"play" | "review">("play");
+  const [view, setView] = useState<"play" | "review" | "data">("play");
+  const [players, setPlayers] = useState(1);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [opponents, setOpponents] = useState<{ name: string; hands: number }[]>([]);
   const [history, setHistory] = useState<HandRecord[]>([]);
@@ -467,7 +403,7 @@ export default function Coach() {
     return (
       <div className="coach-actions">
         {sized && (
-          <>
+          <div className="coach-size-row">
             <label className="coach-amount">Total this street
               <input
                 inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)}
@@ -487,51 +423,88 @@ export default function Coach() {
                 </button>
               ))}
             </div>
-          </>
+          </div>
         )}
+        <div className="coach-action-row">
         {state.legal_actions.map((action) => (
           <button key={action} type="button" className="secondary" disabled={loading} title={`Shortcut: ${KEY_FOR_ACTION[action]}`} onClick={() => act(actor, action)}>
             {ACTION_TEXT[action]}{(action === "bet" || action === "raise") && amount ? ` ${amount}` : ""}{action === "call" ? ` ${state.to_call}` : ""}
             <span className="key-hint" aria-hidden="true">{KEY_FOR_ACTION[action]}</span>
           </button>
         ))}
+        </div>
       </div>
     );
   }
 
-  return (
-    <section className="match-panel coach-panel">
-      <h2>Coach</h2>
-      <p>Enter your hand and the action as it happens. When it is your turn, the solver recommends a play; log finished hands under the opponent's name so the Coach learns their style.</p>
-      <p className="muted">Heads-up only. Manual entry for study, review, and practice. Real-time assistance while playing on a poker site breaks most sites' rules.</p>
+  const opponentRow = (
+    <div className="opponent-count" role="radiogroup" aria-label="Opponents in the hand">
+      <span className="field-label">Opponents</span>
+      <div className="segmented">
+        {OPPONENT_COUNTS.map((count) => (
+          <button
+            key={count} type="button" role="radio" aria-checked={players === count}
+            className={players === count ? "is-on" : ""}
+            onClick={() => setPlayers(count)} disabled={!!result && count !== players}
+          >
+            {count}
+          </button>
+        ))}
+      </div>
+      <small className="muted">{players === 1 ? "Heads-up: solver advice and opponent learning" : `${players}-way pot: equity and pot-odds advice`}</small>
+    </div>
+  );
 
-      <div className="coach-views" role="group" aria-label="Coach view">
-        <button type="button" className={view === "play" ? "" : "secondary"} aria-pressed={view === "play"} onClick={() => setView("play")}>Play a hand</button>
-        <button type="button" className={view === "review" ? "" : "secondary"} aria-pressed={view === "review"} onClick={() => setView("review")}>Review my hands</button>
+  return (
+    <section className="coach-panel">
+      <div className="coach-head">
+        <h2>Coach</h2>
+        <div className="segmented" role="tablist" aria-label="Coach view">
+          {([["play", "Play a hand"], ["review", "Review"], ["data", "Saved data"]] as const).map(([key, text]) => (
+            <button key={key} type="button" role="tab" aria-selected={view === key} className={view === key ? "is-on" : ""} onClick={() => { setView(key); if (key !== "play") loadOpponents(); }}>{text}</button>
+          ))}
+        </div>
       </div>
 
-      {view === "review" ? <CoachReview opponents={opponents} /> : (<>
-      <form onSubmit={start}>
-        <div className="form-grid">
-          <div className="span-2">
-            <CardField key={handNumber} label="Your cards" cards={heroCards} onChange={setHeroCards} max={2} usedCards={usedForHero} placeholder="As Kd" autoFocus={handNumber > 0} />
+      {view === "review" ? <CoachReview opponents={opponents} /> : view === "data" ? <CoachData opponents={opponents} onChanged={() => { loadOpponents(); if (opponent.trim()) { loadProfile(opponent); loadHistory(opponent); } }} /> : (<>
+      {opponentRow}
+      {players > 1 ? <CoachMultiway key={players} opponents={players} /> : (<>
+      {!result ? (
+      <form onSubmit={start} className="coach-setup">
+        <CardInput key={handNumber} label="Your cards" slots={["Card 1", "Card 2"]} cards={heroCards} onChange={setHeroCards} usedCards={usedForHero} />
+        <div className="setup-row">
+          <div className="field">
+            <span className="field-label" id="position-label">Your position</span>
+            <div className="segmented" role="radiogroup" aria-labelledby="position-label">
+              {([["button", "Button / SB"], ["big_blind", "Big blind"]] as const).map(([key, text]) => (
+                <button key={key} type="button" role="radio" aria-checked={position === key} className={position === key ? "is-on" : ""} onClick={() => setPosition(key)}>{text}</button>
+              ))}
+            </div>
           </div>
-          <label>Your position<select value={position} onChange={(e) => setPosition(e.target.value as "button" | "big_blind")}><option value="button">Button (small blind)</option><option value="big_blind">Big blind</option></select></label>
           <label>Small blind<input inputMode="numeric" value={blinds.small} onChange={(e) => setBlinds({ ...blinds, small: e.target.value })} /></label>
           <label>Big blind<input inputMode="numeric" value={blinds.big} onChange={(e) => setBlinds({ ...blinds, big: e.target.value })} /></label>
           <label>Your stack<input inputMode="numeric" value={stacks.hero} onChange={(e) => setStacks({ ...stacks, hero: e.target.value })} /></label>
-          <label>Villain stack<input inputMode="numeric" value={stacks.villain} onChange={(e) => setStacks({ ...stacks, villain: e.target.value })} /></label>
-          <label>Opponent (optional)<input list="coach-opponents" value={opponent} onChange={(e) => setOpponent(e.target.value)} placeholder="Name to track" />
+          <label>Their stack<input inputMode="numeric" value={stacks.villain} onChange={(e) => setStacks({ ...stacks, villain: e.target.value })} /></label>
+        </div>
+        <div className="setup-row">
+          <label className="field-grow">Opponent name <span className="muted">(optional, so the Coach learns their style)</span><input list="coach-opponents" value={opponent} onChange={(e) => setOpponent(e.target.value)} placeholder="e.g. Alex" />
             <datalist id="coach-opponents">{opponents.map((o) => <option key={o.name} value={o.name}>{o.hands} hands</option>)}</datalist>
           </label>
-          <label className="coach-toggle"><input type="checkbox" checked={exploit} onChange={(e) => setExploit(e.target.checked)} />Adjust to this opponent</label>
+          <label className="coach-toggle"><input type="checkbox" checked={exploit} onChange={(e) => setExploit(e.target.checked)} />Adjust advice to this opponent</label>
         </div>
         <div className="coach-form-actions">
-          <button className="analyze" disabled={loading}>{loading ? "Thinking..." : "Start hand"}</button>
-          {result && <button type="button" className="secondary" onClick={newHand} disabled={loading}>New hand</button>}
+          <button className="primary" disabled={loading || heroCards.length !== 2}>{loading ? "Thinking…" : heroCards.length === 2 ? "Start hand" : `Pick ${2 - heroCards.length} more card${heroCards.length === 1 ? "" : "s"}`}</button>
         </div>
-        {!result && error && <p className="error" role="alert">{error}</p>}
+        {error && <p className="error" role="alert">{error}</p>}
       </form>
+      ) : (
+        <div className="hand-bar">
+          <div className="hand-bar-cards">{heroCards.map((card) => <PlayingCard key={card} card={card} />)}</div>
+          <span>{position === "button" ? "Button / SB" : "Big blind"} · {blinds.small}/{blinds.big} · stacks {stacks.hero} vs {stacks.villain}{opponent.trim() ? ` · vs ${opponent.trim()}` : ""}</span>
+          {reviewMode && <span className="pill">Reviewing a logged hand</span>}
+          <button type="button" className="secondary" onClick={newHand} disabled={loading}>New hand</button>
+        </div>
+      )}
 
       {notice && <p className="coach-notice" role="status">{notice}</p>}
 
@@ -539,39 +512,41 @@ export default function Coach() {
         <div className="coach-layout">
           <div className="coach-main">
             <div className="coach-table">
-              <p><small>BOARD</small><br />{board.length ? board.map((c) => <span key={c} className={`card-token ${"hd".includes(c[1]) ? "red" : ""}`}>{c}</span>) : <span className="muted">No board yet</span>}</p>
-              {state && <p><small>POT</small><br /><strong>{state.pot}</strong>{state.to_call > 0 && <span className="muted"> · to call {state.to_call}</span>}</p>}
-              {result.status === "need_board" && result.pot !== undefined && <p><small>POT</small><br /><strong>{result.pot}</strong></p>}
-              {reviewMode && <p className="muted eyebrow">REVIEWING A LOGGED HAND</p>}
+              <div><span className="field-label">Board</span><div className="board-cards">{board.length ? board.map((c) => <PlayingCard key={c} card={c} />) : <span className="muted">Preflop</span>}</div></div>
+              {state && <div><span className="field-label">Pot</span><strong>{state.pot}</strong>{state.to_call > 0 && <span className="muted"> · to call {state.to_call}</span>}</div>}
+              {result.status === "need_board" && result.pot !== undefined && <div><span className="field-label">Pot</span><strong>{result.pot}</strong></div>}
             </div>
 
-            <ol className="coach-log">
-              {actions.map((step, index) => <li key={index}>{describeAction(step)}</li>)}
-            </ol>
-            {!reviewMode && actions.length > 0 && <button type="button" className="secondary" onClick={undo} disabled={loading}>Undo last action</button>}
+            {actions.length > 0 && (
+              <ol className="coach-log">
+                {actions.map((step, index) => <li key={index}>{describeAction(step)}</li>)}
+              </ol>
+            )}
+            {!reviewMode && actions.length > 0 && <button type="button" className="link-button" onClick={undo} disabled={loading}>Undo last action</button>}
 
             {error && <p className="error" role="alert">{error}</p>}
 
-            {result.status === "villain_to_act" && (<><h3>Villain to act</h3><p className="muted">Enter what the opponent did.</p>{actionButtons("villain")}</>)}
+            {result.status === "villain_to_act" && (<div className="coach-step"><h3>{opponent.trim() || "Opponent"} to act</h3><p className="muted">What did they do?</p>{actionButtons("villain")}</div>)}
 
             {result.status === "need_board" && (() => {
               const needed = result.cards_needed - board.length;
+              const slotName = result.street[0].toUpperCase() + result.street.slice(1);
               return (
-                <form onSubmit={addBoard} className="coach-board">
-                  <CardField
-                    label={`Enter the ${result.street} (${needed} card${needed > 1 ? "s" : ""})`}
-                    cards={boardDraft} onChange={setBoardDraft} max={needed} usedCards={usedForBoard}
-                    placeholder={result.street === "flop" ? "Ah 7c 2d" : "Ts"} autoFocus
+                <form onSubmit={addBoard} className="coach-step">
+                  <CardInput
+                    key={`${result.street}-${board.length}`}
+                    label={`Deal the ${result.street}`}
+                    slots={Array(needed).fill(slotName)}
+                    cards={boardDraft} onChange={setBoardDraft} usedCards={usedForBoard}
                   />
-                  <button className="secondary" disabled={loading}>Add {result.street}</button>
+                  <button className="primary" disabled={loading || boardDraft.length !== needed}>{boardDraft.length === needed ? `Add ${result.street}` : `Pick ${needed - boardDraft.length} more`}</button>
                 </form>
               );
             })()}
 
             {result.status === "hero_to_act" && (
               <div className="coach-advice">
-                <p className="eyebrow">RECOMMENDED</p>
-                <p className="coach-recommendation">{ACTION_TEXT[result.advice.action]}{result.advice.amount ? ` ${result.advice.amount}` : ""}</p>
+                <h3 className="coach-recommendation">Recommended: {ACTION_TEXT[result.advice.action]}{result.advice.amount ? ` ${result.advice.amount}` : ""}</h3>
                 {result.explain?.reason && <p className="coach-reason">{result.explain.reason}</p>}
                 {result.explain && <CoachStrategy options={result.explain.options} />}
                 {result.explain?.ev_note && <p className="muted"><small>{result.explain.ev_note}</small></p>}
@@ -602,9 +577,9 @@ export default function Coach() {
                 ) : (
                   <>
                     {result.summary.showdown && (
-                      <CardField label="Villain's shown cards (optional)" cards={villainCards} onChange={setVillainCards} max={2} usedCards={usedForVillain} placeholder="Qh Qd" />
+                      <CardInput label="Their shown cards (optional)" slots={["Card 1", "Card 2"]} cards={villainCards} onChange={setVillainCards} usedCards={usedForVillain} />
                     )}
-                    <button type="button" className="analyze" onClick={logHand} disabled={loading || logged || !opponent.trim()}>{logged ? "Hand logged" : opponent.trim() ? `Log hand vs ${opponent.trim()}` : "Enter an opponent name to log"}</button>
+                    <button type="button" className="primary" onClick={logHand} disabled={loading || logged || !opponent.trim()}>{logged ? "Hand logged" : opponent.trim() ? `Log hand vs ${opponent.trim()}` : "Enter an opponent name to log"}</button>
                   </>
                 )}
               </div>
@@ -670,6 +645,7 @@ export default function Coach() {
           </aside>
         </div>
       )}
+      </>)}
       </>)}
     </section>
   );

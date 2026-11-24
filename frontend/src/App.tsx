@@ -10,9 +10,10 @@ import Replay from "./Replay";
 import type { Analysis } from "./types";
 
 type Tab = "analyzer" | "coach" | "simulator" | "match" | "replay";
+const TABS: [Tab, string][] = [["coach", "Coach"], ["analyzer", "Equity calculator"], ["simulator", "Bot simulator"], ["match", "Bot match"], ["replay", "Replay"]];
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>("analyzer");
+  const [tab, setTab] = useState<Tab>("coach");
   const [cards, setCards] = useState<(string | null)[]>(Array(7).fill(null));
   const [form, setForm] = useState({
     pot: "100",
@@ -66,30 +67,17 @@ export default function App() {
 
   return (
     <main>
-      <header>
-        <p className="eyebrow">LOCAL EDUCATIONAL TOOL</p>
-        <h1>Poker Analyzer MVP</h1>
-        <p>Texas Hold’em analysis from manually entered cards.</p>
+      <header className="app-header">
+        <div>
+          <h1>Poker Coach</h1>
+          <p>Texas Hold’em study tool. Enter your cards, get advice, and learn how your opponents play.</p>
+        </div>
+        <p className="app-note">Manual entry only. No site automation, no real-money play.</p>
       </header>
-      <aside>
-        Manual input only · No website automation · No real-money play · No
-        hidden-card access
-      </aside>
-      <nav aria-label="Poker tools">
-        {(["analyzer", "coach", "simulator", "match", "replay"] as Tab[]).map((item) => (
-          <button
-            key={item}
-            type="button"
-            aria-pressed={tab === item}
-            onClick={() => setTab(item)}
-          >
-            {item === "analyzer"
-              ? "Analyzer"
-              : item === "coach"
-                ? "Coach"
-              : item === "simulator"
-                ? "Simulator"
-              : item === "match" ? "Match" : "Replay"}
+      <nav className="app-nav" aria-label="Poker tools">
+        {TABS.map(([item, label]) => (
+          <button key={item} type="button" aria-current={tab === item ? "page" : undefined} className={tab === item ? "is-on" : ""} onClick={() => setTab(item)}>
+            {label}
           </button>
         ))}
       </nav>
@@ -107,7 +95,7 @@ export default function App() {
           <DeckVisualizer />
           {error && <p className="error">{error}</p>}
           <button
-            className="analyze"
+            className="analyze primary"
             onClick={analyze}
             disabled={!cards[0] || !cards[1]}
           >

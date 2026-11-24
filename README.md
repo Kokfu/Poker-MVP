@@ -10,7 +10,7 @@ Phase 5 is COMPLETE under the owner's revised criterion (see ROADMAP; the origin
 
 - **`solver` bot** — preflop charts solved offline plus a real-time range solve of every postflop street (discounted CFR over both players' public ranges). Select it anywhere a bot is chosen.
 - **`solver_adaptive` bot** — the same solver, adjusting to confident reads of its opponent's public tendencies (node locking), learned hand by hand.
-- **Coach tab** — enter your own heads-up hand as it happens, either by typing card notation or clicking a 52-card picker; quick 1/3, 1/2, 3/4, pot, and all-in buttons fill a legal bet/raise size. When it is your turn the solver recommends a play with its full action mix, your equity against the villain's estimated range, and that range's make-up. Log finished hands under an opponent's name to build their profile — the Coach then adjusts to it — and browse, reload, or delete an opponent's hand history from the profile panel. Each recommendation comes with a one-line reason, the per-action frequency and (postflop) EV, and each opponent's type label with its confidence and sample size; the **Review my hands** view shows your own stats, results, and possible leaks. Actions can also be entered from the keyboard (F fold, C check/call, B bet/raise, A all-in).
+- **Coach tab** — enter your own heads-up hand as it happens by clicking cards in a four-colour 52-card deck; quick 1/3, 1/2, 3/4, pot, and all-in buttons fill a legal bet/raise size. When it is your turn the solver recommends a play with its full action mix, your equity against the villain's estimated range, and that range's make-up. Log finished hands under an opponent's name to build their profile — the Coach then adjusts to it — and browse, reload, or delete an opponent's hand history from the profile panel. Each recommendation comes with a one-line reason, the per-action frequency and (postflop) EV, and each opponent's type label with its confidence and sample size; the **Review** view shows your own stats, results, and possible leaks. Choose **Opponents 2-8** for a multiway pot: the Coach then gives equity-and-pot-odds advice against that many random hands (no solver, no opponent tracking). The **Saved data** view shows where logged hands are stored (`backend/data/coach.sqlite`, or `COACH_DB_PATH`) and deletes one opponent or everything. Actions can also be entered from the keyboard (F fold, C check/call, B bet/raise, A all-in).
 - **Duplicate-deal evaluation** — every deal is replayed with seats swapped to cancel card luck; learning sessions measure opponent adaptation; a Slumbot bridge benchmarks against a strong outside bot.
 
 The Coach is manual entry for study, review, and practice. Using real-time assistance while playing on a poker site breaks most sites' rules; this project does not automate or assist play on any site.
@@ -95,7 +95,7 @@ npm.cmd install
 npm.cmd run dev
 ```
 
-Open `http://127.0.0.1:5173`. The backend listens on `http://127.0.0.1:8000`. When running the frontend outside Docker, point Vite at the local backend with `$env:API_PROXY = "http://127.0.0.1:8000"` before `npm.cmd run dev`. Tabs: Analyzer, Coach, Simulator, Match, Replay.
+Open `http://127.0.0.1:5173`. The backend listens on `http://127.0.0.1:8000`. When running the frontend outside Docker, point Vite at the local backend with `$env:API_PROXY = "http://127.0.0.1:8000"` before `npm.cmd run dev`. Tabs: Coach (default), Equity calculator, Bot simulator, Bot match, Replay.
 
 ## Docker
 
@@ -125,6 +125,9 @@ The configured ports bind to localhost. The frontend proxies `/api` requests to 
 - `GET /api/coach/opponents/{name}/hands` — that opponent's logged hands, newest first, each with its `id` and `created_at`
 - `DELETE /api/coach/hands/{id}` — delete one logged hand (404 if the id does not exist)
 - `DELETE /api/coach/opponents/{name}` — delete every logged hand for that opponent
+- `GET /api/coach/storage` — database file path, size, hand and opponent counts
+- `DELETE /api/coach/hands?confirm=delete-all` — delete every logged hand for every opponent (the file is compacted afterwards)
+- `POST /api/coach/multiway` — equity vs 1-8 random hands plus pot-odds advice for `hero_cards`, `board`, `opponents`, `pot`, `to_call`
 
 Every registered bot (`random`, `tight`, `aggressive`, `equity`, `expert`, `adaptive`, `range_expert`, `solver`, `solver_adaptive`, `solver_adaptive_gated`, `solver_adaptive_sized`) is accepted wherever the API takes a bot name.
 
@@ -221,7 +224,7 @@ The final Phase 2 backend suite contains 275 passing tests. Retained runtime evi
 
 ## Limitations
 
-- Heads-up only; no multiway pots. The Coach is accurate once a hand is down to the user and one opponent.
+- The solver Coach is heads-up only. Multiway pots (2-8 opponents) get a simpler equity-vs-random-hands and pot-odds estimate, which overstates equity against players who chose to stay in.
 - The solver's flop and turn solves value the end of the street by equity over the remaining cards; future-street betting and position after that street are not modelled. Preflop charts value a seen flop by raw equity.
 - Solver decisions take about 1-3 seconds each on a desktop CPU.
 - No tournament structure, rake, antes, or ICM.

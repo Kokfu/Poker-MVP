@@ -109,6 +109,32 @@ class HandStore:
             ).fetchall()
         return {bucket: (n, folds, calls, raises) for bucket, n, folds, calls, raises in rows}
 
+    def delete_all(self) -> int:
+        """Remove every logged hand and every cached read; returns the number of hands removed."""
+        with self._connect() as connection:
+            cursor = connection.execute("DELETE FROM hands")
+            connection.execute("DELETE FROM sized_reads")
+            removed = cursor.rowcount
+        # Rewrite the file so deleted hands do not linger in SQLite's free pages.
+        connection = sqlite3.connect(self.path, isolation_level=None)
+        try:
+            connection.execute("VACUUM")
+        finally:
+            connection.close()
+        return removed
+
+    def summary(self) -> dict[str, Any]:
+        """Where the Coach keeps its data and how much is there."""
+        with self._connect() as connection:
+            hands, opponents, first, last = connection.execute(
+                "SELECT COUNT(*), COUNT(DISTINCT opponent), MIN(created_at), MAX(created_at) FROM hands"
+            ).fetchone()
+        return {
+            "path": str(self.path.resolve()),
+            "size_bytes": self.path.stat().st_size if self.path.exists() else 0,
+            "hands": hands, "opponents": opponents, "first_logged": first, "last_logged": last,
+        }
+
     def opponents(self) -> list[tuple[str, int]]:
         with self._connect() as connection:
             return [(name, count) for name, count in connection.execute("SELECT opponent, COUNT(*) FROM hands GROUP BY opponent ORDER BY opponent")]
