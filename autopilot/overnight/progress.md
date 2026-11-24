@@ -13,3 +13,9 @@
 - Use temporary SQLite databases seeded with generated hands. No user records are required.
 
 ## Task log
+
+### 02:02 +08:00 · A1 decision model audit · done
+
+- Commits: this entry and the decision model audit.
+- Evidence: four heads-up decisions, two preflop (504.66 ms cold, 0.83 ms repeat) and two flop (695.01 ms first, 359.67 ms repeat), with stable actions within each spot. Three 20,000-deal multiway diagnostics. No test suite required for the audit.
+- Next: build the flagged postflop likelihood experiment. The API timing script is collecting the larger B1 baseline in utopilot/overnight/coach-before.json.
