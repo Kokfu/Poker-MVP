@@ -40,3 +40,9 @@
 - Tests: npx.cmd tsc -b passed in 8.28 s. node --test test/coach-strategy.test.mjs passed 2/2 in 1.96 s. npm.cmd run build passed, 31 modules, Vite 412 ms. One end-to-end mobile browser hand passed with zero console errors, covering both B1 and B2.
 - Result: one click reused a legal 375-chip raise from a synthetic opponent's history. Historical totals are scaled to the current blind and illegal sizes are skipped.
 - Next: see coach-ui.md and coach-frontend.log. The browser lacks the raw CDP storage methods, so scratch-origin browser preference cleanup will use a test-only HTTP response during C3.
+
+### 02:25 +08:00 · C1 autonomous agent design · done
+
+- Commits: this entry and AUTONOMOUS_AGENT.md.
+- Tests: design only. Checked the three adapters and observation, legal action, settlement and learning contracts against the existing simulator code. No tests run for this doc.
+- Next: build the offline runner with a session-boundary ledger. Slumbot remains an independently invoked, optional network benchmark.
