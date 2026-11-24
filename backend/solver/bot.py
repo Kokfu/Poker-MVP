@@ -181,6 +181,18 @@ def map_action(tree: StreetTree, node_index: int, kind: str, target: int | None,
     return min(aggressive, key=lambda i: _log_distance(node.actions[i][1], scaled))
 
 
+def _size_bracket(actions, kind: str, target: int | None) -> tuple[int, int, float] | None:
+    """Return adjacent same-kind sizes and the target's fraction in log space."""
+    if kind not in ("bet", "raise") or target is None:
+        return None
+    sizes = sorted((amount, index) for index, (action, amount) in enumerate(actions)
+                   if action == kind and amount is not None)
+    for (low, left), (high, right) in zip(sizes, sizes[1:]):
+        if 0 < low < target < high:
+            return left, right, math.log(target / low) / math.log(high / low)
+    return None
+
+
 def _full_equity(board: tuple[str, ...], flop_runouts: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     key = (board, flop_runouts)
     if key in _EQUITY_CACHE:
@@ -223,6 +235,7 @@ class SolverBot(PokerBot):
     pool_streets = False  # partial pooling of postflop reads across streets
     gated_locks = False  # deviation-gated locking (DESIGN_OPPONENT_MODEL.md, proposal A); off = today's behaviour
     sized_reads = False  # bet-size-conditioned reads (DESIGN_OPPONENT_MODEL.md, proposal B); off = today's behaviour
+    interpolate_sizes = False  # opt-in postflop opponent range experiment
     range_selection = None  # optional bounded research projection override
     persistent_ranges = False  # enabled independently by the local Coach and Match services
     explain_ev = False  # add per-action EV to postflop explanations (read-only; the Coach turns it on)
@@ -369,7 +382,17 @@ class SolverBot(PokerBot):
                 kind, target = tree_node.actions[choice]
                 on_tree &= kind == step.kind or (step.kind in ("check", "call") and kind in ("check", "call"))
                 on_tree &= target is None or step.target is None or target == step.target
-                ranges[step.player] = self._apply_strategy(ranges[step.player], solve, node, choice)
+                weights = ranges[step.player]
+                blend = (_size_bracket(tree_node.actions, step.kind, step.target)
+                         if self.interpolate_sizes and step.player == opponent else None)
+                if blend is None:
+                    ranges[step.player] = self._apply_strategy(weights, solve, node, choice)
+                else:
+                    lower, upper, fraction = blend
+                    ranges[step.player] = (
+                        (1 - fraction) * self._apply_strategy(weights, solve, node, lower)
+                        + fraction * self._apply_strategy(weights, solve, node, upper)
+                    )
                 node = tree_node.children[choice]
             if street != replay.street:
                 continue
@@ -606,3 +629,8 @@ class GatedAdaptiveSolverBot(AdaptiveSolverBot):
 class SizedAdaptiveSolverBot(AdaptiveSolverBot):
     """``solver_adaptive`` with bet-size-conditioned reads (proposal B), off in every other bot."""
     sized_reads = True
+
+
+class InterpolatingAdaptiveSolverBot(AdaptiveSolverBot):
+    """Interpolate the opponent's range likelihood between compatible bet sizes."""
+    interpolate_sizes = True

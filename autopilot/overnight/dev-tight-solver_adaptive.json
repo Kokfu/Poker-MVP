@@ -1,0 +1,80 @@
+{
+  "configuration": {
+    "big_blind": 100,
+    "bootstrap_resamples": 2000,
+    "confidence_level": 0.95,
+    "equity_iterations": 100,
+    "pairs": 3,
+    "seed_offset": 25000,
+    "seed_set": "development",
+    "session_hands": 8,
+    "small_blind": 50,
+    "starting_stack": 10000,
+    "statistics_seed": 91002,
+    "workers": 1
+  },
+  "duplicate_schema_version": "1.0",
+  "methodology": {
+    "button": "seat A in both hands; the strategy holds the button cards once and the big-blind cards once",
+    "confidence_method": "deterministic percentile bootstrap over pairs",
+    "holdout_policy": "holdout seeds are reserved for frozen final acceptance runs",
+    "seed_range": [
+      1025000,
+      1025016
+    ],
+    "seed_set": "development",
+    "stacks": "reset every hand",
+    "unit": "duplicate pair: one seeded deal played with the strategy in each seat"
+  },
+  "metrics": {
+    "bb_per_100": -5.729166666666667,
+    "confidence_interval": {
+      "confidence_level": 0.95,
+      "lower": -64.0625,
+      "upper": 31.25
+    },
+    "deal_mismatches": 0,
+    "fallback_actions": 0,
+    "hands": 48,
+    "illegal_actions": 0,
+    "interpretation": "negative_estimate_uncertain",
+    "pairs": 3,
+    "seat_a_bb_per_100": 29.166666666666668,
+    "seat_b_bb_per_100": -40.625,
+    "standard_error_bb_per_100": 29.513378263556646,
+    "unpaired_standard_error_bb_per_100": 25.418587700626574,
+    "variance_reduction": -0.34814006213787874
+  },
+  "opponent": "tight",
+  "raw_pairs": [
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 8,
+      "illegal_actions": 0,
+      "net_seat_a": 450,
+      "net_seat_b": -200,
+      "seed": 1025000
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 8,
+      "illegal_actions": 0,
+      "net_seat_a": -100,
+      "net_seat_b": -925,
+      "seed": 1025008
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 8,
+      "illegal_actions": 0,
+      "net_seat_a": 350,
+      "net_seat_b": 150,
+      "seed": 1025016
+    }
+  ],
+  "report_type": "duplicate_evaluation",
+  "strategy": "solver_adaptive"
+}

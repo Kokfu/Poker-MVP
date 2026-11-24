@@ -93,3 +93,11 @@ class SizedAdaptiveSolverBot:
 
 
 BOT_TYPES={"random":RandomBot,"tight":TightBot,"aggressive":AggressiveBot,"equity":EquityBot,"expert":ExpertRuleBot,"adaptive":ExpertAdaptiveBot,"range_expert":RangeAwareExpertBot,"solver":SolverBot,"solver_adaptive":AdaptiveSolverBot,"solver_adaptive_gated":GatedAdaptiveSolverBot,"solver_adaptive_sized":SizedAdaptiveSolverBot}
+
+
+def _interpolating_solver(*args, **kwargs):
+    from solver.bot import InterpolatingAdaptiveSolverBot
+    return InterpolatingAdaptiveSolverBot(*args, **kwargs)
+
+
+OPT_IN_BOTS = {"solver_adaptive_interpolated": _interpolating_solver}

@@ -16,7 +16,7 @@ from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Any, Literal, Sequence
 
-from .bots import BOT_TYPES
+from .bots import BOT_TYPES, OPT_IN_BOTS
 from .engine import HandEngine
 from .history import validate_hand_history
 from .match import MatchConfig, run_match
@@ -144,7 +144,7 @@ def _derived_seed(seed: int, role: str) -> int:
 
 
 def _bot(name: str, seed: int, role: str, equity_iterations: int):
-    return BOT_TYPES[name](
+    return (BOT_TYPES | OPT_IN_BOTS)[name](
         seed=_derived_seed(seed, role), equity_iterations=equity_iterations
     )
 

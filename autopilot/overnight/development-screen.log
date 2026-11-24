@@ -1,0 +1,6 @@
+tight solver_adaptive : 43.65 s
+tight solver_adaptive_interpolated : 45.49 s
+equity solver_adaptive : 112.43 s
+equity solver_adaptive_interpolated : 120.02 s
+aggressive solver_adaptive : 106.92 s
+aggressive solver_adaptive_interpolated : 113.33 s

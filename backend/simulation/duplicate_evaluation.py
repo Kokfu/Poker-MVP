@@ -28,7 +28,7 @@ import statistics
 from itertools import combinations
 from typing import Any, Literal, Sequence
 
-from .bots import BOT_TYPES
+from .bots import BOT_TYPES, OPT_IN_BOTS
 from .engine import HandEngine
 from .evaluation import _bot, _json_safe, _percentile_interval, _validate_history_and_conservation, interpret_interval
 from .opponent_model import OpponentModel
@@ -212,7 +212,7 @@ def _run_seed_chunk(job: tuple[dict[str, Any], str, str, tuple[int, ...]]) -> li
 def run_duplicate_pairs(config: DuplicateConfig, strategy: str, opponent: str, executor: ProcessPoolExecutor | None = None) -> tuple[DuplicatePair, ...]:
     """Results are identical for every worker count; chunks keep seed order."""
     for name in (strategy, opponent):
-        if name not in BOT_TYPES:
+        if name not in (BOT_TYPES | OPT_IN_BOTS):
             raise ValueError(f"unknown bot: {name}")
     seeds = config.seeds()
     if config.workers == 1 and executor is None:

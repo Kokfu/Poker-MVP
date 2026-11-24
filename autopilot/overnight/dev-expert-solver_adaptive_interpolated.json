@@ -1,0 +1,71 @@
+{
+  "configuration": {
+    "big_blind": 100,
+    "bootstrap_resamples": 2000,
+    "confidence_level": 0.95,
+    "equity_iterations": 100,
+    "pairs": 2,
+    "seed_offset": 25000,
+    "seed_set": "development",
+    "session_hands": 6,
+    "small_blind": 50,
+    "starting_stack": 10000,
+    "statistics_seed": 91002,
+    "workers": 1
+  },
+  "duplicate_schema_version": "1.0",
+  "methodology": {
+    "button": "seat A in both hands; the strategy holds the button cards once and the big-blind cards once",
+    "confidence_method": "deterministic percentile bootstrap over pairs",
+    "holdout_policy": "holdout seeds are reserved for frozen final acceptance runs",
+    "seed_range": [
+      1025000,
+      1025006
+    ],
+    "seed_set": "development",
+    "stacks": "reset every hand",
+    "unit": "duplicate pair: one seeded deal played with the strategy in each seat"
+  },
+  "metrics": {
+    "bb_per_100": 378.375,
+    "confidence_interval": {
+      "confidence_level": 0.95,
+      "lower": 68.0,
+      "upper": 688.75
+    },
+    "deal_mismatches": 0,
+    "fallback_actions": 0,
+    "hands": 24,
+    "illegal_actions": 0,
+    "interpretation": "positive_estimate_supported",
+    "pairs": 2,
+    "seat_a_bb_per_100": 805.0,
+    "seat_b_bb_per_100": -48.25,
+    "standard_error_bb_per_100": 310.375,
+    "unpaired_standard_error_bb_per_100": 375.8212635103041,
+    "variance_reduction": 0.3179585508273527
+  },
+  "opponent": "expert",
+  "raw_pairs": [
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 6,
+      "illegal_actions": 0,
+      "net_seat_a": 8980,
+      "net_seat_b": -715,
+      "seed": 1025000
+    },
+    {
+      "deal_verified": true,
+      "fallback_actions": 0,
+      "hands_per_seat": 6,
+      "illegal_actions": 0,
+      "net_seat_a": 680,
+      "net_seat_b": 136,
+      "seed": 1025006
+    }
+  ],
+  "report_type": "duplicate_evaluation",
+  "strategy": "solver_adaptive_interpolated"
+}

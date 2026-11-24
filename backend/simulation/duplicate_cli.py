@@ -13,7 +13,7 @@ import json
 import os
 from pathlib import Path
 
-from .bots import BOT_TYPES
+from .bots import BOT_TYPES, OPT_IN_BOTS
 from .duplicate_evaluation import SEED_SETS, DuplicateConfig, duplicate_report, run_tournament, win_rate_gate
 from .evaluation import json_report_text, write_json_report
 
@@ -38,8 +38,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Duplicate-deal heads-up evaluation")
     commands = parser.add_subparsers(dest="command", required=True)
     pair = commands.add_parser("pair", help="one strategy against one opponent")
-    pair.add_argument("--strategy", choices=BOT_TYPES, required=True)
-    pair.add_argument("--opponent", choices=BOT_TYPES, required=True)
+    pair.add_argument("--strategy", choices=BOT_TYPES | OPT_IN_BOTS, required=True)
+    pair.add_argument("--opponent", choices=BOT_TYPES | OPT_IN_BOTS, required=True)
     _add_common(pair)
     tournament = commands.add_parser("tournament", help="round robin with pool standings")
     tournament.add_argument("--bots", nargs="+", choices=BOT_TYPES, default=list(BOT_TYPES))
