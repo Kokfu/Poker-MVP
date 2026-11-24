@@ -53,3 +53,10 @@
 - Tests: python -m pytest -q -p no:cacheprovider test_simulation_agent_cli.py test_simulation_duplicate_evaluation.py, 10 passed, 7 warnings, 2.09 s. Tests covered an interrupted second session, a partial JSONL write and incompatible resume parameters.
 - Smoke: 3 paired sessions × 4 hands per orientation, 24 hands, 20.62 s. +2.08 bb/100, 95% interval [−56.25, +62.50], zero illegal actions, fallbacks and deal mismatches. Reopening the completed run left its ledger byte-identical.
 - Next: begin the LAN table prototype. Simulator command and log are in AUTONOMOUS_AGENT.md and autopilot/overnight/agent-smoke.log.
+
+### 02:31 +08:00 · C3 one-human LAN practice table · done (prototype)
+
+- Commits: this entry, the practice API, the browser page and focused evidence.
+- Tests: python -m pytest -q -p no:cacheprovider test_practice_table.py test_simulation_decision_privacy.py test_simulation_history_privacy.py test_simulation_short_stack_legality.py, 33 passed, 8 warnings, 3.10 s. Final frontend type check, 2 Node tests and production build passed.
+- Result: one loopback browser hand through a bot raise and flop bet, then fold settlement and hand 2. The bot seat was labelled and the console had zero errors. The scratch origin received a browser storage-clear response and the test server was stopped. A separate LAN device was unavailable.
+- Next: try Practice table from the existing LAN launcher. Tables live in one server process and end on restart. Full backend regression runs once in the background with output to autopilot/overnight/full-backend.log.

@@ -5,12 +5,13 @@ import { DeckVisualizer } from "./components/DeckVisualizer";
 import { InputForm } from "./components/InputForm";
 import { Simulator } from "./components/Simulator";
 import Coach from "./Coach";
+import PracticeTable from "./PracticeTable";
 import Match from "./Match";
 import Replay from "./Replay";
 import type { Analysis } from "./types";
 
-type Tab = "analyzer" | "coach" | "simulator" | "match" | "replay";
-const TABS: [Tab, string][] = [["coach", "Coach"], ["analyzer", "Equity calculator"], ["simulator", "Bot simulator"], ["match", "Bot match"], ["replay", "Replay"]];
+type Tab = "analyzer" | "coach" | "practice" | "simulator" | "match" | "replay";
+const TABS: [Tab, string][] = [["coach", "Coach"], ["practice", "Practice table"], ["analyzer", "Equity calculator"], ["simulator", "Bot simulator"], ["match", "Bot match"], ["replay", "Replay"]];
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("coach");
@@ -73,7 +74,7 @@ export default function App() {
           <h1>Poker Coach</h1>
           <p>Texas Hold’em study tool. Enter your cards, get advice, and learn how your opponents play.</p>
         </div>
-        <p className="app-note">Manual entry only. No site automation, no real-money play.</p>
+        <p className="app-note">Manual Coach entry and play-chip practice.</p>
       </header>
       <nav className="app-nav" aria-label="Poker tools">
         {TABS.map(([item, label]) => (
@@ -83,7 +84,7 @@ export default function App() {
         ))}
       </nav>
 
-      {tab === "coach" ? <Coach /> : tab === "replay" ? <Replay /> : tab === "match" ? (
+      {tab === "coach" ? <Coach /> : tab === "practice" ? <PracticeTable /> : tab === "replay" ? <Replay /> : tab === "match" ? (
         <Match />
       ) : tab === "simulator" ? (
         <Simulator />
