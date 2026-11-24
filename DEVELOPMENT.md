@@ -5,13 +5,13 @@
 The accepted backend environment uses Python 3.11.9 at:
 
 ```text
-C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Scripts\python.exe
+path\to\poker-analyzer-mvp\backend\.venv\Scripts\python.exe
 ```
 
 Create or restore the environment and install dependencies:
 
 ```powershell
-cd C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend
+cd path\to\poker-analyzer-mvp\backend
 py -3.11 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
@@ -56,7 +56,7 @@ The Phase 4E control is library-only and remains outside the simulator CLI. From
 Use Node.js 20 or newer with npm. The Docker image uses Node 20; the accepted host build used Node 24.16.0 and npm 11.13.0.
 
 ```powershell
-cd C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\frontend
+cd path\to\poker-analyzer-mvp\frontend
 npm.cmd install
 npm.cmd run dev
 npm.cmd run build
@@ -77,7 +77,7 @@ The Match form validates whole-number inputs in the browser before submission. I
 ## Docker Compose
 
 ```powershell
-cd C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp
+cd path\to\poker-analyzer-mvp
 docker compose config
 docker compose up --build -d
 docker compose ps
@@ -133,14 +133,14 @@ Regenerate stress, pairwise, and benchmark artifacts whenever engine, bot, settl
 Run a persistent match:
 
 ```powershell
-cd C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend
+cd path\to\poker-analyzer-mvp\backend
 .\.venv\Scripts\python.exe -m simulation.cli match --bot-a tight --bot-b aggressive --starting-stack 10000 --small-blind 50 --big-blind 100 --max-hands 25 --seed 42 --equity-iterations 500
 ```
 
 Run the focused foundation, API, and CLI suites directly:
 
 ```powershell
-cd C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend
+cd path\to\poker-analyzer-mvp\backend
 .\.venv\Scripts\python.exe -m pytest -q -p no:cacheprovider test_simulation_match.py
 .\.venv\Scripts\python.exe -m pytest -q -p no:cacheprovider test_simulation_match_api.py
 .\.venv\Scripts\python.exe -m pytest -q -p no:cacheprovider test_simulation_match_cli.py
@@ -164,7 +164,7 @@ History schema `1.0` is implemented in `backend/simulation/history.py` and is in
 Run the focused history suites:
 
 ```powershell
-cd C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend
+cd path\to\poker-analyzer-mvp\backend
 .\.venv\Scripts\python.exe -m pytest -q -p no:cacheprovider test_simulation_history.py test_simulation_history_validation.py test_simulation_history_privacy.py
 ```
 
@@ -177,7 +177,7 @@ Completed histories are available internally as `result["history"]`. Persistent 
 Run the history interface tests:
 
 ```powershell
-cd C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend
+cd path\to\poker-analyzer-mvp\backend
 .\.venv\Scripts\python.exe -m pytest -q -p no:cacheprovider test_simulation_history_service.py test_simulation_history_api.py test_simulation_history_cli.py
 ```
 
@@ -220,7 +220,7 @@ Keep statistical work in `simulation.evaluation`; bots and the authoritative pok
 Run the focused suite first:
 
 ```powershell
-cd C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend
+cd path\to\poker-analyzer-mvp\backend
 .\.venv\Scripts\python.exe -m pytest -q -p no:cacheprovider test_simulation_evaluation.py
 ```
 
@@ -241,7 +241,7 @@ For an engine-backed diagnostic, feed `PublicRangeTracker.observe` each opponent
 Run the focused invariant and related suites with:
 
 ```powershell
-cd C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend
+cd path\to\poker-analyzer-mvp\backend
 .\.venv\Scripts\python.exe -m pytest -q -p no:cacheprovider test_simulation_short_stack_legality.py test_simulation_all_in.py test_simulation_decision_state.py test_simulation_fallback.py
 ```
 

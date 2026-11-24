@@ -264,7 +264,7 @@ Sizing is target-total and clamped to engine bounds: 60% pot standard value/prot
 The reproducible Expert-versus-Adaptive command is:
 
 ```powershell
-cd C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend
+cd path\to\poker-analyzer-mvp\backend
 .\.venv\Scripts\python.exe -m simulation.evaluation_cli compare --control expert --treatment adaptive --opponent tight --mode persistent_match --sample-count 100 --base-seed 10000 --max-hands 100 --bootstrap-resamples 2000 --statistics-seed 91001
 ```
 

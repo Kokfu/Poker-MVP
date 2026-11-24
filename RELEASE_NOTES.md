@@ -19,12 +19,12 @@ Poker Analyzer MVP is a local, educational, offline-first heads-up No-Limit Hold
 - Real-time decision limits against Slumbot: p95 4.7 s, 55 of 2,423 decisions above 6 s in the one instrumented run.
 
 ## Known limitations
-- Heads-up only; no multiway, tournaments, rake or ICM. Coach seats and stacks are entered by hand; only completed hands can be logged.
-- Warmed (opponent-adjusted) advice can be near-pure and extreme (for example all-in with KQo); one possible lock oddity against a very tight villain is recorded in `autopilot/reports/step-16.md` and not investigated.
+- The solver and opponent tracking are heads-up only. Multiway pots (2-8 opponents, added 2026-11-24) get equity against random hands plus pot odds, which overstates equity against players who stayed in. No tournaments, rake or ICM. Coach seats and stacks are entered by hand; only completed hands can be logged.
+- Warmed (opponent-adjusted) advice can be near-pure and extreme (for example all-in with KQo). The lock oddity against a very tight villain (`autopilot/reports/step-16.md`) was diagnosed in step 17a as a small lock-strength bug at the preflop unopened small-blind node; it is not fixed (optional step 21).
 - Profile cards show smoothed percentages after a single hand (labelled "very low" confidence).
 - The full backend suite takes about 12 minutes on the development machine.
 - `benchmark-results/` is git-ignored; only selected results were force-added (45 files: final head-to-heads, step 5 and 10 results, three Slumbot logs). Other logs live only on the original machine.
-- Older docs contain absolute paths from the original machine.
+- README, DEVELOPMENT and SIMULATION use `path\to\poker-analyzer-mvp` in place of the original machine's paths (fixed 2026-11-25); older reports and protocols may still contain them.
 
 ## How to run
 See README ("Local development") and DEVELOPMENT.md ("Project status and how to resume autopilot"). In short: `py -3.11 -m venv backend\.venv`, `pip install -r requirements.txt`, `pytest -q -p no:cacheprovider`, `npm ci && npm run build` in `frontend`, then uvicorn on 8000 and Vite on 5173 (or `docker compose up --build`).
@@ -34,3 +34,12 @@ See README ("Local development") and DEVELOPMENT.md ("Project status and how to 
 - **Opponent-model proposal B** (`solver_adaptive_sized`, bet-size-conditioned reads) was built (step 18) and pre-registered tested at offset 7,000,000 (step 19) and **failed all three gates**: pooled paired difference vs a fresh `solver_adaptive` -92.4 [-123.4, -62.1] bb/100; large losses versus aggressive (-554), equity (-279) and solver (-123). Verdict KEEP BASE; `solver_adaptive` is unchanged.
 - **Both A and B failed their pre-registered no-harm tests.** `solver_adaptive_gated` (A) and `solver_adaptive_sized` (B) are available as bot types but are **off by default** and not recommended; the Coach does not use them.
 - This supersedes the line above saying B is "not built": it was built (873 backend tests passed at step 18/19) and tested. The T0 gate passed but did not predict strength.
+
+## Update (2026-11-25): Coach redesign, multiway, launcher
+- **Coach UI** (74f81a9): cards are picked by clicking a four-colour 52-card deck; Coach is the default tab; quick bet-size buttons and keyboard shortcuts.
+- **Multiway** (74f81a9, 37f6b2d): the Coach and the Equity calculator take 1-8 opponents. 1 keeps the heads-up solver; 2-8 use Monte Carlo equity against that many random hands (ties split) plus pot-odds advice, checked within 0.3 points of a published AA-versus-N table. No solver and no opponent tracking in multiway pots.
+- **Saved data view**: shows where hands are stored and their counts; deletes one opponent or everything.
+- **One-click launcher** (a12a4d7): `Start Poker Coach.cmd` sets up Python and the web packages on first run, starts the engine on this computer only and the page on the local network (only when Windows marks the network Private), and prints the address for friends. `Stop Poker Coach.cmd` stops a copy left running.
+- **Tests**: backend suite 1,098 passed (2026-11-24, about 12 minutes); frontend build and its UI test pass.
+- **Launcher caveats**: it serves the Vite development server, not a production build; everyone on the page shares one saved-hands file, and anyone who can open the page can delete saved hands. Share the address only on a network you trust.
+- The tag `v0.5.0` points at a2f5803 and does not include these changes.

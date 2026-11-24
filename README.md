@@ -2,9 +2,9 @@
 
 Poker Analyzer MVP is a local, educational, offline-first Texas Hold'em analyzer and heads-up simulator. It accepts manually entered poker states, performs mathematical analysis, and runs deterministic bot-versus-bot experiments on the local machine. It does not play poker for the user.
 
-## Status (2026-11-14)
+## Status (2026-11-25)
 
-Phase 5 is COMPLETE under the owner's revised criterion (see ROADMAP; the original pool-score criterion is still unmet). Opponent-model proposal A (`solver_adaptive_gated`) failed its pre-registered test and is not the default; proposal B (bet-size-conditioned reads) passed only the weak offline gate T0 and is not built. The project status and how to resume the autopilot are in DEVELOPMENT.md ("Project status and how to resume autopilot").
+Phase 5 is COMPLETE under the owner's revised criterion (see ROADMAP; the original pool-score criterion is still unmet). Opponent-model proposals A (`solver_adaptive_gated`) and B (`solver_adaptive_sized`, bet-size-conditioned reads) were both built and both failed their pre-registered tests; neither is the default. Since then the Coach got a click-to-pick card UI, 1-8 opponents (multiway is equity and pot odds only), a Saved data view, and a one-click launcher for playing with friends on the same Wi-Fi; see RELEASE_NOTES.md. The backend suite has 1,098 tests. The project status and how to resume the autopilot are in DEVELOPMENT.md ("Project status and how to resume autopilot").
 
 ## Phase 5 at a glance
 
@@ -44,7 +44,7 @@ Phase 2 adds a deterministic, local-only, heads-up No-Limit Texas Hold'em simula
 - JSONL dataset schema 2.0 generation and strict validation;
 - CLI, API, and React Simulator interfaces.
 
-The original baseline bots are `RandomBot`, `TightBot`, `AggressiveBot`, and `EquityBot`; later phases add `expert`, `adaptive`, `range_expert`, `solver`, and `solver_adaptive` (plus two experimental variants that are off by default: `solver_adaptive_gated`, not adopted, and `solver_adaptive_sized`, bet-size-conditioned reads, built but untested; see ROADMAP). All are research strategies, not claims of optimal play.
+The original baseline bots are `RandomBot`, `TightBot`, `AggressiveBot`, and `EquityBot`; later phases add `expert`, `adaptive`, `range_expert`, `solver`, and `solver_adaptive` (plus two experimental variants that are off by default: `solver_adaptive_gated`, not adopted, and `solver_adaptive_sized`, bet-size-conditioned reads, tested and not adopted; see ROADMAP). All are research strategies, not claims of optimal play.
 
 Chip amounts are integer internal units:
 
@@ -78,7 +78,7 @@ Double-click **`Start Poker Coach.cmd`** in this folder.
 
 ## Local development
 
-The paths below are from the original machine; `cd` into your own clone's `backend` and `frontend` folders instead. First-time setup, tested from a fresh `git clone`:
+Replace `path\to\poker-analyzer-mvp` below with the folder of your own clone. First-time setup, tested from a fresh `git clone`:
 
 ```powershell
 cd backend
@@ -93,7 +93,7 @@ npm.cmd run build
 Backend:
 
 ```powershell
-cd C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend
+cd path\to\poker-analyzer-mvp\backend
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe -m uvicorn main:app --reload
 ```
@@ -101,7 +101,7 @@ cd C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend
 Frontend:
 
 ```powershell
-cd C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\frontend
+cd path\to\poker-analyzer-mvp\frontend
 npm.cmd install
 npm.cmd run dev
 ```
@@ -111,7 +111,7 @@ Open `http://127.0.0.1:5173`. The backend listens on `http://127.0.0.1:8000`. Wh
 ## Docker
 
 ```powershell
-cd C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp
+cd path\to\poker-analyzer-mvp
 docker compose config
 docker compose up --build -d
 docker compose ps
@@ -217,7 +217,7 @@ Fold histories contain no private cards. Showdown events may contain only legiti
 Generate and validate a dataset:
 
 ```powershell
-cd C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend
+cd path\to\poker-analyzer-mvp\backend
 .\.venv\Scripts\python.exe -m simulation.cli run --bot-a random --bot-b tight --hands 100 --seed 42 --dataset-output ..\benchmark-results\sample.jsonl --overwrite
 .\.venv\Scripts\python.exe -m simulation.cli validate-dataset ..\benchmark-results\sample.jsonl
 ```
