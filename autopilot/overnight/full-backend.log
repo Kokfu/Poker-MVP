@@ -1,0 +1,118 @@
+........................................................................ [  6%]
+........................................................................ [ 13%]
+........................................................................ [ 19%]
+.............................F.....F.................................... [ 26%]
+........................................................................ [ 32%]
+........................................................................ [ 39%]
+........................................................................ [ 45%]
+........................................................................ [ 52%]
+........................................................................ [ 58%]
+........................................................................ [ 65%]
+........................................................................ [ 71%]
+........................................................................ [ 78%]
+........................................................................ [ 84%]
+........................................................................ [ 91%]
+........................................................................ [ 97%]
+.........................                                                [100%]
+================================== FAILURES ===================================
+______ test_live_coach_multiple_streets_preserve_raw_policy_and_profile _______
+
+    def test_live_coach_multiple_streets_preserve_raw_policy_and_profile():
+        name = "tight_passive"
+        spot = coach_spot(name)
+        prefixes = coach_prefixes(spot)
+        store = FixtureStore(name)
+>       baseline, _ = run_coach(prefixes, name, store, False)
+
+test_research_holdem_phase_4v.py:23:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+research\holdem\phase_4v.py:157: in run_coach
+    responses = [coach.advise(spot, name, store=store, seed=917) for spot in prefixes]
+research\holdem\phase_4v.py:157: in <listcomp>
+    responses = [coach.advise(spot, name, store=store, seed=917) for spot in prefixes]
+coach\service.py:255: in advise
+    model = profile_for(store or HandStore(), opponent, advisor if advisor.exploit else None)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+store = <research.holdem.phase_4v.FixtureStore object at 0x000001EF9B135B90>
+opponent = 'tight_passive'
+observer = <coach.advisor.CoachAdvisor object at 0x000001EF9933FC10>
+
+    def profile_for(store: HandStore, opponent: str, observer=None):
+        """Rebuild the opponent model; ``observer`` (a bot) also sees each history."""
+        profile_key = None
+        if observer is not None and getattr(observer, "cache_solves", False):
+>           rows = store.hand_payloads(opponent)
+E           AttributeError: 'FixtureStore' object has no attribute 'hand_payloads'
+
+coach\service.py:210: AttributeError
+_______ test_profiled_coach_collapse_repaired_and_flag_disabled_matches _______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001EF9E728910>
+
+    def test_profiled_coach_collapse_repaired_and_flag_disabled_matches(monkeypatch):
+        monkeypatch.delenv("POKER_COACH_PERSISTENT_RANGES", raising=False)
+        spot = coach_spot("collapse-profiled")
+        name = "tight_aggressive"
+        store = FixtureStore(name, 131, 3)
+        prefixes = coach_prefixes(spot)
+        river = prefixes[-2]
+>       disabled = advise(river, name, store=store, seed=917)
+
+test_research_holdem_phase_4w.py:55:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+coach\service.py:255: in advise
+    model = profile_for(store or HandStore(), opponent, advisor if advisor.exploit else None)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+store = <research.holdem.phase_4v.FixtureStore object at 0x000001EF9E38F450>
+opponent = 'tight_aggressive'
+observer = <coach.advisor.CoachAdvisor object at 0x000001EF9E3F2F90>
+
+    def profile_for(store: HandStore, opponent: str, observer=None):
+        """Rebuild the opponent model; ``observer`` (a bot) also sees each history."""
+        profile_key = None
+        if observer is not None and getattr(observer, "cache_solves", False):
+>           rows = store.hand_payloads(opponent)
+E           AttributeError: 'FixtureStore' object has no attribute 'hand_payloads'
+
+coach\service.py:210: AttributeError
+============================== warnings summary ===============================
+.venv\Lib\site-packages\starlette\formparsers.py:12
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\starlette\formparsers.py:12: PendingDeprecationWarning: Please use `import python_multipart` instead.
+    import multipart
+
+.venv\Lib\site-packages\eval7\rangestring.py:149
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:149: PyparsingDeprecationWarning: 'setName' deprecated - use 'set_name'
+    suitedness = pyparsing.Word("os", exact=1).setName("suitedness")
+
+.venv\Lib\site-packages\eval7\rangestring.py:150
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:150: PyparsingDeprecationWarning: 'setName' deprecated - use 'set_name'
+    card = pyparsing.Word(ranks_str, suits_str, exact=2).setName("card")
+
+.venv\Lib\site-packages\eval7\rangestring.py:152
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:152: PyparsingDeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    hand.setParseAction(lambda s, loc, toks: ''.join(toks))
+
+.venv\Lib\site-packages\eval7\rangestring.py:160
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:160: PyparsingDeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    decimal.setParseAction(lambda s, loc, toks: ''.join(toks))
+
+.venv\Lib\site-packages\eval7\rangestring.py:167
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:167: PyparsingDeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    handtype.setParseAction(lambda s, loc, toks: ''.join(toks))
+
+.venv\Lib\site-packages\eval7\rangestring.py:175
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:175: PyparsingDeprecationWarning: 'delimitedList' deprecated - use 'DelimitedList'
+    hand_group_list = pyparsing.Group(pyparsing.delimitedList(handtype_group))
+
+.venv\Lib\site-packages\eval7\rangestring.py:180
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:180: PyparsingDeprecationWarning: 'delimitedList' deprecated - use 'DelimitedList'
+    handrange = pyparsing.Optional(pyparsing.delimitedList(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED test_research_holdem_phase_4v.py::test_live_coach_multiple_streets_preserve_raw_policy_and_profile
+FAILED test_research_holdem_phase_4w.py::test_profiled_coach_collapse_repaired_and_flag_disabled_matches
+2 failed, 1103 passed, 8 warnings in 1023.80s (0:17:03)
+Exit 1; elapsed 1025.72 s
