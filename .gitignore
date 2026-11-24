@@ -29,3 +29,6 @@ frontend/vite.config.d.ts
 
 # Local Coach hand database
 backend/data/
+
+# Poker Coach launcher logs and process ids
+.run/

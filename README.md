@@ -59,6 +59,17 @@ Each hand begins from a fresh configured stack, normally 100 BB. Results are not
 
 Phase 3 adds a separate persistent match mode: settled stacks carry between hands, positions alternate, and the match stops on elimination or a configured hand limit. Independent simulation mode still resets both stacks every hand. Open the **Match** tab in the local frontend to configure and run this mode.
 
+## One-click start (you and friends on the same Wi-Fi)
+
+Double-click **`Start Poker Coach.cmd`** in this folder.
+
+- The first run sets everything up (Python 3.11 and Node.js must be installed; it creates `backend/.venv` and installs the web packages).
+- It starts the Coach engine on this computer only and the web page on your home network, opens the page, and prints the address for friends, e.g. `http://192.168.1.20:5173`. Friends open that address in a phone or laptop browser on the same Wi-Fi.
+- Press **Enter** in the window to stop. If you closed the window instead, double-click **`Stop Poker Coach.cmd`** (the next start also cleans up).
+- The page is shared only when Windows marks the network **Private**. On a Public network (cafe, hotspot) it stays on this computer.
+- Everyone shares one saved-hands file, and anyone who can open the page can delete hands, so share the address only on a network you trust.
+- Different ports: set `POKER_API_PORT` / `POKER_WEB_PORT` before starting. Logs are in `.run/`.
+
 ## Requirements
 
 - Python 3.11; the accepted Windows environment uses Python 3.11.9.
