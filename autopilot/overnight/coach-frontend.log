@@ -1,0 +1,25 @@
+Type check passed in 8.278795 s
+✔ Coach strategy renders solver frequencies and allows an empty fallback (618.4629ms)
+✔ Coach selects the newest same-kind villain size within the current total limits (347.3251ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1957.219
+
+> build
+> tsc -b && vite build
+
+vite v8.1.5 building client environment for production...
+
+transforming...✓ 31 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.40 kB │ gzip:  0.28 kB
+dist/assets/index-DEV9_ZuZ.css   19.44 kB │ gzip:  5.01 kB
+dist/assets/index-B2VHXwdn.js   269.66 kB │ gzip: 79.15 kB
+
+✓ built in 412ms

@@ -33,3 +33,10 @@
 - Tests: original Coach/solver focused command 90 passed, 8 warnings, 128.21 s. After the profile cache, python -m pytest -q -p no:cacheprovider test_coach_advice_cache.py test_coach.py test_solver_phase_4h.py, 34 passed, 8 warnings, 21.06 s. All 48 normalized API responses matched.
 - Results: repeat p95 17 ms preflop and 45 ms postflop; aggregate p95 1,514 and 2,274 ms, above both targets. First timing retry fixed Windows SQLite cleanup. Browser verification for the same advice path follows with B2.
 - Next: retain exact caching. Investigate cold chart/lock and new-board solves separately if the targets must include first requests. Commands and raw outputs are in coach-latency.md and its accompanying JSON files.
+
+### 02:24 +08:00 · B2 fewer steps per hand · done
+
+- Commits: this entry, the Recent button, its test and browser evidence.
+- Tests: npx.cmd tsc -b passed in 8.28 s. node --test test/coach-strategy.test.mjs passed 2/2 in 1.96 s. npm.cmd run build passed, 31 modules, Vite 412 ms. One end-to-end mobile browser hand passed with zero console errors, covering both B1 and B2.
+- Result: one click reused a legal 375-chip raise from a synthetic opponent's history. Historical totals are scaled to the current blind and illegal sizes are skipped.
+- Next: see coach-ui.md and coach-frontend.log. The browser lacks the raw CDP storage methods, so scratch-origin browser preference cleanup will use a test-only HTTP response during C3.

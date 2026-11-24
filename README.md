@@ -30,6 +30,8 @@ Every step of a hand can be entered from the keyboard (on a phone, the same step
 
 Blinds, stacks, opponent name and the Speed options are remembered in the browser between visits.
 
+On the opponent's turn, **Recent** records a legal bet or raise from their saved hands in one click. The total is scaled to the current big blind.
+
 The Coach is manual entry for study, review, and practice. Using real-time assistance while playing on a poker site breaks most sites' rules; this project does not automate or assist play on any site.
 
 ## Analyzer

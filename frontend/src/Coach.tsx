@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import CoachReview from "./CoachReview";
 import CoachData from "./CoachData";
 import CoachMultiway from "./CoachMultiway";
@@ -156,6 +156,19 @@ function quickSizes(state: SpotState, actor: Actor): { label: string; amount: nu
   return [...sized, { label: "All-in", amount: maximum_target }];
 }
 
+export function recentVillainSize(history: HandRecord[], kind: "bet" | "raise", state: SpotState, bigBlind: number): number | undefined {
+  if (!state.legal_actions.includes(kind) || state.minimum_target === null || bigBlind <= 0) return;
+  const maximum = effectiveMaximum(state, "villain");
+  for (const { spot } of history) {
+    if (spot.big_blind <= 0) continue;
+    for (const action of [...spot.actions].reverse()) {
+      if (action.actor !== "villain" || action.action !== kind || action.amount == null) continue;
+      const amount = Math.round(action.amount * bigBlind / spot.big_blind);
+      if (amount >= state.minimum_target && amount <= maximum) return amount;
+    }
+  }
+}
+
 /** Table settings remembered between visits, so a new session starts where the last one left off. */
 type Prefs = {
   blinds: { small: string; big: string };
@@ -219,7 +232,9 @@ export default function Coach() {
   const [players, setPlayers] = useState(prefs.players ?? 1);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [opponents, setOpponents] = useState<{ name: string; hands: number }[]>([]);
-  const [history, setHistory] = useState<HandRecord[]>([]);
+  const [loadedHistory, setHistory] = useState<{ name: string; hands: HandRecord[] }>();
+  const historyRequest = useRef(0);
+  const history = loadedHistory?.name === opponent.trim() ? loadedHistory.hands : [];
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -249,18 +264,22 @@ export default function Coach() {
   }
 
   async function loadHistory(name: string) {
-    if (!name.trim()) { setHistory([]); return; }
+    const request = ++historyRequest.current;
+    const cleaned = name.trim();
+    if (!cleaned) { setHistory(undefined); setHistoryLoading(false); return; }
     setHistoryLoading(true); setHistoryError("");
     try {
-      const response = await fetch(`/api/coach/opponents/${encodeURIComponent(name.trim())}/hands`);
+      const response = await fetch(`/api/coach/opponents/${encodeURIComponent(cleaned)}/hands`);
       const body = await response.json();
       if (!response.ok) throw new Error(typeof body.detail === "string" ? body.detail : "Could not load hand history");
-      setHistory(body);
+      if (request === historyRequest.current) setHistory({ name: cleaned, hands: body });
     } catch (requestError) {
-      setHistory([]);
-      setHistoryError(requestError instanceof Error ? requestError.message : "Could not load hand history");
+      if (request === historyRequest.current) {
+        setHistory(undefined);
+        setHistoryError(requestError instanceof Error ? requestError.message : "Could not load hand history");
+      }
     } finally {
-      setHistoryLoading(false);
+      if (request === historyRequest.current) setHistoryLoading(false);
     }
   }
 
@@ -441,7 +460,7 @@ export default function Coach() {
         const body = await response.json().catch(() => ({}));
         throw new Error(typeof body.detail === "string" ? body.detail : "Could not delete this hand");
       }
-      setHistory((current) => current.filter((record) => record.id !== id));
+      setHistory((current) => current && { ...current, hands: current.hands.filter((record) => record.id !== id) });
       loadOpponents();
       if (opponent.trim()) loadProfile(opponent);
     } catch (requestError) {
@@ -462,7 +481,8 @@ export default function Coach() {
         const body = await response.json().catch(() => ({}));
         throw new Error(typeof body.detail === "string" ? body.detail : "Could not delete this opponent");
       }
-      setHistory([]); setProfile(null); setNotice(`Deleted all hands for ${name}.`);
+      ++historyRequest.current;
+      setHistory(undefined); setHistoryLoading(false); setProfile(null); setNotice(`Deleted all hands for ${name}.`);
       loadOpponents();
     } catch (requestError) {
       setHistoryError(requestError instanceof Error ? requestError.message : "Could not delete this opponent");
@@ -524,6 +544,8 @@ export default function Coach() {
   function actionButtons(actor: Actor) {
     if (!state) return null;
     const sizedAction = state.legal_actions.find((a) => a === "bet" || a === "raise");
+    const recent = actor === "villain" && sizedAction
+      ? recentVillainSize(history, sizedAction, state, +blinds.big) : undefined;
     const advice = actor === "hero" && result?.status === "hero_to_act" ? result.advice : null;
     return (
       <div className="coach-actions">
@@ -556,6 +578,11 @@ export default function Coach() {
               <small>{state.minimum_target} – {effectiveMaximum(state, actor)}</small>
             </label>
             <div className="coach-quick-sizes" role="group" aria-label={`One click: ${ACTION_TEXT[sizedAction].toLowerCase()} this size`}>
+              {recent !== undefined && (
+                <button type="button" className="chip" disabled={loading} title="Most recent legal size from this opponent's logged hands" onClick={() => act(actor, sizedAction, recent)}>
+                  Recent <b>{recent}</b>
+                </button>
+              )}
               {quickSizes(state, actor).map((size) => (
                 <button key={size.label} type="button" className="chip" disabled={loading} title={`${ACTION_TEXT[sizedAction]} ${size.amount}`} onClick={() => act(actor, sizedAction, size.amount)}>
                   {size.label} <b>{size.amount}</b>
