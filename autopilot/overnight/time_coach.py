@@ -1,5 +1,7 @@
 """Time the Coach API in-process with generated spots and an isolated SQLite database."""
 import argparse
+from contextlib import ExitStack
+import gc
 import hashlib
 import json
 import math
@@ -41,7 +43,10 @@ def cases():
 
 def measure(repeats):
     measurements = []
-    with TemporaryDirectory() as scratch, TestClient(app) as client:
+    with TemporaryDirectory() as scratch, ExitStack() as stack:
+        # SQLite connection cycles can retain Windows file handles until GC.
+        stack.callback(gc.collect)
+        client = stack.enter_context(TestClient(app))
         os.environ["COACH_DB_PATH"] = str(Path(scratch) / "timing.sqlite")
         store = HandStore()
         for spot in simulated_spots("tight", 150):

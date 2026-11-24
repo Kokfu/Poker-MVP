@@ -54,9 +54,13 @@ class HandStore:
             return int(cursor.lastrowid)
 
     def hands(self, opponent: str) -> list[dict[str, Any]]:
+        return [json.loads(row) for row in self.hand_payloads(opponent)]
+
+    def hand_payloads(self, opponent: str) -> list[str]:
+        """Read the opponent's current, ordered history in one SQLite query."""
         with self._connect() as connection:
             rows = connection.execute("SELECT spot FROM hands WHERE opponent = ? ORDER BY id", (normalize_name(opponent),)).fetchall()
-        return [json.loads(row[0]) for row in rows]
+        return [row[0] for row in rows]
 
     def hands_with_meta(self, opponent: str) -> list[dict[str, Any]]:
         """Logged hands for one opponent, newest first, with id and created_at."""

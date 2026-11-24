@@ -1,0 +1,564 @@
+{
+  "summary": {
+    "preflop_all": {
+      "n": 12,
+      "median_ms": 308.225,
+      "p95_ms": 1761.96
+    },
+    "preflop_first": {
+      "n": 4,
+      "median_ms": 419.41999999999996,
+      "p95_ms": 1761.96
+    },
+    "preflop_repeat": {
+      "n": 8,
+      "median_ms": 151.19,
+      "p95_ms": 399.93
+    },
+    "postflop_all": {
+      "n": 36,
+      "median_ms": 1446.345,
+      "p95_ms": 3787.21
+    },
+    "postflop_first": {
+      "n": 12,
+      "median_ms": 1514.655,
+      "p95_ms": 3902.64
+    },
+    "postflop_repeat": {
+      "n": 24,
+      "median_ms": 1446.345,
+      "p95_ms": 3367.4
+    }
+  },
+  "measurements": [
+    {
+      "spot": "preflop-0",
+      "repeat": 0,
+      "ms": 517.67,
+      "action": {
+        "action": "raise",
+        "amount": 250
+      },
+      "source": "preflop_chart",
+      "advice_sha256": "499a3f6f7498ff9a1b8454e839affd3617d1a605617a933ca05f8808041b79d4"
+    },
+    {
+      "spot": "preflop-0",
+      "repeat": 1,
+      "ms": 3.51,
+      "action": {
+        "action": "raise",
+        "amount": 250
+      },
+      "source": "preflop_chart",
+      "advice_sha256": "499a3f6f7498ff9a1b8454e839affd3617d1a605617a933ca05f8808041b79d4"
+    },
+    {
+      "spot": "preflop-0",
+      "repeat": 2,
+      "ms": 4.82,
+      "action": {
+        "action": "raise",
+        "amount": 250
+      },
+      "source": "preflop_chart",
+      "advice_sha256": "499a3f6f7498ff9a1b8454e839affd3617d1a605617a933ca05f8808041b79d4"
+    },
+    {
+      "spot": "flop-0",
+      "repeat": 0,
+      "ms": 703.73,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "d40a594f1b6981dee3d3a7b1859e53efa88d6b5716d81b00c98a0da69bc3bb77"
+    },
+    {
+      "spot": "flop-0",
+      "repeat": 1,
+      "ms": 519.23,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "d40a594f1b6981dee3d3a7b1859e53efa88d6b5716d81b00c98a0da69bc3bb77"
+    },
+    {
+      "spot": "flop-0",
+      "repeat": 2,
+      "ms": 484.12,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "d40a594f1b6981dee3d3a7b1859e53efa88d6b5716d81b00c98a0da69bc3bb77"
+    },
+    {
+      "spot": "turn-0",
+      "repeat": 0,
+      "ms": 1215.32,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "4ae8a4cd500fc33def5a7a263f60a0c9937103dada0c15f56a6933077a45b8f2"
+    },
+    {
+      "spot": "turn-0",
+      "repeat": 1,
+      "ms": 850.79,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "4ae8a4cd500fc33def5a7a263f60a0c9937103dada0c15f56a6933077a45b8f2"
+    },
+    {
+      "spot": "turn-0",
+      "repeat": 2,
+      "ms": 848.28,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "4ae8a4cd500fc33def5a7a263f60a0c9937103dada0c15f56a6933077a45b8f2"
+    },
+    {
+      "spot": "river-0",
+      "repeat": 0,
+      "ms": 1338.54,
+      "action": {
+        "action": "bet",
+        "amount": 500
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "fb589a70b05259203c5875dfabae0f7a513ff2167a3931e0ec4eba5aa969e13e"
+    },
+    {
+      "spot": "river-0",
+      "repeat": 1,
+      "ms": 1645.07,
+      "action": {
+        "action": "bet",
+        "amount": 500
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "fb589a70b05259203c5875dfabae0f7a513ff2167a3931e0ec4eba5aa969e13e"
+    },
+    {
+      "spot": "river-0",
+      "repeat": 2,
+      "ms": 1287.69,
+      "action": {
+        "action": "bet",
+        "amount": 500
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "fb589a70b05259203c5875dfabae0f7a513ff2167a3931e0ec4eba5aa969e13e"
+    },
+    {
+      "spot": "preflop-1",
+      "repeat": 0,
+      "ms": 1761.96,
+      "action": {
+        "action": "call",
+        "amount": null
+      },
+      "source": "preflop_exploit",
+      "advice_sha256": "5741427e3a0a2b14d8c91a16ebaaec0ddc0fb82b63f0bdc952e34f35488d97bb"
+    },
+    {
+      "spot": "preflop-1",
+      "repeat": 1,
+      "ms": 399.93,
+      "action": {
+        "action": "call",
+        "amount": null
+      },
+      "source": "preflop_exploit",
+      "advice_sha256": "5741427e3a0a2b14d8c91a16ebaaec0ddc0fb82b63f0bdc952e34f35488d97bb"
+    },
+    {
+      "spot": "preflop-1",
+      "repeat": 2,
+      "ms": 321.11,
+      "action": {
+        "action": "call",
+        "amount": null
+      },
+      "source": "preflop_exploit",
+      "advice_sha256": "5741427e3a0a2b14d8c91a16ebaaec0ddc0fb82b63f0bdc952e34f35488d97bb"
+    },
+    {
+      "spot": "flop-1",
+      "repeat": 0,
+      "ms": 3403.35,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "fcea2b90183acc4a0a3ef1306c4e2f199fcb06f543873ac396429a793403f002"
+    },
+    {
+      "spot": "flop-1",
+      "repeat": 1,
+      "ms": 1479.73,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "fcea2b90183acc4a0a3ef1306c4e2f199fcb06f543873ac396429a793403f002"
+    },
+    {
+      "spot": "flop-1",
+      "repeat": 2,
+      "ms": 1754.29,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "fcea2b90183acc4a0a3ef1306c4e2f199fcb06f543873ac396429a793403f002"
+    },
+    {
+      "spot": "turn-1",
+      "repeat": 0,
+      "ms": 3679.98,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "3869512f6f4bf24b0922d14aa031f0c565514856fb8ccd529b10019a7a349c29"
+    },
+    {
+      "spot": "turn-1",
+      "repeat": 1,
+      "ms": 2197.69,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "3869512f6f4bf24b0922d14aa031f0c565514856fb8ccd529b10019a7a349c29"
+    },
+    {
+      "spot": "turn-1",
+      "repeat": 2,
+      "ms": 2567.67,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "3869512f6f4bf24b0922d14aa031f0c565514856fb8ccd529b10019a7a349c29"
+    },
+    {
+      "spot": "river-1",
+      "repeat": 0,
+      "ms": 3902.64,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "42338f9cc7e64e40de21314826de2016fa4ec9d507a8e473e4bfcb0ea2c171d4"
+    },
+    {
+      "spot": "river-1",
+      "repeat": 1,
+      "ms": 3285.61,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "42338f9cc7e64e40de21314826de2016fa4ec9d507a8e473e4bfcb0ea2c171d4"
+    },
+    {
+      "spot": "river-1",
+      "repeat": 2,
+      "ms": 3299.87,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "42338f9cc7e64e40de21314826de2016fa4ec9d507a8e473e4bfcb0ea2c171d4"
+    },
+    {
+      "spot": "preflop-2",
+      "repeat": 0,
+      "ms": 6.25,
+      "action": {
+        "action": "raise",
+        "amount": 250
+      },
+      "source": "preflop_chart",
+      "advice_sha256": "7726622117bf0ead9ce18822783d137330d1bd9706e8a1c50f1a3d434fc786fe"
+    },
+    {
+      "spot": "preflop-2",
+      "repeat": 1,
+      "ms": 7.04,
+      "action": {
+        "action": "raise",
+        "amount": 250
+      },
+      "source": "preflop_chart",
+      "advice_sha256": "7726622117bf0ead9ce18822783d137330d1bd9706e8a1c50f1a3d434fc786fe"
+    },
+    {
+      "spot": "preflop-2",
+      "repeat": 2,
+      "ms": 5.4,
+      "action": {
+        "action": "raise",
+        "amount": 250
+      },
+      "source": "preflop_chart",
+      "advice_sha256": "7726622117bf0ead9ce18822783d137330d1bd9706e8a1c50f1a3d434fc786fe"
+    },
+    {
+      "spot": "flop-2",
+      "repeat": 0,
+      "ms": 674.31,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "a58cbf12c8bbb3b4ad9a197d34aa08ddf4d80b5b71b942288b27a632a0018127"
+    },
+    {
+      "spot": "flop-2",
+      "repeat": 1,
+      "ms": 452.39,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "a58cbf12c8bbb3b4ad9a197d34aa08ddf4d80b5b71b942288b27a632a0018127"
+    },
+    {
+      "spot": "flop-2",
+      "repeat": 2,
+      "ms": 436.17,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "a58cbf12c8bbb3b4ad9a197d34aa08ddf4d80b5b71b942288b27a632a0018127"
+    },
+    {
+      "spot": "turn-2",
+      "repeat": 0,
+      "ms": 950.52,
+      "action": {
+        "action": "bet",
+        "amount": 250
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "52ce4e75c1120f0033c5a8eda81147a853b2bec628a6a4243cd9f478b6e595b8"
+    },
+    {
+      "spot": "turn-2",
+      "repeat": 1,
+      "ms": 590.6,
+      "action": {
+        "action": "bet",
+        "amount": 250
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "52ce4e75c1120f0033c5a8eda81147a853b2bec628a6a4243cd9f478b6e595b8"
+    },
+    {
+      "spot": "turn-2",
+      "repeat": 2,
+      "ms": 664.87,
+      "action": {
+        "action": "bet",
+        "amount": 250
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "52ce4e75c1120f0033c5a8eda81147a853b2bec628a6a4243cd9f478b6e595b8"
+    },
+    {
+      "spot": "river-2",
+      "repeat": 0,
+      "ms": 1143.03,
+      "action": {
+        "action": "bet",
+        "amount": 500
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "451717031080c66de1aa7a72c72ae5db9b1d77daa17e1a67f808bce411430b6d"
+    },
+    {
+      "spot": "river-2",
+      "repeat": 1,
+      "ms": 1129.09,
+      "action": {
+        "action": "bet",
+        "amount": 500
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "451717031080c66de1aa7a72c72ae5db9b1d77daa17e1a67f808bce411430b6d"
+    },
+    {
+      "spot": "river-2",
+      "repeat": 2,
+      "ms": 1344.99,
+      "action": {
+        "action": "bet",
+        "amount": 500
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "451717031080c66de1aa7a72c72ae5db9b1d77daa17e1a67f808bce411430b6d"
+    },
+    {
+      "spot": "preflop-3",
+      "repeat": 0,
+      "ms": 321.17,
+      "action": {
+        "action": "all_in",
+        "amount": null
+      },
+      "source": "preflop_exploit",
+      "advice_sha256": "4c07e2146c88385967823815ffa8853268a29ac8a61af0657e274678bfc68c26"
+    },
+    {
+      "spot": "preflop-3",
+      "repeat": 1,
+      "ms": 331.05,
+      "action": {
+        "action": "all_in",
+        "amount": null
+      },
+      "source": "preflop_exploit",
+      "advice_sha256": "4c07e2146c88385967823815ffa8853268a29ac8a61af0657e274678bfc68c26"
+    },
+    {
+      "spot": "preflop-3",
+      "repeat": 2,
+      "ms": 295.34,
+      "action": {
+        "action": "all_in",
+        "amount": null
+      },
+      "source": "preflop_exploit",
+      "advice_sha256": "4c07e2146c88385967823815ffa8853268a29ac8a61af0657e274678bfc68c26"
+    },
+    {
+      "spot": "flop-3",
+      "repeat": 0,
+      "ms": 1690.77,
+      "action": {
+        "action": "all_in",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "b95dc03552bd6bef7748a79ef18388d0723dce8bec170a59ff91d7fcce827698"
+    },
+    {
+      "spot": "flop-3",
+      "repeat": 1,
+      "ms": 1577.8,
+      "action": {
+        "action": "all_in",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "b95dc03552bd6bef7748a79ef18388d0723dce8bec170a59ff91d7fcce827698"
+    },
+    {
+      "spot": "flop-3",
+      "repeat": 2,
+      "ms": 1412.96,
+      "action": {
+        "action": "all_in",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "b95dc03552bd6bef7748a79ef18388d0723dce8bec170a59ff91d7fcce827698"
+    },
+    {
+      "spot": "turn-3",
+      "repeat": 0,
+      "ms": 3107.44,
+      "action": {
+        "action": "all_in",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "837c827dbb813d0e48a864a57fa53a0f7111aa7b7adb58f4c827c2286be9f526"
+    },
+    {
+      "spot": "turn-3",
+      "repeat": 1,
+      "ms": 2801.3,
+      "action": {
+        "action": "all_in",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "837c827dbb813d0e48a864a57fa53a0f7111aa7b7adb58f4c827c2286be9f526"
+    },
+    {
+      "spot": "turn-3",
+      "repeat": 2,
+      "ms": 2502.22,
+      "action": {
+        "action": "all_in",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "837c827dbb813d0e48a864a57fa53a0f7111aa7b7adb58f4c827c2286be9f526"
+    },
+    {
+      "spot": "river-3",
+      "repeat": 0,
+      "ms": 3787.21,
+      "action": {
+        "action": "all_in",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "aa29c4536ab9d8c0a22a1008cf4c391476cf588bbcfc67f9ded69fbfb9a09018"
+    },
+    {
+      "spot": "river-3",
+      "repeat": 1,
+      "ms": 3600.2,
+      "action": {
+        "action": "all_in",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "aa29c4536ab9d8c0a22a1008cf4c391476cf588bbcfc67f9ded69fbfb9a09018"
+    },
+    {
+      "spot": "river-3",
+      "repeat": 2,
+      "ms": 3367.4,
+      "action": {
+        "action": "all_in",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "aa29c4536ab9d8c0a22a1008cf4c391476cf588bbcfc67f9ded69fbfb9a09018"
+    }
+  ]
+}

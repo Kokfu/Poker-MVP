@@ -26,3 +26,10 @@
 - Commits: this entry, the opt-in duplicate arm, focused tests and eight development reports.
 - Tests: python -m pytest -q -p no:cacheprovider test_solver_interpolated.py test_simulation_duplicate_evaluation.py, 10 passed, 7 warnings, 3.29 s. Four opponents, 336 duplicate hands across both arms, zero illegal actions, fallbacks or deal mismatches.
 - Next: keep the experiment off by default. No holdout or strength claim because only one matchup changed and its point estimate was negative. See model-experiment.md for commands and intervals.
+
+### 02:21 +08:00 · B1 Coach advice latency · partial
+
+- Commits: this entry, exact solve and derived profile caches, timing script and reports.
+- Tests: original Coach/solver focused command 90 passed, 8 warnings, 128.21 s. After the profile cache, python -m pytest -q -p no:cacheprovider test_coach_advice_cache.py test_coach.py test_solver_phase_4h.py, 34 passed, 8 warnings, 21.06 s. All 48 normalized API responses matched.
+- Results: repeat p95 17 ms preflop and 45 ms postflop; aggregate p95 1,514 and 2,274 ms, above both targets. First timing retry fixed Windows SQLite cleanup. Browser verification for the same advice path follows with B2.
+- Next: retain exact caching. Investigate cold chart/lock and new-board solves separately if the targets must include first requests. Commands and raw outputs are in coach-latency.md and its accompanying JSON files.

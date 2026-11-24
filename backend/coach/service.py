@@ -7,8 +7,12 @@ target semantics), and board cards are entered as the streets are reached.
 """
 from __future__ import annotations
 
+from collections import OrderedDict
 from dataclasses import dataclass, field
+from hashlib import sha256
+import json
 from os import getenv
+from threading import Lock
 from time import perf_counter
 from typing import Any, Literal
 
@@ -23,6 +27,9 @@ from .store import HandStore
 Actor = Literal["hero", "villain"]
 HERO, VILLAIN = "a", "b"
 STREET_BOARD = {"flop": 3, "turn": 4, "river": 5}
+_PROFILES = OrderedDict()
+_PROFILES_LOCK = Lock()
+_MAX_PROFILES = 8
 
 
 @dataclass
@@ -198,29 +205,57 @@ def hand_result(spot: Spot) -> dict[str, Any] | None:
 
 def profile_for(store: HandStore, opponent: str, observer=None):
     """Rebuild the opponent model; ``observer`` (a bot) also sees each history."""
+    profile_key = None
+    if observer is not None and getattr(observer, "cache_solves", False):
+        rows = store.hand_payloads(opponent)
+        digest = sha256()
+        for row in rows:
+            encoded = row.encode("utf-8")
+            digest.update(len(encoded).to_bytes(8, "big"))
+            digest.update(encoded)
+        # A fresh query catches inserts, deletes and direct database edits. The
+        # cache retains derived statistics without storing the original rows.
+        profile_key = digest.digest()
+        with _PROFILES_LOCK:
+            cached = _PROFILES.get(profile_key)
+            if cached is not None:
+                _PROFILES.move_to_end(profile_key)
+                model, observer.showdown_model = cached
+                return model
+        hands = map(json.loads, rows)
+    else:
+        hands = store.hands(opponent)
     model = OpponentModel(VILLAIN)
-    for stored in store.hands(opponent):
+    for stored in hands:
         spot = spot_from_dict(stored)
         status, payload, _ = _replay(spot)
         if status == "hand_complete":
             model.update(payload["result"]["history"])
             if observer is not None:
                 observer.observe_completed_hand(payload["result"]["history"], HERO)
+    if profile_key is not None:
+        # Advice reads these models. Training only happens while building a miss.
+        with _PROFILES_LOCK:
+            _PROFILES[profile_key] = (model, observer.showdown_model)
+            _PROFILES.move_to_end(profile_key)
+            if len(_PROFILES) > _MAX_PROFILES:
+                _PROFILES.popitem(last=False)
     return model
 
 
 def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store: HandStore | None = None, seed: int = 0) -> dict[str, Any]:
-    from solver.bot import AdaptiveSolverBot, SolverBot
+    from .advisor import CoachAdvisor
 
     shadow = getenv("POKER_COACH_RIVER_SHADOW") == "1"
     started = perf_counter() if shadow else None
     profile_snapshot = None
-    advisor = AdaptiveSolverBot(seed=seed) if exploit and opponent else SolverBot(seed=seed)
+    cache_solves = getenv("POKER_COACH_SOLVE_CACHE") != "0"
+    advisor = CoachAdvisor(seed=seed, exploit=bool(exploit and opponent), cache_solves=cache_solves)
     if opponent:
         model = profile_for(store or HandStore(), opponent, advisor if advisor.exploit else None)
         profile_snapshot = model.snapshot() if model.hands_observed else None
     if advisor.exploit and profile_snapshot is None:
-        advisor = SolverBot(seed=seed)
+        advisor.exploit = False
     advisor.persistent_ranges = getenv("POKER_COACH_PERSISTENT_RANGES") == "1"
     advisor.explain_ev = True
     if shadow:
