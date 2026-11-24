@@ -1,0 +1,38 @@
+{
+  "agent": "solver_adaptive",
+  "bb_per_100": 2.0833333333333335,
+  "confidence_interval": {
+    "confidence_level": 0.95,
+    "lower": -56.25,
+    "upper": 62.5
+  },
+  "configuration": {
+    "big_blind": 100,
+    "bootstrap_resamples": 2000,
+    "confidence_level": 0.95,
+    "equity_iterations": 100,
+    "pairs": 3,
+    "seed_offset": 27000,
+    "seed_set": "development",
+    "session_hands": 4,
+    "small_blind": 50,
+    "starting_stack": 10000,
+    "statistics_seed": 91002,
+    "workers": 1
+  },
+  "deal_mismatches": 0,
+  "fallback_actions": 0,
+  "format_version": 1,
+  "hands": 24,
+  "illegal_actions": 0,
+  "interpretation": "positive_estimate_uncertain",
+  "ledger": "overnight-smoke.jsonl",
+  "opponent": "tight",
+  "pairs": 3,
+  "seat_a_bb_per_100": 12.5,
+  "seat_b_bb_per_100": -8.333333333333334,
+  "sessions": 3,
+  "standard_error_bb_per_100": 34.295995069071516,
+  "unpaired_standard_error_bb_per_100": 37.9715719687476,
+  "variance_reduction": 0.18422636965683348
+}

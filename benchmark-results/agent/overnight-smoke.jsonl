@@ -1,0 +1,4 @@
+{"agent": "solver_adaptive", "configuration": {"big_blind": 100, "bootstrap_resamples": 2000, "confidence_level": 0.95, "equity_iterations": 100, "pairs": 3, "seed_offset": 27000, "seed_set": "development", "session_hands": 4, "small_blind": 50, "starting_stack": 10000, "statistics_seed": 91002, "workers": 1}, "format_version": 1, "opponent": "tight"}
+{"deal_verified": true, "fallback_actions": 0, "hands_per_seat": 4, "illegal_actions": 0, "net_seat_a": 150, "net_seat_b": -600, "seed": 1027000, "session": 1}
+{"deal_verified": true, "fallback_actions": 0, "hands_per_seat": 4, "illegal_actions": 0, "net_seat_a": -300, "net_seat_b": 300, "seed": 1027004, "session": 2}
+{"deal_verified": true, "fallback_actions": 0, "hands_per_seat": 4, "illegal_actions": 0, "net_seat_a": 300, "net_seat_b": 200, "seed": 1027008, "session": 3}

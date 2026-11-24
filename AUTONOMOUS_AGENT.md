@@ -15,6 +15,15 @@ The simulator runs without a browser or network. Each evaluation session consist
 
 The CLI reports total hands, bb/100, a session-bootstrap 95% interval, illegal actions, fallbacks and deal mismatches. Treat a short run as an operational check. Strength claims require the separate pre-registered gate. Simulation logs may include reproducible synthetic deal seeds. Practice table responses and logs must keep their actual deal seeds private.
 
+Run from `backend/`. Reuse the same options and add `--resume` after an interruption:
+
+```powershell
+./.venv/Scripts/python.exe -m simulation.agent_cli --run demo --opponent tight --sessions 3 --session-hands 4 --seed-offset 27000
+./.venv/Scripts/python.exe -m simulation.agent_cli --run demo --opponent tight --sessions 3 --session-hands 4 --seed-offset 27000 --resume
+```
+
+The outputs are `benchmark-results/agent/demo.jsonl` and `demo.summary.json`. Pass `--output-dir` to keep a test run elsewhere.
+
 ## Slumbot benchmark (optional)
 
 The existing `simulation.slumbot_cli` uses Slumbot's public bot benchmark API. It represents the public opponent actions and cards in the same local engine, whose settlement is checked against the service. Keep this a separately invoked network mode. Use `baseline_adjusted_bb_per_100` when interpreting results and report bridge errors and desynchronization. Keep the simulator and practice table usable offline.

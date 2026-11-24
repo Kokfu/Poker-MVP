@@ -46,3 +46,10 @@
 - Commits: this entry and AUTONOMOUS_AGENT.md.
 - Tests: design only. Checked the three adapters and observation, legal action, settlement and learning contracts against the existing simulator code. No tests run for this doc.
 - Next: build the offline runner with a session-boundary ledger. Slumbot remains an independently invoked, optional network benchmark.
+
+### 02:26 +08:00 · C2 resumable simulator CLI · done
+
+- Commits: this entry, the offline CLI, interrupted-resume tests and synthetic run artifacts.
+- Tests: python -m pytest -q -p no:cacheprovider test_simulation_agent_cli.py test_simulation_duplicate_evaluation.py, 10 passed, 7 warnings, 2.09 s. Tests covered an interrupted second session, a partial JSONL write and incompatible resume parameters.
+- Smoke: 3 paired sessions × 4 hands per orientation, 24 hands, 20.62 s. +2.08 bb/100, 95% interval [−56.25, +62.50], zero illegal actions, fallbacks and deal mismatches. Reopening the completed run left its ledger byte-identical.
+- Next: begin the LAN table prototype. Simulator command and log are in AUTONOMOUS_AGENT.md and autopilot/overnight/agent-smoke.log.
