@@ -96,7 +96,10 @@ def _advance(state: StreetState, kind: str, target: int | None) -> tuple[StreetS
         closed = acted[o] or stack[p] == 0 or stack[o] == 0
         return replace(state, commit=tuple(commit), stack=tuple(stack), acted=tuple(acted), to_act=o), closed
     if kind in ("bet", "raise", "all_in"):
-        if kind == "all_in" or target is None:
+        # The public total is needed when replaying with provisional stacks.
+        if target is None:
+            if kind != "all_in":
+                raise ReplayError("bet or raise is missing its public target")
             target = commit[p] + stack[p]
         if target <= state.highest and kind == "all_in":
             # An all-in for less than a call behaves as a call.
@@ -220,7 +223,11 @@ class SolverBot(PokerBot):
     pool_streets = False  # partial pooling of postflop reads across streets
     gated_locks = False  # deviation-gated locking (DESIGN_OPPONENT_MODEL.md, proposal A); off = today's behaviour
     sized_reads = False  # bet-size-conditioned reads (DESIGN_OPPONENT_MODEL.md, proposal B); off = today's behaviour
+    range_selection = None  # optional bounded research projection override
+    persistent_ranges = False  # enabled independently by the local Coach and Match services
     explain_ev = False  # add per-action EV to postflop explanations (read-only; the Coach turns it on)
+    capture_river_shadow = False  # Coach-only handoff after the incumbent action is selected
+    river_shadow_context = None
     iterations = {"flop": 60, "turn": 70, "river": 80}
     flop_runouts = 30
     prune = 5e-3
@@ -263,6 +270,8 @@ class SolverBot(PokerBot):
             action, explanation = self._decide(ds, profile)
         except (ReplayError, ValueError, KeyError, IndexError, FloatingPointError) as error:
             self.fallback_count += 1
+            if not self.exploit and getattr(observation, "opponent_profile", None) is not None:
+                observation = replace(observation, opponent_profile=None)
             action = self.fallback.decide_decision(observation)
             explanation = {"source": "fallback", "reason": f"{type(error).__name__}: {error}"}
         self.last_explanation = explanation
@@ -279,7 +288,11 @@ class SolverBot(PokerBot):
         replay = replay_hand(ds)
         hero = replay.current.to_act
         hero_combo = combo_index(ds.hole_cards)
-        ranges = [np.ones(COMBO_COUNT), np.ones(COMBO_COUNT)]
+        beliefs = None
+        if self.persistent_ranges:
+            from research.holdem.live_persistent import ReplayBeliefs
+            beliefs = ReplayBeliefs(hero, ds.hole_cards)
+        ranges = [np.ones(COMBO_COUNT), np.ones(COMBO_COUNT)] if beliefs is None else None
         depth = self.charts.nearest_depth(min(replay.start_stacks) / ds.big_blind)
         scale = CHART_BB / ds.big_blind
 
@@ -302,7 +315,11 @@ class SolverBot(PokerBot):
             if chart_tree.nodes[node].kind != "decision":
                 raise ReplayError("preflop history left the chart tree")
             choice = map_action(chart_tree, node, step.kind, step.target, scale)
-            ranges[step.player] = ranges[step.player] * policy(node)[choice]
+            likelihood = policy(node)[choice]
+            if beliefs is None:
+                ranges[step.player] = ranges[step.player] * likelihood
+            else:
+                beliefs.observe(step.player, likelihood)
             node = chart_tree.nodes[node].children[choice]
         if replay.street == "preflop":
             if chart_tree.nodes[node].kind != "decision":
@@ -318,7 +335,19 @@ class SolverBot(PokerBot):
                             "probabilities": [round(float(p), 4) for p in probabilities], "chosen": chart_node.labels[choice],
                             "exploit": {**exploit_info, "locked_nodes": len(preflop_locks)},
                             "instrumentation": self._instrumentation("preflop", preflop_candidates, len(preflop_locks)),
-                            **self._range_report((), hero_combo, ranges[opponent])}
+                            **self._range_report((), hero_combo, ranges[opponent] if beliefs is None else beliefs.opponent),
+                            **({"range_ownership": beliefs.diagnostics()} if beliefs is not None else {})}
+
+        if beliefs is not None:
+            beliefs.replay_postflop(replay, ds.board_cards, profile)
+            working = beliefs.project(hero_combo, self.range_selection)
+            self._info["cache_hit"] = False
+            solve = self._solve(replay.current, beliefs.board, working.reaches, hero_combo, hero, profile,
+                                working_ids=working.ids)
+            action, info = self._postflop_advice(ds, solve, solve.tree.root, hero, hero_combo, beliefs.board,
+                                                 beliefs.opponent, exploit_info, resolved=True)
+            info["range_ownership"] = beliefs.diagnostics(working)
+            return action, info
 
         # Postflop streets already completed, then the current street.
         board: tuple[str, ...] = ()
@@ -348,26 +377,34 @@ class SolverBot(PokerBot):
                 solve = self._solve(replay.current, board, ranges, hero_combo, hero, profile)
                 self._info["cache_hit"] = False
                 node = solve.tree.root
-            tree_node = solve.tree.nodes[node]
-            position = int(np.searchsorted(solve.combos[hero], hero_combo))
-            probabilities = solve.average[node][:, position]
-            choice = self._sample(ds, probabilities)
-            if solve.unlocked_average is not None:
-                self._info["unlocked_action_differs"] = bool(self._pick(ds, solve.unlocked_average[node][:, position]) != choice)
-            action = self._concrete_postflop(ds, tree_node.actions[choice])
-            action_ev = None
-            if solve.solver is not None:
-                values = solve.solver.action_values(tree_node, position)
-                action_ev = [round(float(v), 1) for v in values]
-            return action, {"source": "postflop_solve", "street": street, "labels": tree_node.labels,
-                            "probabilities": [round(float(p), 4) for p in probabilities], "chosen": tree_node.labels[choice],
-                            "range_sizes": [int(len(c)) for c in solve.combos], "solve_seconds": round(solve.seconds, 3),
-                            "exploitability": solve.exploitability, "resolved_from_current_state": not on_tree,
-                            **({"action_ev": action_ev} if action_ev is not None else {}),
-                            "exploit": {**exploit_info, "locked_nodes": solve.locked_nodes},
-                            "instrumentation": self._instrumentation(street, solve.candidate_locks, solve.locked_nodes, solve.sized_info),
-                            **self._range_report(board, hero_combo, ranges[opponent])}
+            return self._postflop_advice(ds, solve, node, hero, hero_combo, board, ranges[opponent],
+                                         exploit_info, resolved=not on_tree)
         raise ReplayError("unreachable street")
+
+    def _postflop_advice(self, ds, solve, node, hero, hero_combo, board, opponent_range, exploit_info, *, resolved):
+        street = ds.street
+        tree_node = solve.tree.nodes[node]
+        position = int(np.searchsorted(solve.combos[hero], hero_combo))
+        probabilities = solve.average[node][:, position]
+        choice = self._sample(ds, probabilities)
+        if solve.unlocked_average is not None:
+            self._info["unlocked_action_differs"] = bool(self._pick(ds, solve.unlocked_average[node][:, position]) != choice)
+        action = self._concrete_postflop(ds, tree_node.actions[choice])
+        action_ev = None
+        if solve.solver is not None:
+            values = solve.solver.action_values(tree_node, position)
+            action_ev = [round(float(v), 1) for v in values]
+        if self.capture_river_shadow and street == "river":
+            self.river_shadow_context = (ds, solve, tree_node, position, opponent_range,
+                                         probabilities, choice, values if action_ev is not None else None)
+        return action, {"source": "postflop_solve", "street": street, "labels": tree_node.labels,
+                        "probabilities": [round(float(p), 4) for p in probabilities], "chosen": tree_node.labels[choice],
+                        "range_sizes": [int(len(c)) for c in solve.combos], "solve_seconds": round(solve.seconds, 3),
+                        "exploitability": solve.exploitability, "resolved_from_current_state": resolved,
+                        **({"action_ev": action_ev} if action_ev is not None else {}),
+                        "exploit": {**exploit_info, "locked_nodes": solve.locked_nodes},
+                        "instrumentation": self._instrumentation(street, solve.candidate_locks, solve.locked_nodes, solve.sized_info),
+                        **self._range_report(board, hero_combo, opponent_range)}
 
     def _street_solve(self, key, root_state, board, ranges, hero_combo, hero, profile=None) -> StreetSolve:
         cached = self.memory.street_solves.get(key)
@@ -377,17 +414,19 @@ class SolverBot(PokerBot):
             self.memory.street_solves[key] = cached
         return cached
 
-    def _solve(self, root_state: StreetState, board, ranges, hero_combo, hero, profile=None) -> StreetSolve:
+    def _solve(self, root_state: StreetState, board, ranges, hero_combo, hero, profile=None, *, working_ids=None) -> StreetSolve:
         started = time.perf_counter()
         self.solve_count += 1
         live, full_d, full_compat = _full_equity(board, self.flop_runouts)
-        combos = []
-        for p in (0, 1):
-            weights = ranges[p][live]
-            keep = weights > self.prune * weights.max() if weights.max() > 0 else np.zeros_like(weights, bool)
-            if p == hero:
-                keep |= live == hero_combo
-            combos.append(live[keep])
+        combos = working_ids
+        if combos is None:
+            combos = []
+            for p in (0, 1):
+                weights = ranges[p][live]
+                keep = weights > self.prune * weights.max() if weights.max() > 0 else np.zeros_like(weights, bool)
+                if p == hero:
+                    keep |= live == hero_combo
+                combos.append(live[keep])
         if not len(combos[0]) or not len(combos[1]):
             raise ReplayError("empty range")
         rows, cols = np.searchsorted(live, combos[0]), np.searchsorted(live, combos[1])
@@ -517,6 +556,8 @@ class SolverBot(PokerBot):
         legal = ds.legal_actions
         if kind == "fold" and "check" in legal:
             return Action("check")
+        if kind == "call" and "all_in" in legal and ds.hero_stack <= ds.amount_to_call:
+            return Action("all_in")
         if kind in ("fold", "check", "call"):
             if kind in legal:
                 return Action(kind)

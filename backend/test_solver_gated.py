@@ -1,6 +1,4 @@
 """Deviation-gated locking (proposal A): off-by-default equivalence, gate unit tests, instrumentation."""
-import json
-from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
@@ -13,9 +11,6 @@ from solver.cfr import RangeSolver
 from solver.exploit import (GATE_LEVEL, GATE_MARGIN, GATE_SCALE, beta_cdf, beta_interval, gate_decision, gate_locks,
                             node_aggregates, node_lock, tree_locks)
 from solver.tree import POSTFLOP_MENU, StreetState, StreetTree
-
-GOLDEN = Path(__file__).parent / "test_data" / "equiv_learning_main_fa3b538.json"
-
 
 def est(n, k, smoothed):
     return SimpleNamespace(opportunities=n, occurrences=k, smoothed_frequency=smoothed, confidence="high")
@@ -31,18 +26,15 @@ def test_default_bots_are_not_gated():
     assert BOT_TYPES["solver_adaptive"](seed=1).gated_locks is False
 
 
-def test_off_learning_session_is_bit_identical_to_main():
-    """40-hand deterministic learning session (fake referee): every probability vector at full
-    float precision, every action, every hand result equals the golden file recorded from
-    ``main`` (fa3b538) before any gate code existed."""
-    from equiv_learning import fingerprint
-    expected = json.loads(GOLDEN.read_text(encoding="utf-8"))
-    actual = json.loads(json.dumps(fingerprint(expected["hands"])))
+def test_ungated_learning_session_matches_phase_4h_reference(adaptive_learning_reference):
+    """Compare every decision and result after the unopened SB lock correction."""
+    expected, actual = adaptive_learning_reference
     assert actual["decisions"] == expected["decisions"] and actual["decisions"] > 80
     assert actual["probabilities"] == expected["probabilities"]
     assert actual["actions"] == expected["actions"]
     assert actual["winnings"] == expected["winnings"]
     assert actual == expected
+    assert actual["fallbacks"] == 0
     sources = {source for source, _ in expected["locked_nodes"]}
     assert "preflop_exploit" in sources and "postflop_solve" in sources  # locks were exercised
 

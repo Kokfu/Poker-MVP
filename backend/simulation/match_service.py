@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from os import getenv
+
 from .bots import BOT_TYPES
 from .match import MatchConfig, MatchResult, run_match
 
@@ -12,6 +14,13 @@ DEFAULT_MATCH_SEED = 0
 DEFAULT_EQUITY_ITERATIONS = 1000
 MAX_MATCH_HANDS = 10_000
 SUPPORTED_EQUITY_ITERATIONS = (500, 1000, 2000)
+
+
+def build_match_bot(name, seed, equity_iterations):
+    bot = BOT_TYPES[name](seed=seed, equity_iterations=equity_iterations)
+    if getenv("POKER_MATCH_PERSISTENT_RANGES") == "1" and hasattr(bot, "persistent_ranges"):
+        bot.persistent_ranges = True
+    return bot
 
 
 def normalize_bot_name(name: str) -> str:
@@ -203,12 +212,6 @@ def run_builtin_match_result(
         max_hands=max_hands,
         seed=seed,
     )
-    first = BOT_TYPES[bot_a](
-        seed=seed,
-        equity_iterations=equity_iterations,
-    )
-    second = BOT_TYPES[bot_b](
-        seed=seed + 1,
-        equity_iterations=equity_iterations,
-    )
+    first = build_match_bot(bot_a, seed, equity_iterations)
+    second = build_match_bot(bot_b, seed + 1, equity_iterations)
     return run_match(first, second, config), config

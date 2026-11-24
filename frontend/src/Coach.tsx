@@ -19,14 +19,10 @@ type SpotState = {
 
 type Explanation = {
   source: string;
-  labels: string[];
-  probabilities: number[];
-  chosen: string;
   hero_equity_vs_range?: number;
   villain_effective_combos?: number;
   villain_top_classes?: { hand: string; share: number }[];
   villain_range_makeup?: { type: string; share: number }[];
-  action_ev?: number[];
   exploit?: { active: boolean; hands_observed?: number; classification?: string; locked_nodes?: number };
   reason?: string;
 };
@@ -41,6 +37,22 @@ type Explain = {
   opponent_range: { effective_combos: number } | null;
   reason: string;
 };
+
+export function CoachStrategy({ options }: { options: Explain["options"] }) {
+  if (options.length === 0) return null;
+  return (
+    <div className="coach-strategy">
+      {options.map(({ label, frequency, ev }) => (
+        <div key={label} className="coach-bar">
+          <span>{describeLabel(label)}</span>
+          <div><i style={{ width: `${Math.round(frequency * 100)}%` }} /></div>
+          <b>{Math.round(frequency * 100)}%</b>
+          {ev !== undefined && <small className="coach-ev" title="Chips you expect to win from here on, counting only chips still to put in (fold = 0)">EV {ev >= 0 ? "+" : ""}{Math.round(ev)}</small>}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 type StatRead = { frequency: number; opportunities: number; confidence: string };
 type Profile = {
@@ -561,19 +573,12 @@ export default function Coach() {
                 <p className="eyebrow">RECOMMENDED</p>
                 <p className="coach-recommendation">{ACTION_TEXT[result.advice.action]}{result.advice.amount ? ` ${result.advice.amount}` : ""}</p>
                 {result.explain?.reason && <p className="coach-reason">{result.explain.reason}</p>}
-                <div className="coach-strategy">
-                  {result.explanation.labels.map((label, index) => (
-                    <div key={label} className="coach-bar">
-                      <span>{describeLabel(label)}</span>
-                      <div><i style={{ width: `${Math.round(result.explanation.probabilities[index] * 100)}%` }} /></div>
-                      <b>{Math.round(result.explanation.probabilities[index] * 100)}%</b>
-                      {result.explanation.action_ev && <small className="coach-ev" title="Chips you expect to win from here on, counting only chips still to put in (fold = 0)">EV {result.explanation.action_ev[index] >= 0 ? "+" : ""}{Math.round(result.explanation.action_ev[index])}</small>}
-                    </div>
-                  ))}
-                </div>
+                {result.explain && <CoachStrategy options={result.explain.options} />}
                 {result.explain?.ev_note && <p className="muted"><small>{result.explain.ev_note}</small></p>}
-                <p className="muted">Mixed strategy from {result.explanation.source === "postflop_solve" ? "a real-time solve of this street" : result.explanation.source === "preflop_exploit" ? "the preflop chart re-solved for this opponent" : result.explanation.source === "preflop_chart" ? "the preflop chart" : "the fallback rule bot"}.
-                  {(result.adjusted ?? result.exploiting) ? " Adjusted to this opponent's tendencies." : ""}</p>
+                {result.explanation.source !== "fallback" && (
+                  <p className="muted">Mixed strategy from {result.explanation.source === "postflop_solve" ? "a real-time solve of this street" : result.explanation.source === "preflop_exploit" ? "the preflop chart re-solved for this opponent" : "the preflop chart"}.
+                    {(result.adjusted ?? result.exploiting) ? " Adjusted to this opponent's tendencies." : ""}</p>
+                )}
                 {result.explanation.hero_equity_vs_range !== undefined && (
                   <p>Your equity vs their estimated range: <strong>{Math.round(result.explanation.hero_equity_vs_range * 100)}%</strong></p>
                 )}

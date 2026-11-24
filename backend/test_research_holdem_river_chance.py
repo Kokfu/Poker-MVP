@@ -113,6 +113,17 @@ def test_tree_is_measured_guarded_and_convention_is_explicit():
     assert validate_river_tree()==[]
     convention=river_subgame_convention(); assert convention["no_future_card_after_river"] and "not full heads-up no-limit" in convention["scope"]
 
+
+def test_reduced_trainer_coverage_uses_only_its_supplied_roots():
+    roots = reduced_river_roots()
+    trainer = RiverChanceExternalSamplingMCCFRTrainer(13, roots=roots)
+    universe = trainer.reachable_infosets()
+    exact = river_tree_diagnostics(roots)
+    assert len(universe) == exact["information_sets"]
+    for street, count in exact["information_sets_by_street"].items():
+        assert list(universe.values()).count(street) == count
+    assert set(trainer.diagnostics(universe)["zero_visit_information_sets"]) == set(universe)
+
 def test_reduced_exact_tree_is_exhaustively_traversable_and_order_invariant():
     forward=river_tree_diagnostics(reduced_river_roots())
     reverse=river_tree_diagnostics(reduced_river_roots(True))

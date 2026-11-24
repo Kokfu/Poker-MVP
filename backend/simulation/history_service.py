@@ -24,6 +24,7 @@ from .match_service import (
     DEFAULT_SMALL_BLIND,
     DEFAULT_STARTING_STACK,
     SUPPORTED_EQUITY_ITERATIONS,
+    build_match_bot,
     match_result_to_public_dict,
     normalize_bot_name,
     run_builtin_match_result,
@@ -163,14 +164,8 @@ def run_builtin_hand_history(
         "seed": seed,
         "equity_iterations": equity_iterations,
     }
-    first = BOT_TYPES[bot_a](
-        seed=seed,
-        equity_iterations=equity_iterations,
-    )
-    second = BOT_TYPES[bot_b](
-        seed=seed + 1,
-        equity_iterations=equity_iterations,
-    )
+    first = build_match_bot(bot_a, seed, equity_iterations)
+    second = build_match_bot(bot_b, seed + 1, equity_iterations)
     engine = HandEngine(
         first,
         second,

@@ -352,11 +352,16 @@ each spot's exact sampled strategy vector and every hand's chosen actions.
 .\.venv\Scripts\python.exe -m solver.benchmark --compare solver/data/benchmark_baseline.json
 ```
 
-`test_solver_benchmark.py` runs a small fixed-size configuration against
-`solver/data/benchmark_baseline_fast.json` as a fast regression guard; it is
-not itself the equivalence evidence for a performance change (that needs the
-full 30-spot/200-hand run compared against a baseline recorded before the
-change).
+`test_solver_benchmark.py` shares one fixed-size run across its regression
+checks and compares it with `solver/data/benchmark_baseline_fast_single_thread.json`.
+The subprocess sets `OPENBLAS_NUM_THREADS=1` before NumPy loads. Different
+BLAS thread counts can change accumulation order enough to affect a sampled
+action. With the default thread layout, fixed hand 9300006 reproduces the
+river bet and +500 chips in `solver/data/benchmark_baseline_fast.json`. It
+checks the river and wins +250 chips at one thread on both sides of the
+all-in replay fix. Both fixture files retain their recorded results.
+Performance equivalence requires the full 30-spot/200-hand run compared
+against a baseline recorded before the change under the same configuration.
 
 A perf-solver pass (branch `perf-solver`, based on `b3be891`) profiled
 `SolverBot`/`AdaptiveSolverBot` with `cProfile` and found the cost concentrated

@@ -100,12 +100,30 @@ def detect_draws(hero: list[str], board: list[str]) -> list[dict]:
     for suit in SUITS:
         if sum(c[1] == suit for c in cards) == 4 and any(c[1] == suit for c in hero):
             draws.append({"type":"flush_draw", "outs_ranks":[], "personal_to_hero":True}); break
-    ranks = {RANK_VALUE[c[0]] for c in cards}; hero_ranks = {RANK_VALUE[c[0]] for c in hero}
-    # A completion is personal only if its straight includes a hero-hole rank.
-    already = any(seq <= ranks and seq & hero_ranks for seq in STRAIGHTS)
-    completes = {candidate for candidate in range(2, 15) if not already and any(seq <= (ranks | {candidate}) and seq & hero_ranks for seq in STRAIGHTS)}
-    if len(completes) == 2: draws.append({"type":"open_ended_straight_draw", "outs_ranks":[_rank(x) for x in sorted(completes)], "personal_to_hero":True})
-    elif len(completes) == 1: draws.append({"type":"gutshot_straight_draw", "outs_ranks":[_rank(next(iter(completes)))], "personal_to_hero":True})
+    ranks = {RANK_VALUE[c[0]] for c in cards}
+    if any(straight <= ranks for straight in STRAIGHTS):
+        return draws
+
+    board_ranks = {RANK_VALUE[c[0]] for c in board}
+    completions: dict[int, list[set[int]]] = {}
+    for straight in STRAIGHTS:
+        missing = straight - ranks
+        if len(missing) != 1:
+            continue
+        out = next(iter(missing))
+        held_ranks = straight - missing
+        if not held_ranks <= board_ranks:
+            completions.setdefault(out, []).append(held_ranks)
+
+    outs = sorted(completions)
+    if not outs:
+        return draws
+    if len(outs) == 1:
+        draw_type = "gutshot_straight_draw"
+    else:
+        shared_run = any(run in completions[outs[1]] for run in completions[outs[0]])
+        draw_type = "open_ended_straight_draw" if shared_run else "double_gutshot_straight_draw"
+    draws.append({"type": draw_type, "outs_ranks": [_rank(out) for out in outs], "personal_to_hero": True})
     return draws
 
 def pot_odds(pot: float, call: float) -> tuple[float, float]:

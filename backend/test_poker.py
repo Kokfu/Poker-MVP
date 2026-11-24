@@ -76,6 +76,21 @@ def test_river_uses_exact_990_combinations():
     assert result["hands_checked"] == 990
 
 
+def test_river_equity_matches_count_of_hands_holding_the_royal_flush_out():
+    result = calculate_equity(["9s", "3c"], ["As", "Ks", "Qs", "Js", "2d"], 10000)
+    # Only Ts beats Hero. It can be paired with any of the other 44 unseen cards.
+    assert result["win_rate"] == pytest.approx(946 / 990)
+    assert result["loss_rate"] == pytest.approx(44 / 990)
+    assert result["tie_rate"] == 0
+    assert result["equity"] == pytest.approx(946 / 990)
+
+
+def test_royal_flush_on_the_board_splits_every_river_deal():
+    result = calculate_equity(["Ah", "Ad"], ["As", "Ks", "Qs", "Js", "Ts"], 10000)
+    assert result["tie_rate"] == 1
+    assert result["equity"] == 0.5
+
+
 @pytest.mark.parametrize("board", [[], ["Js", "8s", "3d"], ["Js", "8s", "3d", "2c"]])
 def test_preflop_flop_turn_use_monte_carlo(board):
     assert calculate_equity(["As", "Qs"], board, 10000, seed=7)["calculation_method"] == "monte_carlo"
@@ -153,6 +168,16 @@ def test_hero_gutshot_straight_draw_is_detected():
 def test_board_only_straight_draw_is_not_personal():
     draws = detect_draws(["As", "Kd"], ["5h", "6d", "7c", "8s"])
     assert not any("straight" in draw["type"] for draw in draws)
+
+
+def test_duplicating_a_board_rank_does_not_make_its_straight_draw_personal():
+    assert detect_draws(["5s", "Ad"], ["5h", "6d", "7c", "8s"]) == []
+
+
+def test_double_gutshot_reports_two_distinct_inside_outs():
+    assert detect_draws(["5s", "Jd"], ["7h", "8d", "9c"]) == [
+        {"type": "double_gutshot_straight_draw", "outs_ranks": ["6", "T"], "personal_to_hero": True},
+    ]
 
 
 def test_river_has_no_draw_labels():

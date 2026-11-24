@@ -11,6 +11,7 @@ class RiverChanceExternalSamplingMCCFRTrainer(ExternalSamplingMCCFRTrainer):
         supplied = roots or river_chance_states()
         super().__init__(supplied, seed, action_label=lambda a:a.label, chance_label=lambda s:"/".join((*s.player0_cards,*s.player1_cards)), full_tree_node_count=full_tree_node_count)
         self.infoset_streets: dict[str,str] = {}
+        self._custom_roots = bool(roots)
     def _node(self,state):
         node=super()._node(state); prior=self.infoset_streets.setdefault(node.key,state.street)
         if prior != state.street: raise AssertionError("information set aliases distinct streets")
@@ -25,7 +26,9 @@ class RiverChanceExternalSamplingMCCFRTrainer(ExternalSamplingMCCFRTrainer):
             return sum(self._distribution(state)[a]*walk(state.apply(a)) for a in state.legal_actions)
         selected=tuple(roots) if roots is not None else self.roots
         return sum(walk(root) for root in selected)/len(selected)
-    def reachable_infosets(self): return dict(reachable_infoset_universe())
+    def reachable_infosets(self):
+        universe = reachable_infoset_universe(self.roots) if self._custom_roots else reachable_infoset_universe()
+        return dict(universe)
     def all_information_set_keys(self): return tuple(self.reachable_infosets())
     def chance_coverage(self):
         turn={card:self.future_chance_stage_sample_counts[f"turn:{card}"] for card in RIVER_RESEARCH_DECK}

@@ -4,6 +4,7 @@ import inspect
 import numpy as np
 import pytest
 
+from coach.service import Spot, SpotAction, advise
 from simulation.bots import BOT_TYPES
 from simulation.duplicate_evaluation import DuplicateConfig, run_duplicate_pairs
 from simulation.engine import HandEngine
@@ -57,6 +58,35 @@ def test_replay_matches_engine_and_no_strategy_fallbacks():
         assert result["illegal_actions"] == 0
     assert sum(b.fallback_count for b in bots) == 0
     assert sum(b.decision_count for b in bots) > 0
+
+
+@pytest.mark.parametrize("hero_stack,villain_stack,action", [
+    (10_000, 10_000, "all_in"),
+    (10_000, 6_000, "call"),
+    (6_000, 10_000, "all_in"),
+])
+def test_coach_uses_preflop_chart_when_facing_a_shove(hero_stack, villain_stack, action):
+    result = advise(Spot(
+        hero_cards=["As", "Ad"], hero_position="big_blind",
+        hero_stack=hero_stack, villain_stack=villain_stack,
+        actions=[SpotAction("villain", "all_in")],
+    ))
+    assert result["explanation"]["source"] == "preflop_chart"
+    assert result["advice"]["action"] == action
+    assert action in result["state"]["legal_actions"]
+
+
+def test_coach_converts_postflop_call_for_hero_entire_stack_to_all_in():
+    result = advise(Spot(
+        hero_cards=["As", "Ks"], board=["Qs", "Js", "Ts"],
+        actions=[SpotAction("hero", "call"), SpotAction("villain", "check"), SpotAction("villain", "all_in")],
+    ))
+    explanation = result["explanation"]
+    assert explanation["source"] == "postflop_solve"
+    assert explanation["chosen"] == "call"
+    assert explanation["probabilities"][explanation["labels"].index("call")] == pytest.approx(1.0, abs=0.001)
+    assert result["advice"]["action"] == "all_in"
+    assert result["advice"]["action"] in result["state"]["legal_actions"]
 
 
 def test_deterministic_for_equal_seeds():

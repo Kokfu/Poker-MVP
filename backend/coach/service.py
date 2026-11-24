@@ -8,6 +8,8 @@ target semantics), and board cards are entered as the streets are reached.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from os import getenv
+from time import perf_counter
 from typing import Any, Literal
 
 from poker_analyzer import FULL_DECK
@@ -210,6 +212,8 @@ def profile_for(store: HandStore, opponent: str, observer=None):
 def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store: HandStore | None = None, seed: int = 0) -> dict[str, Any]:
     from solver.bot import AdaptiveSolverBot, SolverBot
 
+    shadow = getenv("POKER_COACH_RIVER_SHADOW") == "1"
+    started = perf_counter() if shadow else None
     profile_snapshot = None
     advisor = AdaptiveSolverBot(seed=seed) if exploit and opponent else SolverBot(seed=seed)
     if opponent:
@@ -217,7 +221,10 @@ def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store:
         profile_snapshot = model.snapshot() if model.hands_observed else None
     if advisor.exploit and profile_snapshot is None:
         advisor = SolverBot(seed=seed)
+    advisor.persistent_ranges = getenv("POKER_COACH_PERSISTENT_RANGES") == "1"
     advisor.explain_ev = True
+    if shadow:
+        advisor.capture_river_shadow = True
     status, payload, engine = _replay(spot, advisor, profile_snapshot)
     if status == "hand_complete":
         return _hand_complete_payload(spot, payload)
@@ -230,7 +237,24 @@ def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store:
         # exploiting = the opponent model is on; adjusted = it actually changed the strategy (locked nodes).
         response["adjusted"] = bool(((response["explanation"] or {}).get("exploit") or {}).get("locked_nodes"))
         response["opponent_profile"] = profile_summary(profile_snapshot)
+        if shadow and response["state"]["street"] == "river":
+            _observe_river(advisor, engine, profile_snapshot, started)
     return response
+
+
+def _observe_river(advisor, engine, profile, started):
+    # This boundary includes import, snapshot and output errors, outside both
+    # the production fallback handler and construction of the Coach response.
+    try:
+        from research.holdem.river_shadow import observe
+
+        context = advisor.river_shadow_context
+        ds = context[0] if context is not None else engine.decision_observation(HERO).decision_state
+        observe(ds, advisor, profile if advisor.exploit else None, started)
+    except Exception as error:
+        from logging import getLogger
+
+        getLogger(__name__).warning("River shadow output failed (%s)", type(error).__name__)
 
 
 def log_hand(spot: Spot, opponent: str, store: HandStore | None = None) -> dict[str, Any]:

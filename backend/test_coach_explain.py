@@ -69,6 +69,26 @@ def test_explain_build_handles_fallback_and_missing_explanations():
     assert "rule-based" in fallback["reason"] and fallback["options"] == []
 
 
+def test_coach_api_fallback_has_legal_advice_and_empty_strategy(store):
+    actions = [
+        {"actor": actor, "action": "raise", "amount": amount}
+        for actor, amount in (("villain", 250), ("hero", 500), ("villain", 750),
+                              ("hero", 1000), ("villain", 1250))
+    ]
+    with TestClient(main.app) as client:
+        response = client.post("/api/coach/advise", json={
+            "hero_cards": ["As", "Kd"], "hero_position": "big_blind", "actions": actions,
+        })
+    assert response.status_code == 200
+    result = response.json()
+    assert result["status"] == "hero_to_act"
+    assert result["advice"]["action"] in result["state"]["legal_actions"]
+    assert set(result["explanation"]) == {"source", "reason"}
+    assert result["explain"]["source"] == "fallback"
+    assert result["explain"]["options"] == []
+    assert "rule-based bot" in result["explain"]["reason"]
+
+
 def test_reason_mentions_mixing_range_width_and_exploit():
     explanation = {"source": "postflop_solve", "labels": ["check", "bet 50%"], "probabilities": [0.4, 0.6], "chosen": "bet 50%",
                    "action_ev": [120.0, 150.0], "hero_equity_vs_range": 0.62, "villain_effective_combos": 80.0,

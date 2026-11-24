@@ -18,7 +18,7 @@ from solver.exploit import (SIZED_MIN_N, SIZED_PRIOR, _normalized, facing_size_r
                             sized_locks, sized_needs_aggregates, sized_node_lock, tree_locks)
 from solver.cfr import RangeSolver
 from solver.tree import POSTFLOP_MENU, StreetState, StreetTree
-from test_solver_gated import GOLDEN, _session
+from test_solver_gated import _session
 
 
 # ------------------------------------------------------------ equivalence / flags
@@ -30,10 +30,9 @@ def test_sized_is_off_everywhere_except_its_own_bot():
     assert isinstance(bot, SizedAdaptiveSolverBot) and bot.sized_reads is True and bot.exploit and not bot.gated_locks
 
 
-def test_default_path_is_still_bit_identical_to_main_golden_file():
-    from equiv_learning import fingerprint
-    expected = json.loads(GOLDEN.read_text(encoding="utf-8"))
-    assert json.loads(json.dumps(fingerprint(expected["hands"]))) == expected
+def test_default_path_matches_phase_4h_reference(adaptive_learning_reference):
+    expected, actual = adaptive_learning_reference
+    assert actual == expected
 
 
 # ------------------------------------------------------------ buckets and statistics

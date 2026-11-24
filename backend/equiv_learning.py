@@ -7,8 +7,10 @@ hand result.  Run on two code versions and compare the JSON::
 
     python equiv_learning.py out.json [hands]
 
-``test_solver_gated.py`` compares the default code path with the golden file
-``test_data/equiv_learning_main_fa3b538.json`` produced from ``main`` (fa3b538).
+The regression reference ``test_data/equiv_learning_phase_4h.json``
+uses 40 hands and ``OPENBLAS_NUM_THREADS=1`` for reproducible full-precision
+probabilities. The earlier fingerprints preserve the all-in replay correction
+and the policy before that fix.
 """
 from __future__ import annotations
 

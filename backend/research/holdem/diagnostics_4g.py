@@ -61,9 +61,10 @@ def validate_river_tree(roots=None):
     return _traverse(selected)[-1]
 
 @lru_cache(maxsize=1)
-def reachable_infoset_universe() -> tuple[tuple[str,str], ...]:
-    """Deterministic complete Phase 4G infoset universe, independent of MCCFR."""
-    states,_,_,_,_,_,_,_,errors=_traverse(river_chance_states())
+def reachable_infoset_universe(roots=None) -> tuple[tuple[str,str], ...]:
+    """Deterministic infoset universe for the supplied or full Phase 4G tree."""
+    selected = river_chance_states() if roots is None else roots
+    states,_,_,_,_,_,_,_,errors=_traverse(selected)
     if errors: raise AssertionError(errors)
     result={state.information_set():state.street for state in states if not state.terminal and not state.chance}
     return tuple(sorted(result.items()))

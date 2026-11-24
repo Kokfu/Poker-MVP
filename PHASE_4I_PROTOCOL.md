@@ -1,0 +1,15 @@
+# Phase 4I evaluation protocol
+
+Fixed before executing the comparisons on 17 November 2026. The panel is diagnostic and purpose-built. Its rows do not estimate decision incidence in the live pool.
+
+## Targeted comparisons
+
+Use the production Coach service, chart depths, DCFR budgets and legal engine replay. Compare the Phase 4H root-correlation control, corrected exploitation, and exploitation off. Reconstruct frozen profiles in scratch SQLite from existing local Tight (150 hands), Equity (120) and Aggressive (120) generator fixtures, starting at seed 0. Use prefixes of four, 12 and 40 Aggressive hands as evidence ladder controls. Seed Coach recommendations with 917. One BLAS thread for all arms. Clear the locked chart cache per measured row. In the mature Aggressive flop spot additionally isolate preflop-only and postflop-only locks. Keep the solve and hand data fixed.
+
+Record full-precision blocker-filtered villain range total variation (TV), effective combos, displayed equity, concrete action TV, modal action, sampled recommendation, source, scope of the locks, action values and wall time. Also check raw strategy legality/normalization and log fallback separately. Total variation is half the sum of absolute differences. Evaluate each arm under its own modeled policy for reported EV. Use separately specified river shove references with deterministic outcomes for common-payoff checks. The terminal arithmetic is `equity × (pot including wager + call) − call`. Exclude the references and mediation arms from the benchmark trigger.
+
+Run the bounded duplicate panel if corrected versus pre-4H produces concrete action TV of at least 5 percentage points in at least two supported spots or at least 5 points and a modal action change in one supported spot. Differences involving only range, displayed labels, or the single sampled action below the threshold do not trigger. Require no illegality, solver fallback, or normalization failure in the supported decision matrix.
+
+## Conditional paired panel
+
+Use 24 independent duplicate pairs at 30 bb against Tight, with fixed reads from the 150 completed Tight histories, no learning during evaluation and the production duplicate engine as the common harness. Blinds 50/100, 100 equity iterations, evaluation seeds 1,842,600–1,842,623, 2,000 percentile bootstrap resamples over matched pair differences, statistics seed 91,002. Run both seat orientations from the same deck for each arm. Use a 300 s wall cap across both arms. Report all completed results, root exposures, changed policies/actions where comparable, both fallback counts, deal checks and wall/CPU times. The result is favorable at this development scale only if the 95% paired interval lower bound is greater than zero, the point delta is at least +5 bb/100, and illegal actions, engine substitutions, solver fallbacks and deal mismatches are zero. Report a negative effect if the upper bound is below zero, otherwise report the result and its uncertainty without claiming improvement. Zero observed differences indicate no signal in this panel. No larger tournament or holdout in Phase 4I.

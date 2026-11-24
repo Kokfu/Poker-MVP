@@ -19,10 +19,10 @@ have done unwrapped.
     python -m solver.benchmark --save baseline.json          # also write a fixture
     python -m solver.benchmark --compare baseline.json       # run and diff
 
-Baseline recorded at commit b3be891 (pre-optimization) lives at
-``solver/data/benchmark_baseline.json`` and is also used by
-``test_solver_benchmark.py`` (a smaller, faster configuration) to guard
-against future behavior changes.
+The historical baseline recorded at commit b3be891 (pre-optimization) lives
+at ``solver/data/benchmark_baseline.json``. The smaller regression fixture
+``solver/data/benchmark_baseline_fast_single_thread.json`` uses
+``OPENBLAS_NUM_THREADS=1`` to keep sampled decisions reproducible.
 """
 from __future__ import annotations
 
@@ -300,7 +300,10 @@ def compare(report: dict[str, Any], baseline: dict[str, Any], atol: float = 1e-5
         return keyed_spots
 
     base_spots = keyed(baseline["spots"])
-    for key, spot in keyed(report["spots"]).items():
+    report_spots = keyed(report["spots"])
+    problems.extend(f"spot {key}: missing from report" for key in sorted(base_spots.keys() - report_spots.keys()))
+    problems.extend(f"spot {key}: unexpected in report" for key in sorted(report_spots.keys() - base_spots.keys()))
+    for key, spot in report_spots.items():
         base = base_spots.get(key)
         if base is None:
             continue
@@ -311,8 +314,11 @@ def compare(report: dict[str, Any], baseline: dict[str, Any], atol: float = 1e-5
             diff = float(np.max(np.abs(a - b))) if a.shape == b.shape else float("nan")
             problems.append(f"spot {key}: strategy differs by {diff} (> {atol})")
     base_hands = {h["seed"]: h for h in baseline["fixed_hands"]}
-    for hand in report["fixed_hands"]:
-        base = base_hands.get(hand["seed"])
+    report_hands = {h["seed"]: h for h in report["fixed_hands"]}
+    problems.extend(f"hand seed={seed}: missing from report" for seed in sorted(base_hands.keys() - report_hands.keys()))
+    problems.extend(f"hand seed={seed}: unexpected in report" for seed in sorted(report_hands.keys() - base_hands.keys()))
+    for seed, hand in report_hands.items():
+        base = base_hands.get(seed)
         if base is None:
             continue
         if hand["actions"] != base["actions"]:
