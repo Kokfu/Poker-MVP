@@ -1,0 +1,55 @@
+2026-11-25T11:33:03.1833700+08:00 start backend preflight at 7df73dd2f7c9eae28b51d5699101a53f18ba27af
+........................................................................ [  6%]
+........................................................................ [ 12%]
+........................................................................ [ 19%]
+........................................................................ [ 25%]
+........................................................................ [ 31%]
+........................................................................ [ 38%]
+........................................................................ [ 44%]
+........................................................................ [ 51%]
+........................................................................ [ 57%]
+........................................................................ [ 63%]
+........................................................................ [ 70%]
+........................................................................ [ 76%]
+........................................................................ [ 83%]
+........................................................................ [ 89%]
+........................................................................ [ 95%]
+..............................................                           [100%]
+============================== warnings summary ===============================
+..\..\..\..\..\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\starlette\formparsers.py:12
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\starlette\formparsers.py:12: PendingDeprecationWarning: Please use `import python_multipart` instead.
+    import multipart
+
+..\..\..\..\..\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:149
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:149: PyparsingDeprecationWarning: 'setName' deprecated - use 'set_name'
+    suitedness = pyparsing.Word("os", exact=1).setName("suitedness")
+
+..\..\..\..\..\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:150
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:150: PyparsingDeprecationWarning: 'setName' deprecated - use 'set_name'
+    card = pyparsing.Word(ranks_str, suits_str, exact=2).setName("card")
+
+..\..\..\..\..\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:152
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:152: PyparsingDeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    hand.setParseAction(lambda s, loc, toks: ''.join(toks))
+
+..\..\..\..\..\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:160
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:160: PyparsingDeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    decimal.setParseAction(lambda s, loc, toks: ''.join(toks))
+
+..\..\..\..\..\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:167
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:167: PyparsingDeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    handtype.setParseAction(lambda s, loc, toks: ''.join(toks))
+
+..\..\..\..\..\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:175
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:175: PyparsingDeprecationWarning: 'delimitedList' deprecated - use 'DelimitedList'
+    hand_group_list = pyparsing.Group(pyparsing.delimitedList(handtype_group))
+
+..\..\..\..\..\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:180
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:180: PyparsingDeprecationWarning: 'delimitedList' deprecated - use 'DelimitedList'
+    handrange = pyparsing.Optional(pyparsing.delimitedList(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+- generated xml file: C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\autopilot\overnight\jobs\implementation-preflight.xml -
+1126 passed, 8 warnings in 689.84s (0:11:29)
+2026-11-25T11:44:35.7557888+08:00 exit 0
+Parsed JUnit counts: tests 1126, failures 0, errors 0, skips 0.
