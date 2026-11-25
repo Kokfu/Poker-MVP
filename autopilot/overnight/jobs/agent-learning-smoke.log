@@ -1,0 +1,183 @@
+{
+  "agent": "solver_adaptive",
+  "bb_per_100": -400.0,
+  "by_session": [
+    {
+      "bb_per_100": -950.0,
+      "hands": 4,
+      "session": 1
+    },
+    {
+      "bb_per_100": 150.0,
+      "hands": 4,
+      "session": 2
+    }
+  ],
+  "configuration": {
+    "big_blind": 100,
+    "bootstrap_resamples": 2000,
+    "confidence_level": 0.95,
+    "equity_iterations": 100,
+    "pairs": 2,
+    "seed_offset": 56000,
+    "seed_set": "development",
+    "session_hands": 2,
+    "small_blind": 50,
+    "starting_stack": 10000,
+    "statistics_seed": 91002,
+    "workers": 1
+  },
+  "deal_mismatches": 0,
+  "early_vs_late": {
+    "early_bb_per_100": -950.0,
+    "early_sessions": 1,
+    "late_bb_per_100": 150.0,
+    "late_sessions": 1
+  },
+  "fallback_actions": 0,
+  "format_version": 1,
+  "hands": 8,
+  "illegal_actions": 0,
+  "ledger": "tight.profile.json",
+  "opponent": "tight",
+  "pairs": 2,
+  "persistent_learning": true,
+  "profile_hands": {
+    "final": {
+      "a": 4,
+      "b": 4
+    },
+    "initial": {
+      "a": 0,
+      "b": 0
+    }
+  },
+  "seat_a_bb_per_100": -912.5,
+  "seat_b_bb_per_100": 112.5,
+  "sessions": 2,
+  "standard_error_bb_per_100": 550.0,
+  "unpaired_standard_error_bb_per_100": 550.8516134132676,
+  "variance_reduction": 0.00308959835221434
+}
+{
+  "agent": "solver_adaptive",
+  "bb_per_100": 75.0,
+  "by_session": [
+    {
+      "bb_per_100": 75.0,
+      "hands": 4,
+      "session": 1
+    },
+    {
+      "bb_per_100": 75.0,
+      "hands": 4,
+      "session": 2
+    }
+  ],
+  "configuration": {
+    "big_blind": 100,
+    "bootstrap_resamples": 2000,
+    "confidence_level": 0.95,
+    "equity_iterations": 100,
+    "pairs": 2,
+    "seed_offset": 57000,
+    "seed_set": "development",
+    "session_hands": 2,
+    "small_blind": 50,
+    "starting_stack": 10000,
+    "statistics_seed": 91002,
+    "workers": 1
+  },
+  "deal_mismatches": 0,
+  "early_vs_late": {
+    "early_bb_per_100": 75.0,
+    "early_sessions": 1,
+    "late_bb_per_100": 75.0,
+    "late_sessions": 1
+  },
+  "fallback_actions": 0,
+  "format_version": 1,
+  "hands": 8,
+  "illegal_actions": 0,
+  "ledger": "tight.profile.json",
+  "opponent": "tight",
+  "pairs": 2,
+  "persistent_learning": true,
+  "profile_hands": {
+    "final": {
+      "a": 8,
+      "b": 8
+    },
+    "initial": {
+      "a": 4,
+      "b": 4
+    }
+  },
+  "seat_a_bb_per_100": 75.0,
+  "seat_b_bb_per_100": 75.0,
+  "sessions": 2,
+  "standard_error_bb_per_100": 0.0,
+  "unpaired_standard_error_bb_per_100": 0.0,
+  "variance_reduction": 0.0
+}
+{
+  "agent": "solver_adaptive",
+  "bb_per_100": 75.0,
+  "by_session": [
+    {
+      "bb_per_100": 75.0,
+      "hands": 4,
+      "session": 1
+    },
+    {
+      "bb_per_100": 75.0,
+      "hands": 4,
+      "session": 2
+    }
+  ],
+  "configuration": {
+    "big_blind": 100,
+    "bootstrap_resamples": 2000,
+    "confidence_level": 0.95,
+    "equity_iterations": 100,
+    "pairs": 2,
+    "seed_offset": 57000,
+    "seed_set": "development",
+    "session_hands": 2,
+    "small_blind": 50,
+    "starting_stack": 10000,
+    "statistics_seed": 91002,
+    "workers": 1
+  },
+  "deal_mismatches": 0,
+  "early_vs_late": {
+    "early_bb_per_100": 75.0,
+    "early_sessions": 1,
+    "late_bb_per_100": 75.0,
+    "late_sessions": 1
+  },
+  "fallback_actions": 0,
+  "format_version": 1,
+  "hands": 8,
+  "illegal_actions": 0,
+  "ledger": "tight.profile.json",
+  "opponent": "tight",
+  "pairs": 2,
+  "persistent_learning": true,
+  "profile_hands": {
+    "final": {
+      "a": 8,
+      "b": 8
+    },
+    "initial": {
+      "a": 4,
+      "b": 4
+    }
+  },
+  "seat_a_bb_per_100": 75.0,
+  "seat_b_bb_per_100": 75.0,
+  "sessions": 2,
+  "standard_error_bb_per_100": 0.0,
+  "unpaired_standard_error_bb_per_100": 0.0,
+  "variance_reduction": 0.0
+}
