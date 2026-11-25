@@ -1,0 +1,557 @@
+{
+  "startup_ms": 18.12,
+  "measurement_start_ms": 18.12,
+  "summary": {
+    "preflop_all": {
+      "n": 12,
+      "median_ms": 4.645,
+      "p95_ms": 966.25
+    },
+    "preflop_first": {
+      "n": 12,
+      "median_ms": 4.645,
+      "p95_ms": 966.25
+    },
+    "postflop_all": {
+      "n": 36,
+      "median_ms": 690.71,
+      "p95_ms": 1111.66
+    },
+    "postflop_first": {
+      "n": 36,
+      "median_ms": 690.71,
+      "p95_ms": 1111.66
+    }
+  },
+  "measurements": [
+    {
+      "spot": "preflop-0",
+      "repeat": 0,
+      "ms": 365.01,
+      "action": {
+        "action": "raise",
+        "amount": 250
+      },
+      "source": "preflop_chart",
+      "advice_sha256": "499a3f6f7498ff9a1b8454e839affd3617d1a605617a933ca05f8808041b79d4"
+    },
+    {
+      "spot": "flop-0",
+      "repeat": 0,
+      "ms": 481.18,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "d40a594f1b6981dee3d3a7b1859e53efa88d6b5716d81b00c98a0da69bc3bb77"
+    },
+    {
+      "spot": "turn-0",
+      "repeat": 0,
+      "ms": 490.25,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "4ae8a4cd500fc33def5a7a263f60a0c9937103dada0c15f56a6933077a45b8f2"
+    },
+    {
+      "spot": "river-0",
+      "repeat": 0,
+      "ms": 307.04,
+      "action": {
+        "action": "bet",
+        "amount": 500
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "fb589a70b05259203c5875dfabae0f7a513ff2167a3931e0ec4eba5aa969e13e"
+    },
+    {
+      "spot": "preflop-1",
+      "repeat": 0,
+      "ms": 966.25,
+      "action": {
+        "action": "call",
+        "amount": null
+      },
+      "source": "preflop_exploit",
+      "advice_sha256": "5741427e3a0a2b14d8c91a16ebaaec0ddc0fb82b63f0bdc952e34f35488d97bb"
+    },
+    {
+      "spot": "flop-1",
+      "repeat": 0,
+      "ms": 1887.55,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "fcea2b90183acc4a0a3ef1306c4e2f199fcb06f543873ac396429a793403f002"
+    },
+    {
+      "spot": "turn-1",
+      "repeat": 0,
+      "ms": 1005.52,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "3869512f6f4bf24b0922d14aa031f0c565514856fb8ccd529b10019a7a349c29"
+    },
+    {
+      "spot": "river-1",
+      "repeat": 0,
+      "ms": 897.6,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "42338f9cc7e64e40de21314826de2016fa4ec9d507a8e473e4bfcb0ea2c171d4"
+    },
+    {
+      "spot": "preflop-2",
+      "repeat": 0,
+      "ms": 3.4,
+      "action": {
+        "action": "raise",
+        "amount": 250
+      },
+      "source": "preflop_chart",
+      "advice_sha256": "7726622117bf0ead9ce18822783d137330d1bd9706e8a1c50f1a3d434fc786fe"
+    },
+    {
+      "spot": "flop-2",
+      "repeat": 0,
+      "ms": 411.52,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "a58cbf12c8bbb3b4ad9a197d34aa08ddf4d80b5b71b942288b27a632a0018127"
+    },
+    {
+      "spot": "turn-2",
+      "repeat": 0,
+      "ms": 459.24,
+      "action": {
+        "action": "bet",
+        "amount": 250
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "52ce4e75c1120f0033c5a8eda81147a853b2bec628a6a4243cd9f478b6e595b8"
+    },
+    {
+      "spot": "river-2",
+      "repeat": 0,
+      "ms": 336.27,
+      "action": {
+        "action": "bet",
+        "amount": 500
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "451717031080c66de1aa7a72c72ae5db9b1d77daa17e1a67f808bce411430b6d"
+    },
+    {
+      "spot": "preflop-3",
+      "repeat": 0,
+      "ms": 5.57,
+      "action": {
+        "action": "all_in",
+        "amount": null
+      },
+      "source": "preflop_exploit",
+      "advice_sha256": "4c07e2146c88385967823815ffa8853268a29ac8a61af0657e274678bfc68c26"
+    },
+    {
+      "spot": "flop-3",
+      "repeat": 0,
+      "ms": 1057.23,
+      "action": {
+        "action": "all_in",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "b95dc03552bd6bef7748a79ef18388d0723dce8bec170a59ff91d7fcce827698"
+    },
+    {
+      "spot": "turn-3",
+      "repeat": 0,
+      "ms": 1020.21,
+      "action": {
+        "action": "all_in",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "837c827dbb813d0e48a864a57fa53a0f7111aa7b7adb58f4c827c2286be9f526"
+    },
+    {
+      "spot": "river-3",
+      "repeat": 0,
+      "ms": 830.69,
+      "action": {
+        "action": "all_in",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "aa29c4536ab9d8c0a22a1008cf4c391476cf588bbcfc67f9ded69fbfb9a09018"
+    },
+    {
+      "spot": "preflop-0-suits1",
+      "repeat": 0,
+      "ms": 2.53,
+      "action": {
+        "action": "raise",
+        "amount": 250
+      },
+      "source": "preflop_chart",
+      "advice_sha256": "499a3f6f7498ff9a1b8454e839affd3617d1a605617a933ca05f8808041b79d4"
+    },
+    {
+      "spot": "flop-0-suits1",
+      "repeat": 0,
+      "ms": 550.73,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "9318fd06c2e8a237017f3d9396a9786de6c6cef539518b2e8191590111938091"
+    },
+    {
+      "spot": "turn-0-suits1",
+      "repeat": 0,
+      "ms": 541.22,
+      "action": {
+        "action": "bet",
+        "amount": 250
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "eccf33d539fd4aade9e44df9c1fe781a73684f1f10d1e0d4ad65a672a0128153"
+    },
+    {
+      "spot": "river-0-suits1",
+      "repeat": 0,
+      "ms": 388.67,
+      "action": {
+        "action": "bet",
+        "amount": 500
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "35c596abdca504b132ca4dda7ce341fddd7e577822186e1326195be806b4fd44"
+    },
+    {
+      "spot": "preflop-1-suits1",
+      "repeat": 0,
+      "ms": 8.47,
+      "action": {
+        "action": "call",
+        "amount": null
+      },
+      "source": "preflop_exploit",
+      "advice_sha256": "5741427e3a0a2b14d8c91a16ebaaec0ddc0fb82b63f0bdc952e34f35488d97bb"
+    },
+    {
+      "spot": "flop-1-suits1",
+      "repeat": 0,
+      "ms": 1111.66,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "d951ee893cd3de0a1d18d52585caa604e83ad6012c9b52c830c7855ff7ee3e65"
+    },
+    {
+      "spot": "turn-1-suits1",
+      "repeat": 0,
+      "ms": 870.35,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "ae95c314f7f8cbfe513390a13ebdaf144aafee3a9b9ead61a8a7d76e7f3dc59a"
+    },
+    {
+      "spot": "river-1-suits1",
+      "repeat": 0,
+      "ms": 909.12,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "4ded3d0f96eb6d54f8f9c1b3e2c2eb8e0448e21505e5272568ccf7c75ff998e9"
+    },
+    {
+      "spot": "preflop-2-suits1",
+      "repeat": 0,
+      "ms": 2.57,
+      "action": {
+        "action": "raise",
+        "amount": 250
+      },
+      "source": "preflop_chart",
+      "advice_sha256": "7726622117bf0ead9ce18822783d137330d1bd9706e8a1c50f1a3d434fc786fe"
+    },
+    {
+      "spot": "flop-2-suits1",
+      "repeat": 0,
+      "ms": 488.15,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "fa07500b80003f4423e9a497b6148bd5eef4aab1f833bfd61562ce25faf2245a"
+    },
+    {
+      "spot": "turn-2-suits1",
+      "repeat": 0,
+      "ms": 457.93,
+      "action": {
+        "action": "bet",
+        "amount": 250
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "2c78cdefe28fcb90560a46c225221a1259fd309f13c72865db94f2abe1b40691"
+    },
+    {
+      "spot": "river-2-suits1",
+      "repeat": 0,
+      "ms": 277.87,
+      "action": {
+        "action": "bet",
+        "amount": 250
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "00a451502f4d27998616963765b9b86d4bafd31df0590e6d894297bb77f5620f"
+    },
+    {
+      "spot": "preflop-3-suits1",
+      "repeat": 0,
+      "ms": 4.58,
+      "action": {
+        "action": "all_in",
+        "amount": null
+      },
+      "source": "preflop_exploit",
+      "advice_sha256": "4c07e2146c88385967823815ffa8853268a29ac8a61af0657e274678bfc68c26"
+    },
+    {
+      "spot": "flop-3-suits1",
+      "repeat": 0,
+      "ms": 1060.9,
+      "action": {
+        "action": "all_in",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "91004ff29d613409fa9573d8748c9a0e924816a4758a53cf28f8b11ffcd8f9a6"
+    },
+    {
+      "spot": "turn-3-suits1",
+      "repeat": 0,
+      "ms": 1107.81,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "9d62c112513c7e25baf0eca133cb7433886a42d6c36b17ecd1d11d5db65fa3e5"
+    },
+    {
+      "spot": "river-3-suits1",
+      "repeat": 0,
+      "ms": 877.54,
+      "action": {
+        "action": "all_in",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "dca4570d4f109a159595450701b02be966ebc982a1ffd04055793ed6461e8245"
+    },
+    {
+      "spot": "preflop-0-suits2",
+      "repeat": 0,
+      "ms": 4.64,
+      "action": {
+        "action": "raise",
+        "amount": 250
+      },
+      "source": "preflop_chart",
+      "advice_sha256": "499a3f6f7498ff9a1b8454e839affd3617d1a605617a933ca05f8808041b79d4"
+    },
+    {
+      "spot": "flop-0-suits2",
+      "repeat": 0,
+      "ms": 506.69,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "9596212d8fd6ff2ef6db0e6dfb21b97c91089739499a484646aaad7581ae3283"
+    },
+    {
+      "spot": "turn-0-suits2",
+      "repeat": 0,
+      "ms": 498.55,
+      "action": {
+        "action": "bet",
+        "amount": 250
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "9e98843e6a5c2dbed5ce9460c740fb4a73fab98bce9da17b7d530a2100d0ca34"
+    },
+    {
+      "spot": "river-0-suits2",
+      "repeat": 0,
+      "ms": 316.19,
+      "action": {
+        "action": "bet",
+        "amount": 500
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "3b930456d02d490289bf73bb16392ca05a97e0d76d280b0af08c8afc9240db40"
+    },
+    {
+      "spot": "preflop-1-suits2",
+      "repeat": 0,
+      "ms": 5.47,
+      "action": {
+        "action": "call",
+        "amount": null
+      },
+      "source": "preflop_exploit",
+      "advice_sha256": "5741427e3a0a2b14d8c91a16ebaaec0ddc0fb82b63f0bdc952e34f35488d97bb"
+    },
+    {
+      "spot": "flop-1-suits2",
+      "repeat": 0,
+      "ms": 1075.33,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "55fe509669400b9418a386d886e75e4d9917dca226c547ba1ae7d6b35ec060a2"
+    },
+    {
+      "spot": "turn-1-suits2",
+      "repeat": 0,
+      "ms": 1048.44,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "c3371286ae4309f00e523435bb748d5631d032d3d60978ba91cfdffa8b65f73a"
+    },
+    {
+      "spot": "river-1-suits2",
+      "repeat": 0,
+      "ms": 974.49,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "2f2d0011fb9586be541b4ea26cbad8173ddb7bd463dca70e083cf02df1522cd6"
+    },
+    {
+      "spot": "preflop-2-suits2",
+      "repeat": 0,
+      "ms": 4.2,
+      "action": {
+        "action": "raise",
+        "amount": 250
+      },
+      "source": "preflop_chart",
+      "advice_sha256": "7726622117bf0ead9ce18822783d137330d1bd9706e8a1c50f1a3d434fc786fe"
+    },
+    {
+      "spot": "flop-2-suits2",
+      "repeat": 0,
+      "ms": 507.61,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "f2181ce8660771926a0aafd6ddcb7a08007b044acd42505ef77dd2b4d2d8c667"
+    },
+    {
+      "spot": "turn-2-suits2",
+      "repeat": 0,
+      "ms": 480.97,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "9f9d9d9896c0e0c47baac142662b9c967f8dbc4bee9c432455d52e62311f3f23"
+    },
+    {
+      "spot": "river-2-suits2",
+      "repeat": 0,
+      "ms": 274.37,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "1c023e9fbe981480b90db0fd97e9744a2a7103ac445c6b509b90bc0f8f0dd739"
+    },
+    {
+      "spot": "preflop-3-suits2",
+      "repeat": 0,
+      "ms": 4.65,
+      "action": {
+        "action": "all_in",
+        "amount": null
+      },
+      "source": "preflop_exploit",
+      "advice_sha256": "4c07e2146c88385967823815ffa8853268a29ac8a61af0657e274678bfc68c26"
+    },
+    {
+      "spot": "flop-3-suits2",
+      "repeat": 0,
+      "ms": 1038.09,
+      "action": {
+        "action": "all_in",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "58ae7136836083bf8747a541aa463ca731d3dd712b5b5c14dd7ac3ed5979441b"
+    },
+    {
+      "spot": "turn-3-suits2",
+      "repeat": 0,
+      "ms": 999.33,
+      "action": {
+        "action": "check",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "a00c2720a2b3f5525aeebdb15cbea6bef06fc2904282c2795fe7d88907ede7f9"
+    },
+    {
+      "spot": "river-3-suits2",
+      "repeat": 0,
+      "ms": 933.06,
+      "action": {
+        "action": "all_in",
+        "amount": null
+      },
+      "source": "postflop_solve",
+      "advice_sha256": "af2397edc1074ec45a30b4f846ede8f9720bcb7ec2ae3aba83fc5f05e600845a"
+    }
+  ],
+  "matching_responses": 48
+}

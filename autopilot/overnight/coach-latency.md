@@ -119,3 +119,7 @@ The same representative spots were measured through Uvicorn on an ephemeral loop
 | In process | On | 359 | 2,364 | 2,992 |
 
 The HTTP startup includes launching a separate interpreter and importing the application. The request timings begin once that process is listening. Use the same environment and add --http to the representative commands above. [Run log](jobs/coach-loopback-48.log)
+
+### Overlapping exact requests
+
+Two threads issued either the same cold turn request or two requests with the same public board and different hole cards. In four repetitions per case, each affected matrix was built once after commit 217bb54. Identical requests shared each exact street solve. Different hole cards still received two solves. Median paired elapsed time changed from 1,059 to 960 ms for identical requests and 1,111 to 1,034 ms for the two private hands on one board. Both 48-spot suites preserved all normalized advice hashes. [Before](jobs/coach-postflop-overlap-before.log) [After](jobs/coach-postflop-overlap-after.log)

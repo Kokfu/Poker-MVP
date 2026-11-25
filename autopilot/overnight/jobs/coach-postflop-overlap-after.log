@@ -1,0 +1,8 @@
+identical 1 961.4 {'matrix-3': 1, 'matrix-4': 1, 'solve-flop': 1, 'solve-turn': 1} [{'action': 'check', 'amount': None}, {'action': 'check', 'amount': None}]
+identical 2 904.8 {'matrix-3': 1, 'matrix-4': 1, 'solve-flop': 1, 'solve-turn': 1} [{'action': 'check', 'amount': None}, {'action': 'check', 'amount': None}]
+identical 3 1054.3 {'matrix-3': 1, 'matrix-4': 1, 'solve-flop': 1, 'solve-turn': 1} [{'action': 'check', 'amount': None}, {'action': 'check', 'amount': None}]
+identical 4 959.4 {'matrix-3': 1, 'matrix-4': 1, 'solve-flop': 1, 'solve-turn': 1} [{'action': 'check', 'amount': None}, {'action': 'check', 'amount': None}]
+same board, different hole cards 1 1000.3 {'matrix-3': 1, 'matrix-4': 1, 'solve-flop': 2, 'solve-turn': 2} [{'action': 'check', 'amount': None}, {'action': 'bet', 'amount': 500}]
+same board, different hole cards 2 1030.8 {'matrix-3': 1, 'matrix-4': 1, 'solve-flop': 2, 'solve-turn': 2} [{'action': 'check', 'amount': None}, {'action': 'bet', 'amount': 500}]
+same board, different hole cards 3 1036.9 {'matrix-3': 1, 'matrix-4': 1, 'solve-flop': 2, 'solve-turn': 2} [{'action': 'check', 'amount': None}, {'action': 'bet', 'amount': 500}]
+same board, different hole cards 4 1086.9 {'matrix-3': 1, 'matrix-4': 1, 'solve-flop': 2, 'solve-turn': 2} [{'action': 'check', 'amount': None}, {'action': 'bet', 'amount': 500}]
