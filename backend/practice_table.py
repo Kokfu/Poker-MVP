@@ -43,6 +43,7 @@ _MAX_BODY_BYTES = 2048
 _KEY = re.compile(r"[A-Za-z0-9_-]{43}")
 _TABLES = {}
 _TABLES_LOCK = Lock()
+_CREATING = 0
 _CREATES: dict[str, deque[float]] = {}
 _LOG = getLogger(__name__)
 
@@ -372,6 +373,8 @@ def _check_revision(table: PracticeTable, revision: int):
 
 @router.post("/table", status_code=201)
 def create_table(request: Request, settings: TableSettings | None = None):
+    global _CREATING
+    settings = settings or TableSettings()
     with _TABLES_LOCK:
         now = monotonic()
         host = request.client.host if request.client is not None else ""
@@ -387,11 +390,18 @@ def create_table(request: Request, settings: TableSettings | None = None):
         for key, table in list(_TABLES.items()):
             if now - table.last_used > _IDLE_SECONDS:
                 del _TABLES[key]
-        if len(_TABLES) >= _TABLE_LIMIT:
+        if len(_TABLES) + _CREATING >= _TABLE_LIMIT:
             raise HTTPException(503, "practice tables are full; try later")
         key = token_urlsafe(32)
-        settings = settings or TableSettings()
-        table = _TABLES[key] = PracticeTable(settings.turn_seconds, settings.opponent)
+        _CREATING += 1
+    table = None
+    try:
+        table = PracticeTable(settings.turn_seconds, settings.opponent)
+    finally:
+        with _TABLES_LOCK:
+            _CREATING -= 1
+            if table is not None:
+                _TABLES[key] = table
     with table.lock:
         return {"key": key, "table": table.snapshot()}
 
@@ -442,7 +452,7 @@ def review_session(authorization: TableKey = None):
 def close_table(authorization: TableKey = None):
     table = _lookup(authorization)
     key = authorization[7:]
-    with _TABLES_LOCK, table.lock:
+    with table.lock, _TABLES_LOCK:
         if _TABLES.get(key) is table:
             del _TABLES[key]
             table.closed = True

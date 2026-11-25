@@ -1,8 +1,11 @@
+from concurrent.futures import ThreadPoolExecutor
 from sqlite3 import OperationalError
+from threading import Event
 
 from fastapi.testclient import TestClient
 import pytest
 
+import practice_table
 from coach.store import HandStore
 from main import app
 from practice_table import _CREATES, _TABLES
@@ -208,3 +211,100 @@ def test_independent_tables_and_bounded_requests(monkeypatch):
     assert client.get("/api/practice/table", headers=first_headers).status_code == 404
     now[0] += 60
     assert client.post("/api/practice/table").status_code == 201
+
+
+def test_timeout_and_late_action_save_once_while_another_table_settles(monkeypatch):
+    now = [1000.0]
+    monkeypatch.setattr(practice_table, "monotonic", lambda: now[0])
+    client = TestClient(app)
+    first = client.post("/api/practice/table", json={"opponent": "First", "turn_seconds": 5}).json()
+    second = client.post("/api/practice/table", json={"opponent": "Second", "turn_seconds": 120}).json()
+    first_table = _TABLES[first["key"]]
+    original_save = first_table.store.add
+    writing, release = Event(), Event()
+
+    def slow_save(*args, **kwargs):
+        writing.set()
+        assert release.wait(10)
+        return original_save(*args, **kwargs)
+
+    monkeypatch.setattr(first_table.store, "add", slow_save)
+    now[0] += 5
+
+    def act(created, action):
+        return client.post(
+            "/api/practice/table/action", headers={"Authorization": f"Bearer {created['key']}"},
+            json={"revision": created["table"]["revision"], "action": action},
+        )
+
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        expiry = pool.submit(first_table._on_timeout, first["table"]["revision"])
+        try:
+            assert writing.wait(5)
+            late = pool.submit(act, first, "call")
+            other = pool.submit(act, second, "fold").result(timeout=5)
+            assert other.json()["status"] == "complete"
+            assert HandStore().hands("First") == []
+        finally:
+            release.set()
+        expiry.result(timeout=5)
+        assert late.result(timeout=5).status_code == 409
+
+    assert first_table.state["status"] == "complete"
+    assert first_table.state["last_action_timed_out"] is True
+    assert first_table.profile.hands_observed == 1
+    assert len(HandStore().hands("First")) == len(HandStore().hands("Second")) == 1
+
+
+def test_closing_busy_table_does_not_block_another_table(monkeypatch):
+    client = TestClient(app)
+    first = client.post("/api/practice/table").json()
+    second = client.post("/api/practice/table").json()
+    busy = _TABLES[first["key"]]
+    busy_lock = busy.lock
+    waiting = Event()
+
+    class ObservedLock:
+        def __enter__(self):
+            waiting.set()
+            return busy_lock.__enter__()
+
+        def __exit__(self, *args):
+            return busy_lock.__exit__(*args)
+
+    monkeypatch.setattr(busy, "lock", ObservedLock())
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        with busy_lock:
+            closing = pool.submit(client.delete, "/api/practice/table",
+                                  headers={"Authorization": f"Bearer {first['key']}"})
+            assert waiting.wait(5)
+            second_state = pool.submit(client.get, "/api/practice/table",
+                                       headers={"Authorization": f"Bearer {second['key']}"})
+            assert second_state.result(timeout=5).status_code == 200
+        assert closing.result(timeout=5).status_code == 204
+
+
+def test_slow_creation_reserves_capacity_without_blocking_existing_table(monkeypatch):
+    client = TestClient(app)
+    first = client.post("/api/practice/table").json()
+    original = practice_table.PracticeTable
+    starting, release = Event(), Event()
+    monkeypatch.setattr(practice_table, "_TABLE_LIMIT", 2)
+
+    def slow_create(*args):
+        starting.set()
+        assert release.wait(10)
+        return original(*args)
+
+    monkeypatch.setattr(practice_table, "PracticeTable", slow_create)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        create = pool.submit(client.post, "/api/practice/table")
+        try:
+            assert starting.wait(5)
+            lookup = pool.submit(client.get, "/api/practice/table", headers={"Authorization": f"Bearer {first['key']}"})
+            assert lookup.result(timeout=5).status_code == 200
+            denied = pool.submit(client.post, "/api/practice/table")
+            assert denied.result(timeout=5).status_code == 503
+        finally:
+            release.set()
+        assert create.result(timeout=5).status_code == 201
