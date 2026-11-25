@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { PlayingCard } from "./CardInput";
 
 type Action = "fold" | "check" | "call" | "bet" | "raise" | "all_in";
@@ -21,11 +21,21 @@ type Table = {
   actions: { player: "a" | "b"; type: Action; amount?: number }[];
   learned_hands: number;
   net_chips?: number;
+  turn_seconds: number;
+  remaining_ms: number | null;
+  last_action_timed_out?: boolean;
 };
+
+type Play = { action: Action; amount: number | null };
+type Review = { street: string; action: Play; advice: Play; timed_out: boolean; explain: { reason: string } | null };
 
 const LABEL: Record<Action, string> = {
   fold: "Fold", check: "Check", call: "Call", bet: "Bet", raise: "Raise to", all_in: "All-in",
 };
+
+function playLabel(play: Play) {
+  return play.amount === null ? LABEL[play.action] : `${LABEL[play.action]} ${play.amount}`;
+}
 
 export default function PracticeTable() {
   const [key, setKey] = useState("");
@@ -33,15 +43,30 @@ export default function PracticeTable() {
   const [pending, setPending] = useState(false);
   const [amount, setAmount] = useState("");
   const [error, setError] = useState("");
+  const [turnSeconds, setTurnSeconds] = useState("20");
+  const [deadline, setDeadline] = useState<number>();
+  const [remaining, setRemaining] = useState(0);
+  const [review, setReview] = useState<Review[]>();
+  const [reviewError, setReviewError] = useState("");
+  const pendingRef = useRef(false);
 
-  async function request(path = "", payload?: object) {
+  const update = useCallback((state: Table) => {
+    setTable(state);
+    setAmount(state.minimum_target === null ? "" : String(state.minimum_target));
+    setRemaining(Math.ceil((state.remaining_ms ?? 0) / 1000));
+    setDeadline(state.remaining_ms === null ? undefined : performance.now() + state.remaining_ms);
+  }, []);
+
+  const request = useCallback(async (path = "", payload?: object, method = "POST") => {
+    if (pendingRef.current) return;
+    pendingRef.current = true;
     setPending(true);
     setError("");
     const headers = new Headers({ "Content-Type": "application/json" });
     if (key) headers.set("Authorization", `Bearer ${key}`);
     try {
       const response = await fetch(`/api/practice/table${path}`, {
-        method: "POST",
+        method,
         headers,
         body: payload ? JSON.stringify(payload) : undefined,
       });
@@ -59,14 +84,44 @@ export default function PracticeTable() {
     } catch (problem) {
       setError(problem instanceof Error ? problem.message : "Practice table request failed");
     } finally {
+      pendingRef.current = false;
       setPending(false);
     }
-  }
+  }, [key, update]);
 
-  function update(state: Table) {
-    setTable(state);
-    setAmount(state.minimum_target === null ? "" : String(state.minimum_target));
-  }
+  useEffect(() => {
+    if (deadline === undefined) return;
+    const interval = window.setInterval(() => {
+      const seconds = Math.max(0, Math.ceil((deadline - performance.now()) / 1000));
+      setRemaining(seconds);
+      if (seconds === 0 && !pendingRef.current) {
+        window.clearInterval(interval);
+        void request("", undefined, "GET");
+      }
+    }, 100);
+    return () => window.clearInterval(interval);
+  }, [deadline, request]);
+
+  const completedRevision = table?.status === "complete" ? table.revision : undefined;
+  useEffect(() => {
+    setReview(undefined);
+    setReviewError("");
+    if (!key || completedRevision === undefined) return;
+    const abort = new AbortController();
+    fetch(`/api/practice/table/review?revision=${completedRevision}`, {
+      headers: { Authorization: `Bearer ${key}` }, signal: abort.signal,
+    }).then(response => {
+      if (!response.ok) throw new Error("Coach review could not be loaded.");
+      return response.json();
+    }).then(rows => {
+      if (!abort.signal.aborted) setReview(rows);
+    }).catch(() => {
+      if (!abort.signal.aborted) setReviewError("Coach review could not be loaded.");
+    });
+    return () => abort.abort();
+  }, [completedRevision, key]);
+
+  const validTimer = Number.isInteger(+turnSeconds) && +turnSeconds >= 1 && +turnSeconds <= 120;
 
   return (
     <section className="panel" aria-labelledby="practice-title">
@@ -74,7 +129,12 @@ export default function PracticeTable() {
       <p className="muted">Play chips · 50/100 blinds · stacks reset each hand.</p>
       {error && <p className="error" role="alert">{error}</p>}
       {!table ? (
-        <button className="primary" disabled={pending} onClick={() => request()}>Start practice table</button>
+        <div className="coach-action-row">
+          <label>Seconds per action <input type="number" inputMode="numeric" min="1" max="120" value={turnSeconds}
+            onChange={event => setTurnSeconds(event.target.value)} /></label>
+          <button className="primary" disabled={pending || !validTimer}
+            onClick={() => request("", { turn_seconds: +turnSeconds })}>Start practice table</button>
+        </div>
       ) : (
         <>
           <p>Hand {table.hand} · {table.position === "BTN" ? "Button / SB" : "Big blind"} · {table.status === "complete" ? "Complete" : table.street}</p>
@@ -84,6 +144,7 @@ export default function PracticeTable() {
           </div>
           <div className="coach-action-row" aria-label="Your cards">{table.your_cards.map(card => <PlayingCard key={card} card={card} />)}</div>
           <p>Pot {table.pot}{table.to_call > 0 && ` · ${table.to_call} to call`}</p>
+          {table.last_action_timed_out && <p role="status">Timer expired. The table played your previous action.</p>}
           {table.board.length > 0 && <div className="coach-action-row" aria-label="Board">{table.board.map(card => <PlayingCard key={card} card={card} />)}</div>}
           {table.shown_bot_cards && <div className="coach-action-row" aria-label="Solver bot showdown cards">{table.shown_bot_cards.map(card => <PlayingCard key={card} card={card} />)}</div>}
           {table.actions.length > 0 && <ul aria-label="Recent actions">{table.actions.slice(-6).map((action, index) => (
@@ -92,18 +153,26 @@ export default function PracticeTable() {
           {table.status === "complete" ? (
             <>
               <p role="status">Hand complete · {(table.net_chips ?? 0) > 0 && "+"}{table.net_chips} chips · {table.learned_hands} {table.learned_hands === 1 ? "hand" : "hands"} observed by the bot</p>
+              <h3>Coach review</h3>
+              {reviewError ? <p role="alert">{reviewError}</p> : !review ? <p role="status">Loading advice…</p> :
+                <ol>{review.map((decision, index) => <li key={index}>
+                  <strong>{decision.street}</strong> · You played {playLabel(decision.action)}{decision.timed_out && " (timer)"} · Coach suggests {playLabel(decision.advice)}
+                  {decision.explain && <p>{decision.explain.reason}</p>}
+                </li>)}</ol>}
               <button className="primary" disabled={pending} onClick={() => request("/next", { revision: table.revision })}>Next practice hand</button>
             </>
           ) : (
             <>
               <h3>Your turn</h3>
+              <p role="timer" aria-label="Time left">{remaining} s left</p>
+              {remaining === 0 && error && <button disabled={pending} onClick={() => request("", undefined, "GET")}>Refresh turn</button>}
               {(table.legal_actions.includes("bet") || table.legal_actions.includes("raise")) && (
                 <label>Street total <input type="number" inputMode="numeric" min={table.minimum_target ?? 0} max={table.maximum_target} value={amount} onChange={(event) => setAmount(event.target.value)} /></label>
               )}
               <div className="coach-action-row">
                 {table.legal_actions.map(action => {
                   const sized = action === "bet" || action === "raise";
-                  return <button key={action} className="secondary" disabled={pending || (sized && (!Number.isInteger(+amount) || +amount < (table.minimum_target ?? 1) || +amount > table.maximum_target))}
+                  return <button key={action} className="secondary" disabled={pending || remaining === 0 || (sized && (!Number.isInteger(+amount) || +amount < (table.minimum_target ?? 1) || +amount > table.maximum_target))}
                     onClick={() => request("/action", { revision: table.revision, action, ...(sized ? { amount: +amount } : {}) })}>
                     {LABEL[action]}{action === "call" && ` ${table.to_call}`}
                   </button>;
