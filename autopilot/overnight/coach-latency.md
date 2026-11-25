@@ -66,4 +66,4 @@ The experiment compared two fresh API processes on the same 48 distinct spots, w
 | Archived control | 1,047 | 13 / 170 | 2,472 / 3,999 |
 | Exact board-ranking candidate | 825 | 13 / 52 | 2,380 / 3,496 |
 
-Six alternating matrix runs per shape matched bit for bit. Median exact turn time was 746 → 558 ms for 1,326 × 1,326 combos and 496 → 338 ms for 750 × 670 combos. The API timing reflects a single pair of sequential runs under shared load. Postflop still exceeds the target. The idle-machine warmup comparison is pending.
+Six alternating matrix runs per shape matched bit for bit. Median exact turn time was 746 → 558 ms for 1,326 × 1,326 combos and 496 → 338 ms for 750 × 670 combos. The API timing reflects a single pair of sequential runs under shared load. Postflop still exceeds the target. Commit 975387d contains the exact board-ranking change. The idle-machine warmup comparison is pending.
