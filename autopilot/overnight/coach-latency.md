@@ -123,3 +123,14 @@ The HTTP startup includes launching a separate interpreter and importing the app
 ### Overlapping exact requests
 
 Two threads issued either the same cold turn request or two requests with the same public board and different hole cards. In four repetitions per case, each affected matrix was built once after commit 217bb54. Identical requests shared each exact street solve. Different hole cards still received two solves. Median paired elapsed time changed from 1,059 to 960 ms for identical requests and 1,111 to 1,034 ms for the two private hands on one board. Both 48-spot suites preserved all normalized advice hashes. [Before](jobs/coach-postflop-overlap-before.log) [After](jobs/coach-postflop-overlap-after.log)
+
+### Advice after prior streets
+
+For the 12 turns and 12 rivers in the representative set, two orders were alternated. Each final request started with either empty board and street caches or caches populated through the legal earlier hero decisions of that hand. Preflop policies were prepared in both arms. Earlier requests were given only the board available at their decision, and their latency is separate from the final request. All 24 final advice hashes matched.
+
+| Street | Isolated median / p95 (ms) | After earlier advice median / p95 (ms) | Earlier requests median total (ms) |
+| --- | ---: | ---: | ---: |
+| Turn | 1,352 / 2,046 | 748 / 999 | 623 |
+| River | 1,779 / 2,897 | 545 / 866 | 1,295 |
+
+In the isolated arm, median solver time for earlier streets was 407 ms on turns and 804 ms on rivers. The populated caches brought both medians to zero. The median new-street solve used 481–483 ms. [Per-spot breakdown](jobs/coach-replay-cost.log)
