@@ -1,0 +1,3 @@
+3 board cards: baseline 502.93 ms, candidate 489.82 ms, bit-identical (6 runs)
+4 board cards: baseline 1117.00 ms, candidate 1084.22 ms, bit-identical (6 runs)
+5 board cards: baseline 139.79 ms, candidate 128.00 ms, bit-identical (6 runs)
