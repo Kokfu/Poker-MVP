@@ -1,6 +1,6 @@
 2026-11-25T20:50:43.3288189+08:00 start 48 independent Coach spots
 2026-11-25T20:50:43.3375805+08:00 warmup=0
-startup 16.23 ms, matches 
+startup 16.23 ms, matches
 preflop 12 spots, median/p95 827.74/1338.35 ms
 flop 12 spots, median/p95 728.41/1154.73 ms
 turn 12 spots, median/p95 1276.82/2166.02 ms

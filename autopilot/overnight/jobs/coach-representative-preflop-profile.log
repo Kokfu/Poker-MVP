@@ -52,5 +52,3 @@ preflop-representative-11 200bb big_blind Aggressive synthetic 1086.2 ms, lock s
     136/4    0.004    0.000    0.333    0.083 {built-in method builtins.exec}
         1    0.000    0.000    0.333    0.333 bot.py:1(<module>)
      4000    0.277    0.000    0.288    0.000 cfr.py:165(_current_reaches)
-
-

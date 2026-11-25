@@ -148,4 +148,4 @@ $env:MKL_NUM_THREADS = '1'
 backend/.venv/Scripts/python.exe autopilot/overnight/profile_coach_replay.py
 ```
 
-The driver creates its own synthetic history and reports hashes for the final requests. [Reproduction log](jobs/coach-replay-driver.log)
+The driver creates its own synthetic history and checks matching advice hashes for the final requests. [Reproduction log](jobs/coach-replay-driver.log)
