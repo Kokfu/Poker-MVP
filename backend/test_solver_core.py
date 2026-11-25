@@ -152,6 +152,19 @@ def test_cfr_exploitability_shrinks():
     assert late < early and late < 0.1
 
 
+def test_action_values_match_with_the_already_calculated_policy(monkeypatch):
+    solver, result = _polarized(30)
+    root = solver.tree.nodes[solver.tree.root]
+    expected = solver.action_values(root, 0)
+
+    def reject_recalculation():
+        raise AssertionError("the final policy was already available")
+
+    monkeypatch.setattr(solver, "final_policy", reject_recalculation)
+    actual = solver.action_values(root, 0, policy=lambda node: result.average[node.index])
+    assert np.array_equal(actual.view(np.uint64), expected.view(np.uint64))
+
+
 def test_fit_frequencies_matches_targets_and_keeps_ordering():
     from solver.cfr import fit_frequencies
     sigma = np.array([[0.9, 0.5, 0.1], [0.1, 0.5, 0.9]])  # combo 0 prefers action 0

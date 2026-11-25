@@ -435,7 +435,7 @@ class SolverBot(PokerBot):
         action = self._concrete_postflop(ds, tree_node.actions[choice])
         action_ev = None
         if solve.solver is not None:
-            values = solve.solver.action_values(tree_node, position)
+            values = solve.solver.action_values(tree_node, position, policy=lambda node: solve.average[node.index])
             action_ev = [round(float(v), 1) for v in values]
         if self.capture_river_shadow and street == "river":
             self.river_shadow_context = (ds, solve, tree_node, position, opponent_range,
