@@ -26,3 +26,9 @@ backend/.venv/Scripts/python.exe autopilot/overnight/time_coach.py
 $env:POKER_COACH_SOLVE_CACHE = '1'
 backend/.venv/Scripts/python.exe autopilot/overnight/time_coach.py
 ```
+
+## November 26 cold path
+
+One direct profiling run used a synthetic opponent with 150 logged hands and one BLAS worker. The first named preflop request took 5.82 s under cProfile, including 1.07 s to import the solver, 0.97 s to rebuild the opponent profile, and 3.65 s to compute the locked chart policy. The first named flop request took 7.56 s, including 3.75 s for the other seat's locked preflop policy, 0.87 s for new-board equity, and 3.76 s for the full street solve including equity. Profiling shared the machine with the diagnostic and regression, so these numbers are a breakdown under load.
+
+The server now loads charts and class equity before serving requests. A background thread prepares the default 100 bb preflop policy for both hero positions against each of the two opponents with the most logged hands. It uses the normal advisory path and only reads existing Coach profiles. An unseen postflop board still incurs an exact solve.

@@ -29,6 +29,7 @@ from dataclasses import dataclass, field, replace
 from hashlib import sha256
 import math
 import random
+from threading import Lock
 import time
 from typing import Any
 
@@ -56,6 +57,7 @@ _EQUITY_CACHE: OrderedDict[tuple, tuple[np.ndarray, np.ndarray, np.ndarray]] = O
 # compat at up to ~1,081 live combos), so 12 entries stays well under 75MB.
 _EQUITY_CACHE_SIZE = 12
 _PREFLOP_CACHE: OrderedDict[tuple, dict[int, np.ndarray]] = OrderedDict()
+_PREFLOP_CACHE_LOCK = Lock()
 _PREFLOP_CACHE_SIZE = 128
 PREFLOP_LOCKED_ITERATIONS = 250
 
@@ -496,18 +498,21 @@ class SolverBot(PokerBot):
         if not locks:
             return lambda node: self.charts.strategy(depth, node)
         key = (depth, opponent, locks_key(locks))
-        policy = _PREFLOP_CACHE.get(key)
+        with _PREFLOP_CACHE_LOCK:
+            policy = _PREFLOP_CACHE.get(key)
+            if policy is not None:
+                _PREFLOP_CACHE.move_to_end(key)
         self._info["cache_hit"] = policy is not None
         if policy is None:
             class_d, class_w = load_class_equity()
             counts = CLASS_COMBO_COUNT.astype(float)
             solver = RangeSolver(self.charts.trees[depth], (counts, counts), class_d, class_w, locks=locks)
             policy = solver.solve(PREFLOP_LOCKED_ITERATIONS).average
-            _PREFLOP_CACHE[key] = policy
-            if len(_PREFLOP_CACHE) > _PREFLOP_CACHE_SIZE:
-                _PREFLOP_CACHE.popitem(last=False)
-        else:
-            _PREFLOP_CACHE.move_to_end(key)
+            with _PREFLOP_CACHE_LOCK:
+                _PREFLOP_CACHE[key] = policy
+                _PREFLOP_CACHE.move_to_end(key)
+                if len(_PREFLOP_CACHE) > _PREFLOP_CACHE_SIZE:
+                    _PREFLOP_CACHE.popitem(last=False)
         return lambda node: policy[node][:, COMBO_CLASS]
 
     def _range_report(self, board, hero_combo: int, villain: np.ndarray) -> dict[str, Any]:

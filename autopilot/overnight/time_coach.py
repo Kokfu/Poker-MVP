@@ -41,17 +41,36 @@ def cases():
         yield f"river-{i}", dict(base, hero_position="big_blind", actions=preflop + 2 * checks, board=board)
 
 
-def measure(repeats):
+def scenarios(suit_variants):
+    suits = "cdhs"
+    for variant in range(suit_variants):
+        shifted = suits[variant:] + suits[:variant]
+        mapping = str.maketrans(suits, shifted)
+        for label, payload in cases():
+            if variant:
+                label += f"-suits{variant}"
+                payload["hero_cards"] = [card.translate(mapping) for card in payload["hero_cards"]]
+                if "board" in payload:
+                    payload["board"] = [card.translate(mapping) for card in payload["board"]]
+            yield label, payload
+
+
+def measure(repeats, suit_variants, wait_for_warmup):
     measurements = []
     with TemporaryDirectory() as scratch, ExitStack() as stack:
         # SQLite connection cycles can retain Windows file handles until GC.
         stack.callback(gc.collect)
-        client = stack.enter_context(TestClient(app))
         os.environ["COACH_DB_PATH"] = str(Path(scratch) / "timing.sqlite")
         store = HandStore()
         for spot in simulated_spots("tight", 150):
             store.add("Synthetic", spot_to_dict(spot))
-        for label, payload in cases():
+        startup = perf_counter()
+        client = stack.enter_context(TestClient(app))
+        startup_ms = 1000 * (perf_counter() - startup)
+        if wait_for_warmup and (worker := app.state.coach_warmup):
+            worker.join()
+        ready_ms = 1000 * (perf_counter() - startup)
+        for label, payload in scenarios(suit_variants):
             for repeat in range(repeats):
                 start = perf_counter()
                 response = client.post("/api/coach/advise", json=payload)
@@ -77,13 +96,28 @@ def measure(repeats):
             if ms:
                 summary[f"{cohort}_{phase}"] = {"n": len(ms), "median_ms": median(ms),
                                                "p95_ms": ms[math.ceil(.95 * len(ms)) - 1]}
-    return {"summary": summary, "measurements": measurements}
+    return {"startup_ms": round(startup_ms, 2), "measurement_start_ms": round(ready_ms, 2),
+            "summary": summary, "measurements": measurements}
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repeats", type=int, default=3)
+    parser.add_argument("--suit-variants", type=int, choices=range(1, 5), default=1)
+    parser.add_argument("--expect", type=Path, help="fail if advice differs from this baseline report")
+    parser.add_argument("--wait-for-warmup", action="store_true")
     args = parser.parse_args()
     if args.repeats < 1:
         parser.error("--repeats must be positive")
-    print(json.dumps(measure(args.repeats), indent=2))
+    report = measure(args.repeats, args.suit_variants, args.wait_for_warmup)
+    if args.expect:
+        def hashes(rows):
+            return {(row["spot"], row["repeat"]): row["advice_sha256"] for row in rows}
+
+        expected = hashes(json.loads(args.expect.read_text(encoding="utf-8-sig"))["measurements"])
+        actual = hashes(report["measurements"])
+        different = sorted(key for key in expected.keys() | actual.keys() if expected.get(key) != actual.get(key))
+        if different:
+            parser.exit(1, f"Advice mismatch at {different}\n")
+        report["matching_responses"] = len(actual)
+    print(json.dumps(report, indent=2))
