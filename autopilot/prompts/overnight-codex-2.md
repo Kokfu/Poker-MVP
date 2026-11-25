@@ -95,6 +95,10 @@ Work in order. Start long jobs as early as possible and work on other items whil
 23. **Update privacy and practice architecture.** Bring the existing documentation in line with timed turns, the seat capability, saved practice hands, and the flagged multiway model.
 24. **Quiet-machine Coach benchmark.** After the ordered agent workload finishes, repeat all 48 cold spots with warmup off and on under comparable load. Record both p95s and the advice check.
 
+25. **Concurrent Coach startup.** Verify that startup warmup and the first request share an identical pending locked preflop solve. Preserve exact advice, allow distinct keys to work independently, and verify recovery after a solve fails.
+26. **Representative cold benchmark.** Add a deterministic 48-spot workload with independent boards, multiple depths and action paths. Report latencies by street and preserve the existing benchmark and hash checks.
+27. **Interrupted diagnostic visibility.** Have the read-only runner status identify stale progress without requiring an exit marker. Report missing sessions and the last write time, preserve accurate complete and failed states, and verify that status never mutates a ledger.
+
 ## At 06:30
 - Collect the background job results.
 - Run the full backend suite, `npx.cmd tsc -b`, `node --test test/coach-strategy.test.mjs` and `npm.cmd run build`.

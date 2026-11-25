@@ -1,0 +1,10 @@
+2026-11-25T20:31:27.4137578+08:00 quiet workload at bd5988423d35a7bf153b620d547d844eb137bfc5
+2026-11-25T20:31:27.5340895+08:00 start off-1
+off-1 startup 14.88 ms, preflop median/p95 4.63/972.42 ms, postflop median/p95 678.115/1194.97 ms, matches 
+2026-11-25T20:32:00.4146612+08:00 start on-1
+on-1 startup 310.32 ms, preflop median/p95 5.34/19.28 ms, postflop median/p95 878.1/1171.46 ms, matches 48
+2026-11-25T20:32:32.4428705+08:00 start on-2
+on-2 startup 291.73 ms, preflop median/p95 4.93/14.63 ms, postflop median/p95 902.145/1137.06 ms, matches 48
+2026-11-25T20:33:04.3773781+08:00 start off-2
+off-2 startup 24.35 ms, preflop median/p95 6.2/903.1 ms, postflop median/p95 648.37/1129.18 ms, matches 48
+2026-11-25T20:33:36.2331661+08:00 finished quiet benchmark

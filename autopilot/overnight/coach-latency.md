@@ -66,4 +66,17 @@ The experiment compared two fresh API processes on the same 48 distinct spots, w
 | Archived control | 1,047 | 13 / 170 | 2,472 / 3,999 |
 | Exact board-ranking candidate | 825 | 13 / 52 | 2,380 / 3,496 |
 
-Six alternating matrix runs per shape matched bit for bit. Median exact turn time was 746 → 558 ms for 1,326 × 1,326 combos and 496 → 338 ms for 750 × 670 combos. The API timing reflects a single pair of sequential runs under shared load. Postflop still exceeds the target. Commit 975387d contains the exact board-ranking change. The idle-machine warmup comparison is pending.
+Six alternating matrix runs per shape matched bit for bit. Median exact turn time was 746 → 558 ms for 1,326 × 1,326 combos and 496 → 338 ms for 750 × 670 combos. The API timing reflects a single pair of sequential runs under shared load. Postflop still exceeds the target. Commit 975387d contains the exact board-ranking change. The later quiet comparison is below.
+
+### Quiet warmup comparison
+
+Once the diagnostic worker had exited, four fresh single-worker processes used independent synthetic SQLite databases and one fixed set of 48 first-use inputs. Each process started measuring immediately after the app became ready. The order was warmup off, on, on, off. All normalized advice hashes matched across the four runs.
+
+| Warmup | Startup (ms) | Preflop median / p95 (ms) | Postflop median / p95 (ms) |
+| --- | ---: | ---: | ---: |
+| Off, first | 15 | 5 / 972 | 678 / 1,195 |
+| On, first | 310 | 5 / 19 | 878 / 1,171 |
+| On, second | 292 | 5 / 15 | 902 / 1,137 |
+| Off, second | 24 | 6 / 903 | 648 / 1,129 |
+
+Both warmed runs met the 300 ms preflop target. None met the 600 ms postflop target. The warmup thread was allowed to overlap first-use requests. [Run timestamps and arguments](jobs/coach-quiet-48.log)
