@@ -234,6 +234,10 @@ export default function Coach() {
   const [opponents, setOpponents] = useState<{ name: string; hands: number }[]>([]);
   const [loadedHistory, setHistory] = useState<{ name: string; hands: HandRecord[] }>();
   const historyRequest = useRef(0);
+  const profileRequest = useRef(0);
+  const opponentsRequest = useRef(0);
+  const selectedOpponent = useRef(opponent.trim());
+  const adviceRequest = useRef<AbortController | undefined>(undefined);
   const history = loadedHistory?.name === opponent.trim() ? loadedHistory.hands : [];
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
@@ -249,23 +253,33 @@ export default function Coach() {
   }), [heroCards, board, position, blinds, stacks, actions]);
 
   async function loadOpponents() {
+    const request = ++opponentsRequest.current;
     try {
       const response = await fetch("/api/coach/opponents");
-      if (response.ok) setOpponents(await response.json());
+      if (!response.ok) return;
+      const opponents = await response.json();
+      if (request === opponentsRequest.current) setOpponents(opponents);
     } catch { /* the list is optional */ }
   }
 
   async function loadProfile(name: string) {
-    if (!name.trim()) { setProfile(null); return; }
+    const cleaned = name.trim();
+    if (cleaned !== selectedOpponent.current) return;
+    const request = ++profileRequest.current;
+    if (!cleaned) { setProfile(null); return; }
     try {
-      const response = await fetch(`/api/coach/opponents/${encodeURIComponent(name.trim())}`);
-      setProfile(response.ok ? (await response.json()).profile : null);
-    } catch { setProfile(null); }
+      const response = await fetch(`/api/coach/opponents/${encodeURIComponent(cleaned)}`);
+      const profile = response.ok ? (await response.json()).profile : null;
+      if (request === profileRequest.current) setProfile(profile);
+    } catch {
+      if (request === profileRequest.current) setProfile(null);
+    }
   }
 
   async function loadHistory(name: string) {
-    const request = ++historyRequest.current;
     const cleaned = name.trim();
+    if (cleaned !== selectedOpponent.current) return;
+    const request = ++historyRequest.current;
     if (!cleaned) { setHistory(undefined); setHistoryLoading(false); return; }
     setHistoryLoading(true); setHistoryError("");
     try {
@@ -284,6 +298,7 @@ export default function Coach() {
   }
 
   useEffect(() => { loadOpponents(); }, []);
+  useEffect(() => () => adviceRequest.current?.abort(), []);
 
   useEffect(() => {
     if (reviewMode) return; // a reviewed hand's blinds and stacks are not the live table's
@@ -291,22 +306,60 @@ export default function Coach() {
     try { window.localStorage.setItem(PREFS_KEY, JSON.stringify(next)); } catch { /* storage is optional */ }
   }, [blinds, stacks, opponent, exploit, players, autoContinue, autoSave, carryStacks, showDetails, reviewMode]);
 
+  function beginAdviceRequest() {
+    adviceRequest.current?.abort();
+    const request = new AbortController();
+    adviceRequest.current = request;
+    setLoading(true);
+    return request;
+  }
+
+  function cancelAdviceRequest() {
+    if (!adviceRequest.current) return;
+    adviceRequest.current.abort();
+    adviceRequest.current = undefined;
+    setLoading(false);
+  }
+
+  function finishAdviceRequest(request: AbortController) {
+    if (adviceRequest.current !== request || request.signal.aborted) return;
+    adviceRequest.current = undefined;
+    setLoading(false);
+  }
+
+  function changeOpponent(name: string) {
+    if (name.trim() !== selectedOpponent.current) {
+      selectedOpponent.current = name.trim();
+      ++profileRequest.current;
+      ++historyRequest.current;
+      setProfile(null);
+      setHistory(undefined);
+      setHistoryLoading(false);
+      setHistoryError("");
+      cancelAdviceRequest();
+    }
+    setOpponent(name);
+  }
+
   async function evaluate(nextActions = actions, nextBoard = board, options: { hero?: string[]; remember?: boolean } = {}) {
-    setError(""); setNotice(""); setLoading(true);
+    setError(""); setNotice("");
+    const request = beginAdviceRequest();
     try {
       const response = await fetch("/api/coach/advise", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...spot, hero_cards: options.hero ?? heroCards, actions: nextActions, board: nextBoard, opponent: opponent.trim() || null, exploit }),
+        signal: request.signal,
       });
       const body = await response.json();
+      if (request.signal.aborted) return;
       if (!response.ok) throw new Error(describeError(body, "Coach request failed"));
       if (options.remember && result) setPast((current) => [...current, { actions, board }]);
       setActions(nextActions); setBoard(nextBoard); setBoardDraft([]); setResult(body);
       setAmount(defaultAmount(body)); setTyped(false);
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Coach request failed");
+      if (!request.signal.aborted) setError(requestError instanceof Error ? requestError.message : "Coach request failed");
     } finally {
-      setLoading(false);
+      finishAdviceRequest(request);
     }
   }
 
@@ -324,6 +377,7 @@ export default function Coach() {
   }
 
   function pickHeroCards(next: string[]) {
+    cancelAdviceRequest();
     setHeroCards(next);
     if (autoContinue && next.length === 2 && heroCards.length < 2 && !loading) beginHand(next);
   }
@@ -335,8 +389,12 @@ export default function Coach() {
     });
     const body = await response.json();
     if (!response.ok) throw new Error(describeError(body, "Could not log the hand"));
-    setProfile(body.opponent_profile);
-    loadOpponents(); loadHistory(opponent);
+    if (opponent.trim() === selectedOpponent.current) {
+      ++profileRequest.current;
+      setProfile(body.opponent_profile);
+      loadHistory(opponent);
+    }
+    loadOpponents();
     const count: number = body.opponent_profile.hands_observed;
     return `${opponent.trim()} now has ${count} ${count === 1 ? "hand" : "hands"} on record.`;
   }
@@ -428,13 +486,16 @@ export default function Coach() {
   }
 
   async function viewHand(record: HandRecord) {
-    setHistoryError(""); setLoading(true);
+    setHistoryError("");
+    const request = beginAdviceRequest();
     try {
       const response = await fetch("/api/coach/advise", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...record.spot, opponent: null, exploit: false }),
+        signal: request.signal,
       });
       const body = await response.json();
+      if (request.signal.aborted) return;
       if (!response.ok) throw new Error("Could not load this hand");
       setHeroCards(record.spot.hero_cards);
       setBoard(record.spot.board);
@@ -445,9 +506,9 @@ export default function Coach() {
       setPosition(record.spot.hero_position);
       setResult(body); setReviewMode(true); setLogged(false); setError(""); setNotice(""); setPast([]);
     } catch (requestError) {
-      setHistoryError(requestError instanceof Error ? requestError.message : "Could not load this hand");
+      if (!request.signal.aborted) setHistoryError(requestError instanceof Error ? requestError.message : "Could not load this hand");
     } finally {
-      setLoading(false);
+      finishAdviceRequest(request);
     }
   }
 
@@ -462,7 +523,8 @@ export default function Coach() {
       }
       setHistory((current) => current && { ...current, hands: current.hands.filter((record) => record.id !== id) });
       loadOpponents();
-      if (opponent.trim()) loadProfile(opponent);
+      const name = selectedOpponent.current;
+      if (name) { loadProfile(name); loadHistory(name); }
     } catch (requestError) {
       setHistoryError(requestError instanceof Error ? requestError.message : "Could not delete this hand");
     } finally {
@@ -481,8 +543,11 @@ export default function Coach() {
         const body = await response.json().catch(() => ({}));
         throw new Error(typeof body.detail === "string" ? body.detail : "Could not delete this opponent");
       }
-      ++historyRequest.current;
-      setHistory(undefined); setHistoryLoading(false); setProfile(null); setNotice(`Deleted all hands for ${name}.`);
+      if (selectedOpponent.current === name) {
+        setHistory(undefined); setProfile(null);
+        loadHistory(name); loadProfile(name);
+      }
+      setNotice(`Deleted all hands for ${name}.`);
       loadOpponents();
     } catch (requestError) {
       setHistoryError(requestError instanceof Error ? requestError.message : "Could not delete this opponent");
@@ -614,7 +679,7 @@ export default function Coach() {
           <button
             key={count} type="button" role="radio" aria-checked={players === count}
             className={players === count ? "is-on" : ""}
-            onClick={() => setPlayers(count)} disabled={!!result && count !== players}
+            onClick={() => { if (count !== players) cancelAdviceRequest(); setPlayers(count); }} disabled={!!result && count !== players}
           >
             {count}
           </button>
@@ -630,7 +695,11 @@ export default function Coach() {
         <h2>Coach</h2>
         <div className="segmented" role="tablist" aria-label="Coach view">
           {([["play", "Play a hand"], ["review", "Review"], ["data", "Saved data"]] as const).map(([key, text]) => (
-            <button key={key} type="button" role="tab" aria-selected={view === key} className={view === key ? "is-on" : ""} onClick={() => { setView(key); if (key !== "play") loadOpponents(); }}>{text}</button>
+            <button key={key} type="button" role="tab" aria-selected={view === key} className={view === key ? "is-on" : ""} onClick={() => {
+              if (view !== key) cancelAdviceRequest();
+              setView(key);
+              if (key !== "play") loadOpponents();
+            }}>{text}</button>
           ))}
         </div>
       </div>
@@ -646,20 +715,33 @@ export default function Coach() {
             <span className="field-label" id="position-label">Your position <kbd className="kbd-inline">P</kbd></span>
             <div className="segmented" role="radiogroup" aria-labelledby="position-label">
               {([["button", "Button / SB"], ["big_blind", "Big blind"]] as const).map(([key, text]) => (
-                <button key={key} type="button" role="radio" aria-checked={position === key} className={position === key ? "is-on" : ""} onClick={() => setPosition(key)}>{text}</button>
+                <button key={key} type="button" role="radio" aria-checked={position === key} className={position === key ? "is-on" : ""} onClick={() => {
+                  if (key !== position) cancelAdviceRequest();
+                  setPosition(key);
+                }}>{text}</button>
               ))}
             </div>
           </div>
-          <label>Small blind<input inputMode="numeric" value={blinds.small} onChange={(e) => setBlinds({ ...blinds, small: e.target.value })} /></label>
-          <label>Big blind<input inputMode="numeric" value={blinds.big} onChange={(e) => setBlinds({ ...blinds, big: e.target.value })} /></label>
-          <label>Your stack<input inputMode="numeric" value={stacks.hero} onChange={(e) => setStacks({ ...stacks, hero: e.target.value })} /></label>
-          <label>Their stack<input inputMode="numeric" value={stacks.villain} onChange={(e) => setStacks({ ...stacks, villain: e.target.value })} /></label>
+          <label>Small blind<input inputMode="numeric" value={blinds.small} onChange={(e) => {
+            cancelAdviceRequest(); setBlinds({ ...blinds, small: e.target.value });
+          }} /></label>
+          <label>Big blind<input inputMode="numeric" value={blinds.big} onChange={(e) => {
+            cancelAdviceRequest(); setBlinds({ ...blinds, big: e.target.value });
+          }} /></label>
+          <label>Your stack<input inputMode="numeric" value={stacks.hero} onChange={(e) => {
+            cancelAdviceRequest(); setStacks({ ...stacks, hero: e.target.value });
+          }} /></label>
+          <label>Their stack<input inputMode="numeric" value={stacks.villain} onChange={(e) => {
+            cancelAdviceRequest(); setStacks({ ...stacks, villain: e.target.value });
+          }} /></label>
         </div>
         <div className="setup-row">
-          <label className="field-grow">Opponent name <span className="muted">(optional, so the Coach learns their style)</span><input list="coach-opponents" value={opponent} onChange={(e) => setOpponent(e.target.value)} placeholder="e.g. Alex" />
+          <label className="field-grow">Opponent name <span className="muted">(optional, so the Coach learns their style)</span><input list="coach-opponents" value={opponent} onChange={(e) => changeOpponent(e.target.value)} placeholder="e.g. Alex" />
             <datalist id="coach-opponents">{opponents.map((o) => <option key={o.name} value={o.name}>{o.hands} hands</option>)}</datalist>
           </label>
-          <label className="coach-toggle"><input type="checkbox" checked={exploit} onChange={(e) => setExploit(e.target.checked)} />Adjust advice to this opponent</label>
+          <label className="coach-toggle"><input type="checkbox" checked={exploit} onChange={(e) => {
+            cancelAdviceRequest(); setExploit(e.target.checked);
+          }} />Adjust advice to this opponent</label>
         </div>
         <fieldset className="speed-options">
           <legend>Speed</legend>

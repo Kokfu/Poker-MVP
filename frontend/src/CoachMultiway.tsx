@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useLayoutEffect, useState } from "react";
+import { FormEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { CardInput, isTypingTarget } from "./CardInput";
 
 type MultiwayAdvice = {
@@ -37,6 +37,7 @@ export default function CoachMultiway({ opponents }: { opponents: number }) {
   const [actions, setActions] = useState<PublicAction[]>([]);
   const [newAction, setNewAction] = useState<PublicAction>({ seat: 1, street: "preflop", action: "raise" });
   const [fraction, setFraction] = useState("");
+  const request = useRef<AbortController | undefined>(undefined);
 
   const boardOpen = heroCards.length === 2 ? (board.length >= 3 ? Math.min(5, board.length + 1) : 3) : 0;
   const latestStreet = actions.at(-1)?.street ?? "preflop";
@@ -54,6 +55,7 @@ export default function CoachMultiway({ opponents }: { opponents: number }) {
     }).catch(() => {});
     return () => abort.abort();
   }, []);
+  useEffect(() => () => request.current?.abort(), []);
 
   // Enter anywhere (outside a text field or button) asks for advice, so typed cards need no mouse at all.
   useLayoutEffect(() => {
@@ -72,38 +74,54 @@ export default function CoachMultiway({ opponents }: { opponents: number }) {
     setError("");
     if (heroCards.length !== 2) { setError("Pick your two cards first."); return; }
     if (![0, 3, 4, 5].includes(board.length)) { setError("The board needs 0, 3, 4 or 5 cards. Finish the flop or clear it."); return; }
+    request.current?.abort();
+    const pending = new AbortController();
+    request.current = pending;
     setLoading(true);
     try {
       const response = await fetch("/api/coach/multiway", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ hero_cards: heroCards, board, opponents, pot: Number(pot) || 0, to_call: Number(toCall) || 0,
           ...(useRanges && actions.length ? { actions } : {}) }),
+        signal: pending.signal,
       });
       const body = await response.json();
+      if (pending.signal.aborted) return;
       if (!response.ok) throw new Error(typeof body.detail === "string" ? body.detail : "Check the pot and amount to call.");
       setAdvice(body);
     } catch (problem) {
-      setError(problem instanceof Error ? problem.message : "Could not get advice.");
+      if (!pending.signal.aborted) setError(problem instanceof Error ? problem.message : "Could not get advice.");
     } finally {
-      setLoading(false);
+      if (request.current === pending && !pending.signal.aborted) {
+        request.current = undefined;
+        setLoading(false);
+      }
     }
   }
 
+  function clearAdvice() {
+    request.current?.abort();
+    request.current = undefined;
+    setLoading(false);
+    setAdvice(undefined);
+    setError("");
+  }
+
   function reset() {
-    setHeroCards([]); setBoard([]); setActions([]); setAdvice(undefined); setError("");
+    clearAdvice(); setHeroCards([]); setBoard([]); setActions([]);
   }
 
   function addAction() {
     if (!street || !validFraction || actions.length >= 32) return;
     setActions(previous => [...previous, { ...newAction, street, ...(fraction !== "" ? { pot_fraction: Number(fraction) } : {}) }]);
-    setAdvice(undefined);
+    clearAdvice();
     setFraction("");
   }
 
   function changeBoard(next: string[]) {
     setBoard(next);
     setActions(previous => previous.filter(action => STREETS[action.street] <= next.length));
-    setAdvice(undefined);
+    clearAdvice();
   }
 
   const heroUsed = new Set(board);
@@ -116,7 +134,7 @@ export default function CoachMultiway({ opponents }: { opponents: number }) {
           `With ${opponents} opponents the Coach estimates your equity against ${opponents} random hands and compares it with the price of a call. Opponent tracking and the solver work heads-up only.`}
       </p>
       <div className="setup-cards">
-        <CardInput label="Your cards" slots={["Card 1", "Card 2"]} cards={heroCards} onChange={(next) => { setHeroCards(next); setAdvice(undefined); }} usedCards={heroUsed} keyboard={heroCards.length < 2} />
+        <CardInput label="Your cards" slots={["Card 1", "Card 2"]} cards={heroCards} onChange={(next) => { setHeroCards(next); clearAdvice(); }} usedCards={heroUsed} keyboard={heroCards.length < 2} />
         <CardInput label="Board" slots={BOARD_SLOTS} cards={board} onChange={changeBoard} usedCards={boardUsed} limit={boardOpen} keyboard={heroCards.length === 2} />
       </div>
       {useRanges && <fieldset>
@@ -139,13 +157,13 @@ export default function CoachMultiway({ opponents }: { opponents: number }) {
           <li key={index}>{action.street} · Opponent {action.seat} · {PUBLIC_ACTIONS[action.action]}
             {action.pot_fraction !== undefined && ` · ${action.pot_fraction} pots`}
             <button type="button" className="secondary" aria-label={`Remove action ${index + 1}`} onClick={() => {
-              setActions(previous => previous.filter((_, row) => row !== index)); setAdvice(undefined);
+            setActions(previous => previous.filter((_, row) => row !== index)); clearAdvice();
             }}>Remove</button>
           </li>)}</ol>}
       </fieldset>}
       <div className="setup-row">
-        <label>Pot now<input inputMode="numeric" value={pot} onChange={(e) => { setPot(e.target.value); setAdvice(undefined); }} /></label>
-        <label>To call<input inputMode="numeric" value={toCall} onChange={(e) => { setToCall(e.target.value); setAdvice(undefined); }} /><small>0 if you can check</small></label>
+        <label>Pot now<input inputMode="numeric" value={pot} onChange={(e) => { setPot(e.target.value); clearAdvice(); }} /></label>
+        <label>To call<input inputMode="numeric" value={toCall} onChange={(e) => { setToCall(e.target.value); clearAdvice(); }} /><small>0 if you can check</small></label>
       </div>
       <div className="coach-form-actions">
         <button className="primary" disabled={loading || heroCards.length !== 2}>{loading ? "Working it out…" : <>Get advice <kbd>Enter</kbd></>}</button>
