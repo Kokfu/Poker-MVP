@@ -1,0 +1,14 @@
+2026-11-25T21:29:35.2025680+08:00 representative numerical workers, baseline d12607a and candidate cache changes
+2026-11-25T21:29:35.2263137+08:00 start old 1 worker(s)
+2026-11-25T21:30:41.0575922+08:00 start old 2 worker(s)
+2026-11-25T21:31:38.3229559+08:00 start current 1 worker(s)
+2026-11-25T21:32:41.8309625+08:00 start current 2 worker(s)
+NumPy 1.26.4
+1 worker(s), pre/post-cache: all 48 hashes matched.
+2 worker(s), pre/post-cache: all 48 hashes matched.
+old, worker-count changed 9 hashes ['flop-representative-10', 'turn-representative-3', 'turn-representative-5', 'turn-representative-6', 'river-representative-0', 'river-representative-3', 'river-representative-6', 'river-representative-9', 'river-representative-10'], actions/amounts changed 0 [].
+  1 worker(s), preflop/postflop p95: 1360.94/3016.74 ms
+  2 worker(s), preflop/postflop p95: 1483.19/2328.83 ms
+current, worker-count changed 9 hashes ['flop-representative-10', 'turn-representative-3', 'turn-representative-5', 'turn-representative-6', 'river-representative-0', 'river-representative-3', 'river-representative-6', 'river-representative-9', 'river-representative-10'], actions/amounts changed 0 [].
+  1 worker(s), preflop/postflop p95: 1275.18/2963.65 ms
+  2 worker(s), preflop/postflop p95: 1310.95/2518.71 ms

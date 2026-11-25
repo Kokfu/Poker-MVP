@@ -107,6 +107,10 @@ Work in order. Start long jobs as early as possible and work on other items whil
 32. **Later-street replay cost.** Compare independent turns and rivers with the same decisions reached after prior street requests. Attribute latency to replay, equity, and new-street CFR using the representative fixtures.
 33. **Numerical worker reproducibility.** Check the wider workload at fixed one and two workers and distinguish solver changes from worker-count differences. Document how to reproduce each advice comparison.
 
+34. **Diagnostic summary validation.** A finished ledger with an empty or mismatched summary needs a distinct status. Validate the summary against run identity, ledger coverage, and integrity counts while keeping status read-only.
+35. **Reproducible later-street profiling.** Preserve the alternating isolated-versus-sequential timing driver using the shared representative fixture and check it through the documented command.
+36. **Broader exact rank coverage.** Cross-check board ranks against direct eval7 calls on a seeded distribution, and compare random square and rectangular matrices bit for bit with the previous board-ranking implementation.
+
 ## At 06:30
 - Collect the background job results.
 - Run the full backend suite, `npx.cmd tsc -b`, `node --test test/coach-strategy.test.mjs` and `npm.cmd run build`.

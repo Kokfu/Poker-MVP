@@ -134,3 +134,7 @@ For the 12 turns and 12 rivers in the representative set, two orders were altern
 | River | 1,779 / 2,897 | 545 / 866 | 1,295 |
 
 In the isolated arm, median solver time for earlier streets was 407 ms on turns and 804 ms on rivers. The populated caches brought both medians to zero. The median new-street solve used 481–483 ms. [Per-spot breakdown](jobs/coach-replay-cost.log)
+
+### Numerical worker settings
+
+The representative comparison used NumPy 1.26.4. At each fixed worker count, the exact-cache update preserved all 48 hashes. Switching from one to two workers changed the same nine postflop hashes on both versions, with no changes in the chosen action or amount over these spots. Reproduce a comparison with the same NumPy version and the same values for OPENBLAS_NUM_THREADS, OMP_NUM_THREADS, and MKL_NUM_THREADS. The accepted timing and hash checks use one worker for each. [Fixed-worker comparison](jobs/coach-representative-workers.log)
