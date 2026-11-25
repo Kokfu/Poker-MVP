@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [switch] $Status,
-    [string] $JobsDirectory = (Join-Path $PSScriptRoot 'jobs')
+    [string] $JobsDirectory = (Join-Path $PSScriptRoot 'jobs'),
+    [ValidateRange(1, 1440)] [int] $StaleAfterMinutes = 30
 )
 
 $ErrorActionPreference = 'Stop'
@@ -18,8 +19,10 @@ function Get-DiagnosticStatus([string] $Opponent, [int] $Offset) {
     $ledger = Join-Path $resultDirectory "$name.jsonl"
     $summary = Join-Path $resultDirectory "$name.summary.json"
     $records = @()
+    $ledgerLastWrite = $null
     if (Test-Path -LiteralPath $ledger) {
         $contents = Get-Content -LiteralPath $ledger -Raw
+        $ledgerLastWrite = [DateTimeOffset](Get-Item -LiteralPath $ledger).LastWriteTime
         # A process may still be writing the final line. Only consume lines
         # that already end in a newline.
         $lines = @([regex]::Matches([string]$contents, '(?m)^[^\r\n]+(?=\r?\n)') | ForEach-Object Value)
@@ -44,13 +47,15 @@ function Get-DiagnosticStatus([string] $Opponent, [int] $Offset) {
     }
 
     $start = $null
+    $attemptStart = $null
     $end = $null
     $exitCode = $null
     if (Test-Path -LiteralPath $logPath) {
         $safeName = [regex]::Escape($name)
         foreach ($line in Get-Content -LiteralPath $logPath) {
             if ($line -match "^(\S+) begin $safeName attempt \d+$") {
-                if ($null -eq $start) { $start = [DateTimeOffset]::Parse($Matches[1]) }
+                $attemptStart = [DateTimeOffset]::Parse($Matches[1])
+                if ($null -eq $start) { $start = $attemptStart }
                 $end = $null
             } elseif ($line -match "^(\S+) end $safeName exit (-?\d+)$") {
                 $end = [DateTimeOffset]::Parse($Matches[1])
@@ -63,21 +68,28 @@ function Get-DiagnosticStatus([string] $Opponent, [int] $Offset) {
     $solverRecords = @($records | Where-Object { $null -ne $_.PSObject.Properties['solver_fallback_actions'] })
     $hasSummary = Test-Path -LiteralPath $summary
     $now = [DateTimeOffset]::Now
+    $remaining = $sessions - $records.Count
+    $lastActivity = if ($ledgerLastWrite -gt $attemptStart) { $ledgerLastWrite } else { $attemptStart }
+    $stale = $attemptStart -and !$end -and $remaining -gt 0 -and
+        ($now - $lastActivity).TotalMinutes -ge $StaleAfterMinutes
     $referenceTime = if ($end) { $end } else { $now }
     $elapsed = if ($start) { ($referenceTime - $start).TotalSeconds } else { 0 }
     $rate = if ($elapsed -gt 0 -and $hands -gt 0) { $hands / $elapsed } else { 0 }
-    $eta = if ($rate -gt 0 -and !$end -and $records.Count -lt $sessions) {
-        $now.AddSeconds((2 * $sessions * $handsPerSeat - $hands) / $rate)
+    $eta = if ($rate -gt 0 -and !$end -and !$stale -and $remaining -gt 0) {
+        $now.AddSeconds((2 * $remaining * $handsPerSeat) / $rate)
     } else { $null }
     $state = if ($hasSummary -and $records.Count -eq $sessions) { 'Complete' }
     elseif ($end -and $exitCode -ne 0) { 'Failed' }
     elseif ($records.Count -eq $sessions) { 'Ledger complete' }
+    elseif ($end) { 'Incomplete' }
+    elseif ($stale) { 'Stale' }
     elseif ($start) { 'Started' }
     else { 'Pending' }
     [pscustomobject]@{
         Opponent = $Opponent
         State = $state
         Sessions = $records.Count
+        MissingSessions = $remaining
         Hands = $hands
         BBPer100 = if ($hands) { [Math]::Round($net / $hands, 2) } else { $null }
         IllegalActions = ($records | Measure-Object -Property illegal_actions -Sum).Sum
@@ -88,6 +100,7 @@ function Get-DiagnosticStatus([string] $Opponent, [int] $Offset) {
         SolverCoverage = "$($solverRecords.Count)/$($records.Count)"
         DealMismatches = @($records | Where-Object { $_.deal_verified -ne $true }).Count
         HandsPerMinute = [Math]::Round($rate * 60, 2)
+        LedgerLastWrite = if ($ledgerLastWrite) { $ledgerLastWrite.ToString('yyyy-MM-dd HH:mm:ss zzz') } else { $null }
         EstimatedEnd = if ($eta) { $eta.ToString('yyyy-MM-dd HH:mm:ss zzz') } else { $null }
     }
 }
