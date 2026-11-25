@@ -88,6 +88,9 @@ Work in order. Start long jobs as early as possible and work on other items whil
 16. **Profile the postflop tail.** Reproduce the slowest fresh-board requests and measure how much time goes to equity, range CFR, and explanation. Remove any redundant calculation that can be verified against the 48 advice hashes.
 17. **Coach requests that finish out of order.** Prevent obsolete advice or history from appearing after edits or deletes. Exercise the affected entry paths in the browser.
 18. **Implementation preflight.** Run the full regression on the upgraded branch, investigate any failures, and retain the evidence before the separate morning check.
+19. **Exact solver traversal.** Check whether reusing an unchanged player's reach calculations reduces CFR time. Keep it only if numerical checks, advice hashes, and timing support the change.
+20. **Partial diagnostic intervals.** Add a read-only CLI view of committed sessions so an interrupted or still-running ledger can report bb/100 and uncertainty without rewriting its results.
+21. **Practice proxy identity.** Verify that the LAN launcher gives the practice rate limiter a trustworthy client address. Keep changes confined to local deployment and add a configuration check.
 
 ## At 06:30
 - Collect the background job results.
