@@ -85,6 +85,9 @@ Work in order. Start long jobs as early as possible and work on other items whil
 13. **Exact solver performance.** Measure and reduce allocation overhead in the lock fitter and new-board path, require bit-for-bit numeric checks, and compare the 48 distinct Coach spots against the warmed control.
 14. **Concurrent practice settlement.** Exercise simultaneous clients, including a stale action at timer expiry, database persistence, and independent progress at the other table. Fix any reproducible consistency issue with a regression.
 15. **Diagnostic progress and recovery.** Turn the four-opponent commands into a reproducible PowerShell runner and report completed ledger coverage, integrity counters, throughput, and ETA without mutating an open run.
+16. **Profile the postflop tail.** Reproduce the slowest fresh-board requests and measure how much time goes to equity, range CFR, and explanation. Remove any redundant calculation that can be verified against the 48 advice hashes.
+17. **Coach requests that finish out of order.** Prevent obsolete advice or history from appearing after edits or deletes. Exercise the affected entry paths in the browser.
+18. **Implementation preflight.** Run the full regression on the upgraded branch, investigate any failures, and retain the evidence before the separate morning check.
 
 ## At 06:30
 - Collect the background job results.
