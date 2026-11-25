@@ -65,8 +65,32 @@ function Get-DiagnosticStatus([string] $Opponent, [int] $Offset) {
     }
     $hands = $records.Count * $handsPerSeat * 2
     $net = ($records | ForEach-Object { $_.net_seat_a + $_.net_seat_b } | Measure-Object -Sum).Sum
+    $illegalActions = ($records | Measure-Object -Property illegal_actions -Sum).Sum
+    $engineFallbacks = ($records | Measure-Object -Property fallback_actions -Sum).Sum
+    $dealMismatches = @($records | Where-Object { $_.deal_verified -ne $true }).Count
     $solverRecords = @($records | Where-Object { $null -ne $_.PSObject.Properties['solver_fallback_actions'] })
-    $hasSummary = Test-Path -LiteralPath $summary
+    $solverFallbacks = if ($solverRecords.Count -eq $records.Count) {
+        ($solverRecords | Measure-Object -Property solver_fallback_actions -Sum).Sum
+    } else { $null }
+    $summaryStatus = 'Missing'
+    if (Test-Path -LiteralPath $summary) {
+        try {
+            $result = Get-Content -LiteralPath $summary -Raw | ConvertFrom-Json
+            $solverCoverageMatches = $result.solver_fallback_coverage_sessions -eq $solverRecords.Count -or
+                ($null -eq $result.solver_fallback_coverage_sessions -and $solverRecords.Count -eq 0)
+            $summaryStatus = if ($result.format_version -eq 1 -and $result.agent -eq 'solver_adaptive' -and
+                $result.opponent -eq $Opponent -and $result.ledger -eq "$name.jsonl" -and
+                $result.configuration.seed_offset -eq $Offset -and $result.configuration.seed_set -eq 'development' -and
+                $result.configuration.pairs -eq $sessions -and $result.configuration.session_hands -eq $handsPerSeat -and
+                $result.configuration.big_blind -eq 100 -and $result.sessions -eq $records.Count -and
+                $result.hands -eq $hands -and $result.illegal_actions -eq $illegalActions -and
+                $result.fallback_actions -eq $engineFallbacks -and $result.deal_mismatches -eq $dealMismatches -and
+                $solverCoverageMatches -and $result.solver_fallback_actions -eq $solverFallbacks) { 'Confirmed' }
+            else { 'Mismatch' }
+        } catch {
+            $summaryStatus = 'Unreadable'
+        }
+    }
     $now = [DateTimeOffset]::Now
     $remaining = $sessions - $records.Count
     $lastActivity = if ($ledgerLastWrite -gt $attemptStart) { $ledgerLastWrite } else { $attemptStart }
@@ -78,8 +102,9 @@ function Get-DiagnosticStatus([string] $Opponent, [int] $Offset) {
     $eta = if ($rate -gt 0 -and !$end -and !$stale -and $remaining -gt 0) {
         $now.AddSeconds((2 * $remaining * $handsPerSeat) / $rate)
     } else { $null }
-    $state = if ($hasSummary -and $records.Count -eq $sessions) { 'Complete' }
+    $state = if ($summaryStatus -eq 'Confirmed' -and $records.Count -eq $sessions) { 'Complete' }
     elseif ($end -and $exitCode -ne 0) { 'Failed' }
+    elseif ($records.Count -eq $sessions -and $summaryStatus -ne 'Missing') { 'Unverified summary' }
     elseif ($records.Count -eq $sessions) { 'Ledger complete' }
     elseif ($end) { 'Incomplete' }
     elseif ($stale) { 'Stale' }
@@ -91,14 +116,13 @@ function Get-DiagnosticStatus([string] $Opponent, [int] $Offset) {
         Sessions = $records.Count
         MissingSessions = $remaining
         Hands = $hands
+        SummaryStatus = $summaryStatus
         BBPer100 = if ($hands) { [Math]::Round($net / $hands, 2) } else { $null }
-        IllegalActions = ($records | Measure-Object -Property illegal_actions -Sum).Sum
-        EngineFallbacks = ($records | Measure-Object -Property fallback_actions -Sum).Sum
-        SolverFallbacks = if ($solverRecords.Count -eq $records.Count) {
-            ($solverRecords | Measure-Object -Property solver_fallback_actions -Sum).Sum
-        } else { $null }
+        IllegalActions = $illegalActions
+        EngineFallbacks = $engineFallbacks
+        SolverFallbacks = $solverFallbacks
         SolverCoverage = "$($solverRecords.Count)/$($records.Count)"
-        DealMismatches = @($records | Where-Object { $_.deal_verified -ne $true }).Count
+        DealMismatches = $dealMismatches
         HandsPerMinute = [Math]::Round($rate * 60, 2)
         LedgerLastWrite = if ($ledgerLastWrite) { $ledgerLastWrite.ToString('yyyy-MM-dd HH:mm:ss zzz') } else { $null }
         EstimatedEnd = if ($eta) { $eta.ToString('yyyy-MM-dd HH:mm:ss zzz') } else { $null }
