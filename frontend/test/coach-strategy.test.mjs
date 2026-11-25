@@ -43,3 +43,54 @@ test("Coach selects the newest same-kind villain size within the current total l
   assert.equal(recentVillainSize(history, "raise", state, 100), 500);
   assert.equal(recentVillainSize(history, "bet", state, 100), undefined);
 });
+
+test("Coach publishes quick advice only while the matching full request is pending", async (t) => {
+  const vite = await createServer({ server: { middlewareMode: true, ws: false } });
+  t.after(() => vite.close());
+  const { requestCoachAdvice } = await vite.ssrLoadModule("/src/Coach.tsx");
+  const preview = { status: "quick", advice: { action: "check" } };
+  const complete = { status: "hero_to_act", advice: { action: "bet", amount: 175 } };
+  const flush = () => new Promise(setImmediate);
+
+  await t.test("an early preview is followed by the full response", async (scenario) => {
+    let finish;
+    const full = new Promise((resolve) => { finish = resolve; });
+    scenario.mock.method(globalThis, "fetch", (url) => url.endsWith("/quick") ? Promise.resolve(Response.json(preview)) : full);
+    const observed = [];
+    const request = requestCoachAdvice({}, (value) => observed.push(value));
+    await flush();
+    assert.deepEqual(observed, [preview]);
+    finish(Response.json(complete));
+    assert.deepEqual(await request, complete);
+  });
+
+  await t.test("a late preview cannot overwrite full advice", async (scenario) => {
+    let finish;
+    const quick = new Promise((resolve) => { finish = resolve; });
+    scenario.mock.method(globalThis, "fetch", (url) => url.endsWith("/quick") ? quick : Promise.resolve(Response.json(complete)));
+    const observed = [];
+    assert.deepEqual(await requestCoachAdvice({}, (value) => observed.push(value)), complete);
+    finish(Response.json(preview));
+    await flush();
+    assert.deepEqual(observed, []);
+  });
+
+  await t.test("aborting suppresses a stale preview and a preview failure leaves full advice available", async (scenario) => {
+    const controller = new AbortController();
+    const observed = [];
+    const fetch = scenario.mock.method(globalThis, "fetch", (url) => {
+      return Promise.resolve(Response.json(url.endsWith("/quick") ? preview : complete));
+    });
+    const obsolete = requestCoachAdvice({ signal: controller.signal }, (value) => observed.push(value));
+    controller.abort();
+    await obsolete;
+    await flush();
+    assert.deepEqual(observed, []);
+
+    fetch.mock.mockImplementation((url) => url.endsWith("/quick")
+      ? Promise.reject(new Error("preview failed"))
+      : Promise.resolve(Response.json(complete)));
+    assert.deepEqual(await requestCoachAdvice({}, (value) => observed.push(value)), complete);
+    assert.deepEqual(observed, []);
+  });
+});

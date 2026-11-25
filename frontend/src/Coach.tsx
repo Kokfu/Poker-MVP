@@ -74,6 +74,24 @@ type CoachResponse =
 
 type QuickAdvice = { status: "quick"; advice: { action: ActionKind }; reason: string; state: SpotState };
 
+export async function requestCoachAdvice(input: RequestInit, onQuick?: (preview: QuickAdvice) => void): Promise<CoachResponse> {
+  let fullFinished = false;
+  if (onQuick) {
+    void fetch("/api/coach/advise/quick", input).then(async (response) => {
+      const preview: QuickAdvice | null = response.ok ? await response.json() : null;
+      if (!fullFinished && !input.signal?.aborted && preview?.status === "quick") onQuick(preview);
+    }).catch(() => { /* The full request supplies the advice. */ });
+  }
+  try {
+    const response = await fetch("/api/coach/advise", input);
+    const body = await response.json();
+    if (!response.ok) throw new Error(describeError(body, "Coach request failed"));
+    return body;
+  } finally {
+    fullFinished = true;
+  }
+}
+
 type RawSpot = {
   hero_cards: string[];
   board: string[];
@@ -356,17 +374,11 @@ export default function Coach() {
       body: JSON.stringify({ ...spot, hero_cards: options.hero ?? heroCards, actions: nextActions, board: nextBoard, opponent: opponent.trim() || null, exploit }),
       signal: request.signal,
     };
-    if (nextBoard.length >= 3) {
-      void fetch("/api/coach/advise/quick", input).then(async (response) => {
-        const preview: QuickAdvice | null = response.ok ? await response.json() : null;
-        if (adviceRequest.current === request && !request.signal.aborted && preview?.status === "quick") setQuick(preview);
-      }).catch(() => { /* The full request is authoritative. */ });
-    }
     try {
-      const response = await fetch("/api/coach/advise", input);
-      const body = await response.json();
+      const body = await requestCoachAdvice(input, nextBoard.length >= 3 ? (preview) => {
+        if (adviceRequest.current === request) setQuick(preview);
+      } : undefined);
       if (request.signal.aborted) return;
-      if (!response.ok) throw new Error(describeError(body, "Coach request failed"));
       if (options.remember && result) setPast((current) => [...current, { actions, board }]);
       setActions(nextActions); setBoard(nextBoard); setBoardDraft([]); setResult(body);
       setAmount(defaultAmount(body)); setTyped(false);

@@ -1,0 +1,30 @@
+✔ Coach strategy renders solver frequencies and allows an empty fallback (1189.9833ms)
+✔ Coach selects the newest same-kind villain size within the current total limits (716.4872ms)
+▶ Coach publishes quick advice only while the matching full request is pending
+  ✔ an early preview is followed by the full response (48.2054ms)
+  ✔ a late preview cannot overwrite full advice (1.9269ms)
+  ✔ aborting suppresses a stale preview and a preview failure leaves full advice available (1.6476ms)
+✔ Coach publishes quick advice only while the matching full request is pending (1396.9033ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4755.5021
+
+> build
+> tsc -b && vite build
+
+vite v8.1.5 building client environment for production...
+[2K
+transforming...✓ 32 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.40 kB │ gzip:  0.28 kB
+dist/assets/index-DEV9_ZuZ.css   19.44 kB │ gzip:  5.01 kB
+dist/assets/index-C8l68fzg.js   283.84 kB │ gzip: 82.78 kB
+
+✓ built in 699ms
+TypeScript 0, Node 0, build 0
