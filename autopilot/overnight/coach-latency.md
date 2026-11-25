@@ -104,3 +104,5 @@ backend/.venv/Scripts/python.exe autopilot/overnight/time_coach.py --representat
 $env:POKER_COACH_WARMUP = '1'
 backend/.venv/Scripts/python.exe autopilot/overnight/time_coach.py --representative --repeats 1 --expect $representativeControl
 ```
+
+In a direct profile of the 12 representative preflop requests, eight first-use locked chart solves consumed 8.26 s of the 10.06 s measured under cProfile. The lock fitter accounted for 4.13 s. Anonymous requests read the public chart. Calling the exact NumPy reductions directly preserved all 48 hashes but did not improve p95 consistently across balanced runs. [Profile and timings](jobs/coach-representative-preflop-profile.log) [Balanced comparison](jobs/coach-lock-reduction-48.log)

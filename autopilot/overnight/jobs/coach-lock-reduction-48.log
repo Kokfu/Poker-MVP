@@ -1,0 +1,9 @@
+Start control1 2026-11-25T20:55:58.6799164+08:00
+control1 matches 48; preflop median/p95 852.88/1261.07 ms; postflop median/p95 1218.89/3022.91 ms
+Start candidate1 2026-11-25T20:57:04.7134604+08:00
+candidate1 matches 48; preflop median/p95 836.88/1379.2 ms; postflop median/p95 1221.045/3061.31 ms
+Start candidate2 2026-11-25T20:58:10.4460879+08:00
+candidate2 matches 48; preflop median/p95 810.12/1308.85 ms; postflop median/p95 1283.245/2845.78 ms
+Start control2 2026-11-25T20:59:14.8782334+08:00
+control2 matches 48; preflop median/p95 818.2/1368.37 ms; postflop median/p95 1183.265/2812.98 ms
+End 2026-11-25T21:00:17.3201448+08:00

@@ -1,0 +1,56 @@
+preflop-representative-0 25bb button anonymous 375.1 ms, lock solves 0
+preflop-representative-1 25bb big_blind Synthetic 1232.6 ms, lock solves 1
+preflop-representative-2 25bb button Aggressive synthetic 2175.6 ms, lock solves 1
+preflop-representative-3 60bb big_blind anonymous 3.3 ms, lock solves 0
+preflop-representative-4 60bb button Synthetic 1137.9 ms, lock solves 1
+preflop-representative-5 60bb big_blind Aggressive synthetic 946.6 ms, lock solves 1
+preflop-representative-6 100bb button anonymous 2.3 ms, lock solves 0
+preflop-representative-7 100bb big_blind Synthetic 1059.8 ms, lock solves 1
+preflop-representative-8 100bb button Aggressive synthetic 1068.8 ms, lock solves 1
+preflop-representative-9 200bb big_blind anonymous 1.5 ms, lock solves 0
+preflop-representative-10 200bb button Synthetic 973.3 ms, lock solves 1
+preflop-representative-11 200bb big_blind Aggressive synthetic 1086.2 ms, lock solves 1
+         3174523 function calls (3171229 primitive calls) in 9.941 seconds
+
+   Ordered by: cumulative time
+   List reduced from 1334 to 36 due to restriction <36>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+       12    0.000    0.000   10.062    0.838 main.py:259(coach_advise)
+       12    0.000    0.000   10.061    0.838 main.py:252(_coach_call)
+       12    0.001    0.000   10.061    0.838 service.py:246(advise)
+      312    0.005    0.000    9.103    0.029 service.py:160(_replay)
+      312    0.011    0.000    9.035    0.029 engine.py:764(play)
+      662    0.024    0.000    8.966    0.014 engine.py:629(_round)
+      972    0.003    0.000    8.306    0.009 service.py:151(decide_decision)
+       12    0.000    0.000    8.287    0.691 bot.py:291(decide_decision)
+       12    0.001    0.000    8.287    0.691 bot.py:309(_decide)
+       12    0.000    0.000    8.264    0.689 bot.py:516(_preflop_policy)
+        8    0.006    0.001    8.259    1.032 cfr.py:297(solve)
+     2000    0.893    0.000    8.226    0.004 cfr.py:216(iterate)
+     4008    0.555    0.000    6.039    0.002 cfr.py:249(policy)
+    16096    2.532    0.000    4.125    0.000 cfr.py:27(fit_frequencies)
+   582702    0.448    0.000    1.966    0.000 {method 'sum' of 'numpy.ndarray' objects}
+   582702    0.250    0.000    1.518    0.000 _methods.py:47(_sum)
+        8    0.006    0.001    1.368    0.171 service.py:206(profile_for)
+   584122    1.282    0.000    1.282    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+     4000    0.738    0.000    0.786    0.000 cfr.py:184(_terminal_values)
+    16096    0.531    0.000    0.764    0.000 exploit.py:201(group_target)
+       13    0.001    0.000    0.665    0.051 __init__.py:1(<module>)
+    32064    0.431    0.000    0.555    0.000 cfr.py:130(current)
+      300    0.001    0.000    0.486    0.002 bot.py:279(observe_completed_hand)
+      300    0.005    0.000    0.485    0.002 showdown.py:62(observe)
+      360    0.014    0.000    0.479    0.001 showdown.py:44(hand_percentile)
+     2017    0.004    0.000    0.455    0.000 engine.py:320(decision_observation)
+     2017    0.008    0.000    0.450    0.000 decision_state.py:273(build_decision_observation)
+      250    0.341    0.001    0.389    0.002 equity.py:24(rank_vector)
+    120/3    0.002    0.000    0.346    0.115 <frozen importlib._bootstrap>:1165(_find_and_load)
+    120/3    0.001    0.000    0.346    0.115 <frozen importlib._bootstrap>:1120(_find_and_load_unlocked)
+    116/4    0.001    0.000    0.341    0.085 <frozen importlib._bootstrap>:666(_load_unlocked)
+    103/4    0.001    0.000    0.341    0.085 <frozen importlib._bootstrap_external>:934(exec_module)
+    304/7    0.001    0.000    0.338    0.048 <frozen importlib._bootstrap>:233(_call_with_frames_removed)
+    136/4    0.004    0.000    0.333    0.083 {built-in method builtins.exec}
+        1    0.000    0.000    0.333    0.333 bot.py:1(<module>)
+     4000    0.277    0.000    0.288    0.000 cfr.py:165(_current_reaches)
+
+

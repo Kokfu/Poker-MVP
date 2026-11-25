@@ -1,0 +1,4 @@
+C 169 100 fits per run, bit-identical, median ms old/direct/in-place [16.37, 15.07, 15.64]
+C 900 100 fits per run, bit-identical, median ms old/direct/in-place [33.37, 31.68, 36.53]
+F 169 100 fits per run, bit-identical, median ms old/direct/in-place [40.56, 34.39, 34.74]
+F 900 100 fits per run, bit-identical, median ms old/direct/in-place [104.42, 114.04, 119.78]
