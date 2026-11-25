@@ -149,3 +149,9 @@ backend/.venv/Scripts/python.exe autopilot/overnight/profile_coach_replay.py
 ```
 
 The driver creates its own synthetic history and checks matching advice hashes for the final requests. [Reproduction log](jobs/coach-replay-driver.log)
+
+### Quick postflop recommendation
+
+Heads-up Coach requests an approximate postflop recommendation while the existing full solver request runs. The quick card is explicitly labeled and shows the current board and pot. The full recommendation replaces it when ready and enables the hand controls. The preview uses a free check when available and compares public-card equity against an unknown hand with the effective call price when facing a bet.
+
+Over loopback, quick p95 was 22.63 ms on 36 original and 38.38 ms on 36 representative postflop spots. The respective maxima were 26.09 and 43.54 ms. Both full 48-spot sets reproduced all advice hashes. The 600 ms target for the full solver remains open. [Timings](jobs/coach-quick-48.log)

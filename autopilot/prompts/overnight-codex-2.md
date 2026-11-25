@@ -115,6 +115,10 @@ Work in order. Start long jobs as early as possible and work on other items whil
 38. **Benchmark error teardown.** Interrupt the isolated benchmark with an invalid request and verify that it closes its own Uvicorn process and releases its scratch database.
 39. **Resumed change audit.** Review the exact cache, benchmark, and diagnostic status changes made during the resumed run. Fix reproducible errors and verify the final baseline for the 06:30 regression.
 
+40. **Quick advice request ordering.** Verify that a quick response appears only for the current request, that a late preview cannot replace full advice, and that preview errors leave full advice available.
+41. **River preview latency under load.** Time 48 independent river spots facing bets while their full requests run. Verify the legal recommendation and report p95 and maximum.
+42. **Supervisor exception proof.** Exercise an isolated missing-worker launch and verify both logged exception and exit markers, retry handling, and the resulting read-only failure status.
+
 ## At 06:30
 - Collect the background job results.
 - Run the full backend suite, `npx.cmd tsc -b`, `node --test test/coach-strategy.test.mjs` and `npm.cmd run build`.
