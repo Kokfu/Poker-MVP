@@ -42,6 +42,14 @@ def _append(handle, record):
     os.fsync(handle.fileno())
 
 
+def _decode_session(record):
+    fields = record.copy()
+    fallback = fields.pop("solver_fallback_actions", None)
+    if fallback is not None and (type(fallback) is not int or fallback < 0):
+        raise ValueError("session ledger contains an invalid solver fallback count")
+    return DuplicatePair(**fields), fallback
+
+
 def _read_sessions(handle, header, seeds):
     records = []
     for index, line in enumerate(handle):
@@ -57,11 +65,11 @@ def _read_sessions(handle, header, seeds):
             continue
         if index > len(seeds) or record.pop("session", None) != index:
             raise ValueError("session ledger is out of sequence")
-        pair = DuplicatePair(**record)
+        pair, fallback = _decode_session(record)
         if (pair.seed != seeds[index - 1] or pair.hands_per_seat != header["configuration"]["session_hands"]
                 or not pair.deal_verified):
             raise ValueError("session ledger has inconsistent deal metadata")
-        records.append(pair)
+        records.append((pair, fallback))
     if handle.tell() == 0:
         _append(handle, header)
     handle.seek(0, os.SEEK_END)
@@ -83,8 +91,12 @@ def _save_summary(path: Path, report) -> None:
             scratch.unlink(missing_ok=True)
 
 
-def _run_report(header, pairs, config, ledger, *, learning=False):
+def _run_report(header, sessions, config, ledger, *, learning=False):
+    pairs = [pair for pair, _ in sessions]
     result = summarize_pairs(pairs, config)
+    known = [fallback for _, fallback in sessions if fallback is not None]
+    result["solver_fallback_coverage_sessions"] = len(known)
+    result["solver_fallback_actions"] = sum(known) if len(known) == len(sessions) else None
 
     def bb_per_100(selection):
         return 100 * sum(pair.net for pair in selection) / config.big_blind / sum(pair.hands for pair in selection)
@@ -145,28 +157,29 @@ def _learning_run(profile_dir, output, name, opponent, config, *, resume):
             data["active_run"] = name
             _save_summary(ledger, data)
 
-        pairs = [DuplicatePair(**record) for record in run["sessions"]]
-        if len(pairs) > len(seeds) or any(
+        sessions = [_decode_session(record) for record in run["sessions"]]
+        if len(sessions) > len(seeds) or any(
             pair.seed != seed or pair.hands_per_seat != config.session_hands or not pair.deal_verified
-            for pair, seed in zip(pairs, seeds)
+            for (pair, _), seed in zip(sessions, seeds)
         ):
             raise ValueError("learning ledger has inconsistent session metadata")
-        if len(pairs) < len(seeds):
+        if len(sessions) < len(seeds):
             if data["active_run"] != name:
                 raise ValueError("another run owns the learning checkpoint")
             profiles = restore_profiles(data["profiles"])
-            for index, seed in enumerate(seeds[len(pairs):], start=len(pairs) + 1):
-                pair = play_duplicate_pair(config, AGENT, opponent, seed, learning=profiles)
+            for index, seed in enumerate(seeds[len(sessions):], start=len(sessions) + 1):
+                diagnostics = {}
+                pair = play_duplicate_pair(config, AGENT, opponent, seed, learning=profiles, diagnostics=diagnostics)
                 if not pair.deal_verified:
                     raise ValueError(f"deal mismatch in session {index}")
-                pairs.append(pair)
-                run["sessions"].append(asdict(pair))
+                sessions.append((pair, diagnostics["solver_fallback_actions"]))
+                run["sessions"].append({**asdict(pair), **diagnostics})
                 data["profiles"] = encode_profiles(profiles)
                 if index == len(seeds):
                     run["final_profile_hands"] = opponent_hands(data["profiles"])
                     data["active_run"] = None
                 _save_summary(ledger, data)
-        report = _run_report(header, pairs, config, ledger, learning=True)
+        report = _run_report(header, sessions, config, ledger, learning=True)
         report["profile_hands"] = {"initial": run["initial_profile_hands"], "final": run["final_profile_hands"]}
         _save_summary(summary, report)
     return report
@@ -185,15 +198,19 @@ def run_sessions(output: Path, name: str, opponent: str, config: DuplicateConfig
     summary = output / f"{name}.summary.json"
     header = {"format_version": 1, "agent": AGENT, "opponent": opponent, "configuration": config.as_dict()}
     seeds = config.seeds()
-    with _exclusive_run(output / f"{name}.lock"), ledger.open("r+b" if resume else "x+b") as handle:
-        pairs = _read_sessions(handle, header, seeds)
-        for index, seed in enumerate(seeds[len(pairs):], start=len(pairs) + 1):
-            pair = play_duplicate_pair(config, AGENT, opponent, seed)
-            if not pair.deal_verified:
-                raise ValueError(f"deal mismatch in session {index}")
-            _append(handle, {"session": index, **asdict(pair)})
-            pairs.append(pair)
-        report = _run_report(header, pairs, config, ledger)
+    with _exclusive_run(output / f"{name}.lock"):
+        if not resume and summary.exists():
+            raise FileExistsError("this agent run already exists")
+        with ledger.open("r+b" if resume else "x+b") as handle:
+            sessions = _read_sessions(handle, header, seeds)
+            for index, seed in enumerate(seeds[len(sessions):], start=len(sessions) + 1):
+                diagnostics = {}
+                pair = play_duplicate_pair(config, AGENT, opponent, seed, diagnostics=diagnostics)
+                if not pair.deal_verified:
+                    raise ValueError(f"deal mismatch in session {index}")
+                _append(handle, {"session": index, **asdict(pair), **diagnostics})
+                sessions.append((pair, diagnostics["solver_fallback_actions"]))
+        report = _run_report(header, sessions, config, ledger)
         _save_summary(summary, report)
     return report
 

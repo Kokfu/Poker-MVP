@@ -1,12 +1,13 @@
 """Local SQLite storage for logged Coach hands (one row per hand)."""
 from __future__ import annotations
 
+from contextlib import closing, contextmanager
 from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
 import sqlite3
-from typing import Any
+from typing import Any, Iterator
 
 DEFAULT_PATH = Path(__file__).resolve().parent.parent / "data" / "coach.sqlite"
 MAX_NAME_LENGTH = 60
@@ -46,10 +47,12 @@ class HandStore:
                 "PRIMARY KEY (opponent, street_class, bucket))"
             )
 
-    def _connect(self) -> sqlite3.Connection:
-        connection = sqlite3.connect(self.path)
-        connection.execute("PRAGMA foreign_keys = ON")
-        return connection
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
+        with closing(sqlite3.connect(self.path)) as connection:
+            connection.execute("PRAGMA foreign_keys = ON")
+            with connection:
+                yield connection
 
     def add(self, opponent: str, spot: dict[str, Any], *, practice_source: str | None = None) -> int:
         with self._connect() as connection:

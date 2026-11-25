@@ -249,6 +249,7 @@ class SolverBot(PokerBot):
     persistent_ranges = False  # enabled independently by the local Coach and Match services
     explain_ev = False  # add per-action EV to postflop explanations (read-only; the Coach turns it on)
     explain_preflop_ev = False  # approximate class-chart EV for settled practice review
+    exact_preflop_cache = False  # the original bots retain their rounded lock-cache policy
     capture_river_shadow = False  # Coach-only handoff after the incumbent action is selected
     river_shadow_context = None
     iterations = {"flop": 60, "turn": 70, "river": 80}
@@ -514,7 +515,9 @@ class SolverBot(PokerBot):
         """Node -> (actions, 1326) strategy: the chart, or a locked re-solve."""
         if not locks:
             return lambda node: self.charts.strategy(depth, node)
-        key = (depth, opponent, locks_key(locks))
+        tree = self.charts.trees[depth]
+        key = (tree, opponent, self.exact_preflop_cache, locks_key(locks, exact=self.exact_preflop_cache),
+               PREFLOP_LOCKED_ITERATIONS)
         with _PREFLOP_CACHE_LOCK:
             policy = _PREFLOP_CACHE.get(key)
             if policy is not None:
@@ -523,7 +526,7 @@ class SolverBot(PokerBot):
         if policy is None:
             class_d, class_w = load_class_equity()
             counts = CLASS_COMBO_COUNT.astype(float)
-            solver = RangeSolver(self.charts.trees[depth], (counts, counts), class_d, class_w, locks=locks)
+            solver = RangeSolver(tree, (counts, counts), class_d, class_w, locks=locks)
             policy = solver.solve(PREFLOP_LOCKED_ITERATIONS).average
             with _PREFLOP_CACHE_LOCK:
                 _PREFLOP_CACHE[key] = policy

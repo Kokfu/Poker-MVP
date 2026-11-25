@@ -261,7 +261,8 @@ def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store:
     else:
         advisor = AdaptiveSolverBot(seed=seed) if use_exploit else SolverBot(seed=seed)
     if opponent:
-        model = profile_for(store or HandStore(), opponent, advisor if advisor.exploit else None, through_id=through_id)
+        history_options = {"through_id": through_id} if through_id is not None else {}
+        model = profile_for(store or HandStore(), opponent, advisor if advisor.exploit else None, **history_options)
         profile_snapshot = model.snapshot() if model.hands_observed else None
     if advisor.exploit and profile_snapshot is None:
         advisor = (CoachAdvisor(seed=seed, exploit=False, cache_solves=True)

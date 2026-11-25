@@ -11,6 +11,8 @@ _MAX_SOLVES = 4  # keep one hand's streets, with room for an off-tree re-solve
 
 
 class CoachAdvisor(AdaptiveSolverBot):
+    exact_preflop_cache = True
+
     def __init__(self, *, seed: int, exploit: bool, cache_solves: bool):
         super().__init__(seed=seed)
         self.exploit = exploit

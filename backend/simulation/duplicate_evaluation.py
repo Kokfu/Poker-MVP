@@ -101,7 +101,7 @@ class DuplicatePair:
         return 2 * self.hands_per_seat
 
 
-def _play_hand(config: DuplicateConfig, strategy: str, opponent: str, seed: int, strategy_seat: str):
+def _play_hand(config: DuplicateConfig, strategy: str, opponent: str, seed: int, strategy_seat: str, diagnostics=None):
     strategy_bot = _bot(strategy, seed, "strategy", config.equity_iterations)
     opponent_bot = _bot(opponent, seed, "opponent", config.equity_iterations)
     first, second = (strategy_bot, opponent_bot) if strategy_seat == "a" else (opponent_bot, strategy_bot)
@@ -114,6 +114,8 @@ def _play_hand(config: DuplicateConfig, strategy: str, opponent: str, seed: int,
     )
     holes = (tuple(engine.holes["a"]), tuple(engine.holes["b"]))
     result = engine.play()
+    if diagnostics is not None:
+        diagnostics["solver_fallback_actions"] += sum(getattr(bot, "fallback_count", 0) for bot in (first, second))
     net_a = result["stacks"]["a"] - config.starting_stack
     net_b = result["stacks"]["b"] - config.starting_stack
     _validate_history_and_conservation(result["history"], net_a, net_b)
@@ -190,16 +192,23 @@ def _play_sessions(config: DuplicateConfig, strategy: str, opponent: str, start:
     return sides["a"], sides["b"]
 
 
-def play_duplicate_pair(config: DuplicateConfig, strategy: str, opponent: str, seed: int, *, learning=None) -> DuplicatePair:
+def play_duplicate_pair(config: DuplicateConfig, strategy: str, opponent: str, seed: int, *,
+                        learning=None, diagnostics=None) -> DuplicatePair:
+    if diagnostics is not None:
+        diagnostics["solver_fallback_actions"] = 0
     if config.session_hands > 1 or learning is not None:
         side_a, side_b = _play_sessions(config, strategy, opponent, seed, learning)
+        if diagnostics is not None:
+            diagnostics["solver_fallback_actions"] = sum(
+                getattr(bot, "fallback_count", 0) for side in (side_a, side_b) for bot in side["seats"]
+            )
         return DuplicatePair(
             seed=seed, net_seat_a=side_a["net"], net_seat_b=side_b["net"],
             illegal_actions=side_a["illegal"] + side_b["illegal"], fallback_actions=side_a["fallback"] + side_b["fallback"],
             deal_verified=all(_same_deal(x, y) for x, y in zip(side_a["deals"], side_b["deals"])), hands_per_seat=config.session_hands,
         )
-    button_net, holes_a, board_a, illegal_a, fallback_a = _play_hand(config, strategy, opponent, seed, "a")
-    blind_net, holes_b, board_b, illegal_b, fallback_b = _play_hand(config, strategy, opponent, seed, "b")
+    button_net, holes_a, board_a, illegal_a, fallback_a = _play_hand(config, strategy, opponent, seed, "a", diagnostics)
+    blind_net, holes_b, board_b, illegal_b, fallback_b = _play_hand(config, strategy, opponent, seed, "b", diagnostics)
     return DuplicatePair(
         seed=seed, net_seat_a=button_net, net_seat_b=blind_net,
         illegal_actions=illegal_a + illegal_b, fallback_actions=fallback_a + fallback_b,
