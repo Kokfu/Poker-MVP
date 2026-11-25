@@ -1,0 +1,16 @@
+INFO:     Started server process [27424]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:18026 (Press CTRL+C to quit)
+INFO:     127.0.0.1:51875 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51875 - "GET /assets/index-Bip-rEGy.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54808 - "GET /assets/index-DEV9_ZuZ.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51875 - "GET /api/coach/opponents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61353 - "POST /api/practice/table HTTP/1.1" 201 Created
+INFO:     127.0.0.1:61353 - "POST /api/practice/table/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61353 - "GET /api/practice/table/review?revision=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61353 - "GET /api/practice/table/session HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59299 - "GET /api/coach/opponents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59299 - "GET /api/coach/opponents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62760 - "GET /api/coach/storage HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62760 - "GET /_clear HTTP/1.1" 204 No Content
