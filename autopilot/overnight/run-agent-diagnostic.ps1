@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
     [switch] $Status,
+    [ValidateSet('tight', 'equity', 'expert', 'range_expert')] [string] $OnlyOpponent,
     [string] $JobsDirectory = (Join-Path $PSScriptRoot 'jobs'),
     [ValidateRange(1, 1440)] [int] $StaleAfterMinutes = 30
 )
@@ -11,6 +12,7 @@ $jobs = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(
 $resultDirectory = Join-Path $jobs 'agent-results'
 $logPath = Join-Path $jobs 'agent.log'
 $opponents = [ordered]@{ tight = 41000; equity = 44000; expert = 47000; range_expert = 50000 }
+if ($OnlyOpponent) { $opponents = [ordered]@{ $OnlyOpponent = $opponents[$OnlyOpponent] } }
 $sessions = 24
 $handsPerSeat = 60
 
@@ -148,20 +150,33 @@ try {
         $name = "nov26-$($match.Key)"
         $progress = Get-DiagnosticStatus $match.Key $match.Value
         if ($progress.State -eq 'Complete') { continue }
+        if ($progress.State -eq 'Stale') {
+            Add-Content -LiteralPath $logPath -Value ('{0:o} interrupted {1}: previous attempt has no exit marker; {2}/{3} sessions committed' -f (Get-Date), $name, $progress.Sessions, $sessions)
+        }
         $options = @('-u', '-m', 'simulation.agent_cli', '--run', $name, '--opponent', $match.Key,
                      '--sessions', $sessions, '--session-hands', $handsPerSeat, '--seed-offset', $match.Value,
                      '--output-dir', $resultDirectory)
         for ($attempt = 1; $attempt -le 2; $attempt++) {
-            Add-Content -LiteralPath $logPath -Value ('{0:o} begin {1} attempt {2}' -f (Get-Date), $name, $attempt)
             $resume = @()
             if (Test-Path -LiteralPath (Join-Path $resultDirectory "$name.jsonl")) { $resume = @('--resume') }
-            & $python @options @resume *>> $logPath
-            $exitCode = $LASTEXITCODE
-            Add-Content -LiteralPath $logPath -Value ('{0:o} end {1} exit {2}' -f (Get-Date), $name, $exitCode)
+            Add-Content -LiteralPath $logPath -Value ('{0:o} supervisor pid {1} for {2}; resume={3}' -f (Get-Date), $PID, $name, ($resume.Count -gt 0))
+            Add-Content -LiteralPath $logPath -Value ('{0:o} begin {1} attempt {2}' -f (Get-Date), $name, $attempt)
+            $exitCode = 1
+            try {
+                & $python @options @resume *>> $logPath
+                $exitCode = $LASTEXITCODE
+            } catch {
+                Add-Content -LiteralPath $logPath -Value ('{0:o} exception {1}: {2}' -f (Get-Date), $name, $_.Exception.Message)
+            } finally {
+                Add-Content -LiteralPath $logPath -Value ('{0:o} end {1} exit {2}' -f (Get-Date), $name, $exitCode)
+            }
             if ($exitCode -eq 0) { break }
         }
         if ($exitCode -ne 0) { $anyFailed = $true }
     }
+} catch {
+    Add-Content -LiteralPath $logPath -Value ('{0:o} supervisor exception: {1}' -f (Get-Date), $_.Exception.Message)
+    throw
 } finally {
     Pop-Location
     $planLock.Dispose()
