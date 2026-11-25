@@ -1,0 +1,170 @@
+{
+  "agent": "solver_adaptive",
+  "bb_per_100": 42.092013888888886,
+  "by_session": [
+    {
+      "bb_per_100": 25.833333333333332,
+      "hands": 120,
+      "session": 1
+    },
+    {
+      "bb_per_100": 35.416666666666664,
+      "hands": 120,
+      "session": 2
+    },
+    {
+      "bb_per_100": 211.66666666666666,
+      "hands": 120,
+      "session": 3
+    },
+    {
+      "bb_per_100": 196.04166666666666,
+      "hands": 120,
+      "session": 4
+    },
+    {
+      "bb_per_100": -95.625,
+      "hands": 120,
+      "session": 5
+    },
+    {
+      "bb_per_100": 193.95833333333334,
+      "hands": 120,
+      "session": 6
+    },
+    {
+      "bb_per_100": 111.45833333333333,
+      "hands": 120,
+      "session": 7
+    },
+    {
+      "bb_per_100": 33.75,
+      "hands": 120,
+      "session": 8
+    },
+    {
+      "bb_per_100": -38.125,
+      "hands": 120,
+      "session": 9
+    },
+    {
+      "bb_per_100": -47.916666666666664,
+      "hands": 120,
+      "session": 10
+    },
+    {
+      "bb_per_100": 204.375,
+      "hands": 120,
+      "session": 11
+    },
+    {
+      "bb_per_100": -148.75,
+      "hands": 120,
+      "session": 12
+    },
+    {
+      "bb_per_100": -78.125,
+      "hands": 120,
+      "session": 13
+    },
+    {
+      "bb_per_100": 173.95833333333334,
+      "hands": 120,
+      "session": 14
+    },
+    {
+      "bb_per_100": 113.125,
+      "hands": 120,
+      "session": 15
+    },
+    {
+      "bb_per_100": 27.5,
+      "hands": 120,
+      "session": 16
+    },
+    {
+      "bb_per_100": 5.0,
+      "hands": 120,
+      "session": 17
+    },
+    {
+      "bb_per_100": 123.33333333333333,
+      "hands": 120,
+      "session": 18
+    },
+    {
+      "bb_per_100": 36.666666666666664,
+      "hands": 120,
+      "session": 19
+    },
+    {
+      "bb_per_100": -146.45833333333334,
+      "hands": 120,
+      "session": 20
+    },
+    {
+      "bb_per_100": 27.5,
+      "hands": 120,
+      "session": 21
+    },
+    {
+      "bb_per_100": -98.125,
+      "hands": 120,
+      "session": 22
+    },
+    {
+      "bb_per_100": 21.041666666666668,
+      "hands": 120,
+      "session": 23
+    },
+    {
+      "bb_per_100": 122.70833333333333,
+      "hands": 120,
+      "session": 24
+    }
+  ],
+  "complete": true,
+  "confidence_interval": {
+    "confidence_level": 0.95,
+    "lower": 1.4466145833333388,
+    "upper": 87.71918402777777
+  },
+  "configuration": {
+    "big_blind": 100,
+    "bootstrap_resamples": 2000,
+    "confidence_level": 0.95,
+    "equity_iterations": 100,
+    "pairs": 24,
+    "seed_offset": 41000,
+    "seed_set": "development",
+    "session_hands": 60,
+    "small_blind": 50,
+    "starting_stack": 10000,
+    "statistics_seed": 91002,
+    "workers": 1
+  },
+  "deal_mismatches": 0,
+  "early_vs_late": {
+    "early_bb_per_100": 56.84027777777778,
+    "early_sessions": 12,
+    "late_bb_per_100": 27.34375,
+    "late_sessions": 12
+  },
+  "fallback_actions": 0,
+  "format_version": 1,
+  "hands": 2880,
+  "illegal_actions": 0,
+  "interpretation": "positive_estimate_supported",
+  "ledger": "nov26-tight.jsonl",
+  "opponent": "tight",
+  "pairs": 24,
+  "planned_sessions": 24,
+  "seat_a_bb_per_100": 20.729166666666668,
+  "seat_b_bb_per_100": 63.454861111111114,
+  "sessions": 24,
+  "solver_fallback_actions": null,
+  "solver_fallback_coverage_sessions": 0,
+  "standard_error_bb_per_100": 22.70000955165263,
+  "unpaired_standard_error_bb_per_100": 23.68460162457562,
+  "variance_reduction": 0.08141381139455539
+}
