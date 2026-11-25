@@ -2,12 +2,13 @@
 
 ## System overview
 
-The application is local and stateless:
+The application runs locally. Practice tables live in the backend process and completed Coach hands are stored on disk.
 
 ```text
 React/Vite frontend
         +-- Analyzer tab
         +-- Coach tab (manual entry)
+        +-- Practice table tab
         +-- independent Simulator tab
         +-- persistent Match tab
         +-- Replay tab
@@ -19,6 +20,7 @@ FastAPI backend
         +-- Analyzer: validation, Treys, NumPy/Monte Carlo
         |
         +-- Coach API (replay through HandEngine, solver advice, SQLite hand log)
+        +-- Practice API (timed heads-up hands, seat keys, post-hand review)
         |
         +-- Simulator API and CLI
                 |
@@ -29,7 +31,15 @@ FastAPI backend
                 +-- JSONL dataset writer/validator
 ```
 
-Docker Compose runs the FastAPI backend and React/Vite frontend as separate services. Ports 8000 and 5173 are bound to `127.0.0.1`. The only application persistence is the Coach hand log, a local SQLite file (`backend/data/coach.sqlite`, or the `coach-data` Docker volume); everything else is stateless apart from explicitly requested dataset or result files.
+Docker Compose runs the FastAPI backend and React/Vite frontend as separate services. The configured ports bind to `127.0.0.1`. The Coach hand log is a local SQLite file at `backend/data/coach.sqlite` by default, or the `coach-data` Docker volume. On Windows the LAN launcher can expose the web page through its proxy while the API listens on loopback. The offline runner writes explicitly requested result ledgers and optional learning checkpoints.
+
+## Timed practice tables
+
+`backend/practice_table.py` reconstructs the current heads-up hand through `HandEngine` from a private deal seed and its accepted actions. The human seat has a capability, and the table owns action deadlines. The API checks the turn revision and deadline under the table lock. At expiry the server checks whenever legal and otherwise folds. A stale request cannot play a later turn. The browser keeps the seat key in session storage so a refresh can resume the same table.
+
+Settlement validates the history and chip conservation before persisting a Coach spot under the selected opponent. An opaque practice hand identifier makes the insert idempotent on retry. The bot carries its completed public profile forward and releases the previous hand's solve memory. Coach computes advice after settlement from the cards and actions visible at each decision. A profile query is limited to rows present when the hand began.
+
+The flagged multiway Coach estimates equity by applying Range Intelligence separately to each active opponent's public actions. It conditions draws on compatible cards across seats and splits ties among all tied players. Its pot-odds heuristic runs independently of the heads-up solver. [Three-to-six seat engine design](DESIGN_MULTIWAY_ENGINE.md)
 
 ## Kuhn CFR research isolation
 

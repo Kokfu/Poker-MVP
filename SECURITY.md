@@ -95,15 +95,28 @@ combos; a test asserts the solver module never references engine internals,
 the deck, or revealed opponent cards.  Mixed-strategy sampling uses a private
 SHA-256-seeded RNG.
 
-**Coach.** Input is typed by the user; there is no screen reading, OCR,
-browser automation, site integration, or automatic clicking.  Completed hands
-logged under an opponent name are stored only in a local SQLite file
-(`backend/data/coach.sqlite`, or `COACH_DB_PATH`; a Docker named volume in
-Compose).  Nothing is uploaded.  Stored rows contain what the user typed:
-their own cards, the board, public actions, and villain cards only if the user
-entered them as shown at showdown.  The Coach is for study, review, and
-practice; real-time assistance while playing on a poker site breaks most
-sites' terms, and this project does not support that use.
+**Coach.** Manual entries and completed practice hands share a local SQLite file at
+`backend/data/coach.sqlite` by default. `COACH_DB_PATH` overrides the path, and
+Compose uses a named volume. Rows contain the player's own cards, public board and
+actions, and any opponent cards legitimately revealed at showdown. The app keeps
+these rows local. The optional multiway feature accepts the player's own cards,
+the public board and per-seat public actions in street order. It derives candidate
+cards from this evidence.
+
+**Practice tables.** Each browser seat uses an opaque capability sent in the
+`Authorization` header. The browser holds it in session storage and the server
+keeps it in memory for the life of the table. Table responses contain that seat's
+own cards and public state. A legitimate showdown can reveal the other seat's
+cards. Seeds and replay state remain server-side. The server validates bodies,
+actions, revisions and deadlines, and limits creation and per-seat requests.
+The Windows launcher keeps its backend on loopback. Its LAN frontend proxies
+requests and shares the creation quota. Saved Coach data remains accessible to
+people who can reach the shared Coach interface. [LAN checklist](docs/practice-table-lan-checklist.md)
+
+**Offline agent checkpoints.** Paired sessions persist performance values,
+synthetic deal seeds and, when enabled, aggregate public opponent profiles and
+showdown statistics. Card identities and raw deal order stay out of the
+checkpoint. Independent seat orientations learn from their own settled hands.
 
 **Slumbot benchmark.** `simulation/slumbot.py` talks only to Slumbot's public
 bot-benchmark API (`slumbot.com/api/new_hand`, `/api/act`), which exists so
