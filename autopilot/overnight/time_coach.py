@@ -7,6 +7,7 @@ import json
 import math
 import os
 from pathlib import Path
+from random import Random
 from statistics import median
 import sys
 from tempfile import TemporaryDirectory
@@ -18,6 +19,7 @@ from fastapi.testclient import TestClient
 from coach.service import spot_to_dict
 from coach.store import HandStore
 from main import app
+from poker_analyzer import FULL_DECK
 from test_coach_learning import simulated_spots
 
 
@@ -55,7 +57,48 @@ def scenarios(suit_variants):
             yield label, payload
 
 
-def measure(repeats, suit_variants, wait_for_warmup):
+def representative_scenarios():
+    rng = Random(20261126)
+    for board_size, street in ((0, "preflop"), (3, "flop"), (4, "turn"), (5, "river")):
+        for index in range(12):
+            button, blind = ("hero", "villain") if index % 2 == 0 else ("villain", "hero")
+            path = index // 2 % 3
+            deal = rng.sample(FULL_DECK, 2 + board_size)
+            depth = (2_500, 6_000, 10_000, 20_000)[index // 3]
+            opponent = (None, "Synthetic", "Aggressive synthetic")[index % 3]
+            if not board_size:
+                paths = (
+                    ([], [action(button, "call"), action(blind, "raise", 300)],
+                     [action(button, "raise", 250), action(blind, "raise", 650)])
+                    if button == "hero"
+                    else ([action(button, "call")], [action(button, "raise", 250)],
+                          [action(button, "raise", 450)])
+                )
+                actions = paths[path]
+            else:
+                actions = (
+                    [action(button, "call"), action(blind, "check")],
+                    [action(button, "raise", 250), action(blind, "call")],
+                    [action(button, "raise", 250), action(blind, "raise", 650), action(button, "call")],
+                )[path]
+                for prior in range(board_size - 3):
+                    actions += (
+                        [action(blind, "check"), action(button, "check")],
+                        [action(blind, "bet", 175), action(button, "call")],
+                        [action(blind, "check"), action(button, "bet", 250), action(blind, "call")],
+                    )[(path + prior) % 3]
+                if button == "hero":
+                    actions.append(action(blind, "bet", 200) if path == 2 else action(blind, "check"))
+                elif path == 2:
+                    actions += [action(blind, "check"), action(button, "bet", 200)]
+            yield f"{street}-representative-{index}", {
+                "hero_cards": deal[:2], "board": deal[2:], "actions": actions,
+                "hero_position": "button" if button == "hero" else "big_blind",
+                "hero_stack": depth, "villain_stack": depth, "opponent": opponent,
+            }
+
+
+def measure(repeats, suit_variants, wait_for_warmup, representative=False):
     measurements = []
     with TemporaryDirectory() as scratch, ExitStack() as stack:
         # SQLite connection cycles can retain Windows file handles until GC.
@@ -64,13 +107,17 @@ def measure(repeats, suit_variants, wait_for_warmup):
         store = HandStore()
         for spot in simulated_spots("tight", 150):
             store.add("Synthetic", spot_to_dict(spot))
+        if representative:
+            for spot in simulated_spots("aggressive", 150, seed0=2_000):
+                store.add("Aggressive synthetic", spot_to_dict(spot))
         startup = perf_counter()
         client = stack.enter_context(TestClient(app))
         startup_ms = 1000 * (perf_counter() - startup)
         if wait_for_warmup and (worker := app.state.coach_warmup):
             worker.join()
         ready_ms = 1000 * (perf_counter() - startup)
-        for label, payload in scenarios(suit_variants):
+        workload = representative_scenarios() if representative else scenarios(suit_variants)
+        for label, payload in workload:
             for repeat in range(repeats):
                 start = perf_counter()
                 response = client.post("/api/coach/advise", json=payload)
@@ -78,6 +125,8 @@ def measure(repeats, suit_variants, wait_for_warmup):
                 response.raise_for_status()
                 result = response.json()
                 assert result["status"] == "hero_to_act", result
+                if representative:
+                    assert result["state"]["street"] == label.split("-", 1)[0], (label, result)
                 explanation = result["explanation"]
                 # Runtime metadata may change without any change to the advice.
                 explanation.pop("solve_seconds", None)
@@ -88,10 +137,12 @@ def measure(repeats, suit_variants, wait_for_warmup):
                                      "source": explanation["source"],
                                      "advice_sha256": hashlib.sha256(encoded).hexdigest()})
     summary = {}
-    for cohort in ("preflop", "postflop"):
+    cohorts = ("preflop", "postflop", "flop", "turn", "river") if representative else ("preflop", "postflop")
+    for cohort in cohorts:
         for phase in ("all", "first", "repeat"):
             ms = sorted(row["ms"] for row in measurements
-                        if (row["spot"].startswith("preflop") == (cohort == "preflop"))
+                        if (not row["spot"].startswith("preflop-") if cohort == "postflop"
+                            else row["spot"].startswith(cohort + "-"))
                         and (phase == "all" or (row["repeat"] == 0) == (phase == "first")))
             if ms:
                 summary[f"{cohort}_{phase}"] = {"n": len(ms), "median_ms": median(ms),
@@ -104,12 +155,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repeats", type=int, default=3)
     parser.add_argument("--suit-variants", type=int, choices=range(1, 5), default=1)
+    parser.add_argument("--representative", action="store_true",
+                        help="48 distinct spots with varied boards and action paths")
     parser.add_argument("--expect", type=Path, help="fail if advice differs from this baseline report")
     parser.add_argument("--wait-for-warmup", action="store_true")
     args = parser.parse_args()
     if args.repeats < 1:
         parser.error("--repeats must be positive")
-    report = measure(args.repeats, args.suit_variants, args.wait_for_warmup)
+    if args.representative and args.suit_variants != 1:
+        parser.error("--representative cannot be combined with multiple suit variants")
+    report = measure(args.repeats, args.suit_variants, args.wait_for_warmup, args.representative)
     if args.expect:
         def hashes(rows):
             return {(row["spot"], row["repeat"]): row["advice_sha256"] for row in rows}

@@ -99,6 +99,10 @@ Work in order. Start long jobs as early as possible and work on other items whil
 26. **Representative cold benchmark.** Add a deterministic 48-spot workload with independent boards, multiple depths and action paths. Report latencies by street and preserve the existing benchmark and hash checks.
 27. **Interrupted diagnostic visibility.** Have the read-only runner status identify stale progress without requiring an exit marker. Report missing sessions and the last write time, preserve accurate complete and failed states, and verify that status never mutates a ledger.
 
+28. **Locked preflop misses.** Profile the slow representative preflop requests by chart depth and profile. Test a narrowly scoped startup or solver change if it can preserve all advice hashes and improve first-use timing.
+29. **Exact runout batching.** Compare bounded batches of integer rank tallies with the existing per-runout loop. Keep it only if equity matrices match bit for bit and both the microbenchmarks and advice timings support it.
+30. **Local HTTP cold latency.** Measure the representative workload through an isolated Uvicorn process on loopback. Check advice hashes and record how its latency compares with the in-process benchmark.
+
 ## At 06:30
 - Collect the background job results.
 - Run the full backend suite, `npx.cmd tsc -b`, `node --test test/coach-strategy.test.mjs` and `npm.cmd run build`.

@@ -80,3 +80,27 @@ Once the diagnostic worker had exited, four fresh single-worker processes used i
 | Off, second | 24 | 6 / 903 | 648 / 1,129 |
 
 Both warmed runs met the 300 ms preflop target. None met the 600 ms postflop target. The warmup thread was allowed to overlap first-use requests. [Run timestamps and arguments](jobs/coach-quiet-48.log)
+
+### Independent boards and stack depths
+
+The representative workload uses two positions, four starting depths from 25 to 200 big blinds, anonymous and two generated opponent profiles, and 36 independent postflop boards. The 48 first-use inputs include checked and bet streets as well as open, limped, and re-raised preflop pots. Both runs used one BLAS worker, fresh databases and fresh API processes. All 48 advice hashes matched.
+
+| Street | Spots | Warmup off median / p95 (ms) | Warmup on median / p95 (ms) |
+| --- | ---: | ---: | ---: |
+| Preflop | 12 | 828 / 1,338 | 398 / 2,825 |
+| Flop | 12 | 728 / 1,155 | 719 / 1,187 |
+| Turn | 12 | 1,277 / 2,166 | 1,326 / 2,199 |
+| River | 12 | 1,963 / 3,194 | 1,886 / 3,165 |
+| All postflop | 36 | 1,154 / 2,693 | 1,173 / 2,927 |
+
+The preflop target met by the 100 bb workload remains open over this wider set. This comparison includes first requests arriving during startup warmup and independent boards for each postflop advice request. [Raw timings](jobs/coach-representative.log)
+
+```powershell
+$env:OPENBLAS_NUM_THREADS = '1'
+$env:POKER_COACH_SOLVE_CACHE = '1'
+$env:POKER_COACH_WARMUP = '0'
+$representativeControl = Join-Path $env:TEMP 'coach-representative-control.json'
+backend/.venv/Scripts/python.exe autopilot/overnight/time_coach.py --representative --repeats 1 > $representativeControl
+$env:POKER_COACH_WARMUP = '1'
+backend/.venv/Scripts/python.exe autopilot/overnight/time_coach.py --representative --repeats 1 --expect $representativeControl
+```
