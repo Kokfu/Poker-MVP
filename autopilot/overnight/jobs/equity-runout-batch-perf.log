@@ -1,0 +1,5 @@
+3 board cards, 1326x1326: median ms original, batch 4/8/16 [166.53, 205.24, 210.62, 201.65], all 8 paired results exact
+4 board cards, 1326x1326: median ms original, batch 4/8/16 [302.27, 328.64, 310.77, 307.69], all 8 paired results exact
+4 board cards, 750x670: median ms original, batch 4/8/16 [160.96, 172.26, 181.3, 162.45], all 8 paired results exact
+5 board cards, 1326x1326: median ms original, batch 4/8/16 [42.63, 50.16, 44.51, 44.07], all 8 paired results exact
+0 board cards, 200x240: median ms original, batch 4/8/16 [8.07, 9.43, 9.43, 10.76], all 8 paired results exact
