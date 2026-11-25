@@ -112,8 +112,10 @@ $log = @{
 }
 
 Write-Step "Starting the Coach engine (port $ApiPort, this computer only)"
+# Vite is the public LAN entry point. The API uses its socket peer for
+# practice creation limits instead of an address carried in HTTP headers.
 $api = Start-Process -FilePath $CoachPython -WorkingDirectory $CoachBackend -WindowStyle Hidden -PassThru `
-    -ArgumentList @('-m', 'uvicorn', 'main:app', '--host', '127.0.0.1', '--port', "$ApiPort") `
+    -ArgumentList @('-m', 'uvicorn', 'main:app', '--host', '127.0.0.1', '--port', "$ApiPort", '--no-proxy-headers') `
     -RedirectStandardOutput $log.apiOut -RedirectStandardError $log.apiErr
 
 # Share the page on the network only when Windows marks this network Private (home/work).

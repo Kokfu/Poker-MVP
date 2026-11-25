@@ -17,6 +17,6 @@
 ## If a check fails
 
 - If the page does not load, confirm the second device has the printed LAN address and is connected to the same network as the host. Try the printed address on the host before changing network settings.
-- If the app asks you to wait after repeated requests, wait for the rate limit to clear. Table creation can share a limit when multiple devices reach the server through the same local proxy.
+- If the app asks you to wait after repeated requests, wait for the rate limit to clear. The Windows launcher shares a table creation limit across devices connected through its local proxy. Existing tables have their own request limits.
 - A refresh can recover the seat in the same browser tab while the server is running. A closed table, an idle table that expired, or a server restart ends the associated seat. Completed hands remain in Coach.
 - Press Enter in the launcher window after testing to stop both services.
