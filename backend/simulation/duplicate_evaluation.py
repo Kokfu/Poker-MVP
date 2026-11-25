@@ -138,7 +138,7 @@ def _same_deal(first, second) -> bool:
     return holes_a == holes_b and board_a[:shared] == board_b[:shared]
 
 
-def _play_sessions(config: DuplicateConfig, strategy: str, opponent: str, start: int):
+def _play_sessions(config: DuplicateConfig, strategy: str, opponent: str, start: int, learning=None):
     """Both seat orientations of one session, interleaved hand by hand.
 
     Each orientation keeps its own persistent bot instances and opponent
@@ -149,7 +149,18 @@ def _play_sessions(config: DuplicateConfig, strategy: str, opponent: str, start:
         strategy_bot = _bot(strategy, start, "strategy", config.equity_iterations)
         opponent_bot = _bot(opponent, start, "opponent", config.equity_iterations)
         seats = (strategy_bot, opponent_bot) if strategy_seat == "a" else (opponent_bot, strategy_bot)
-        sides[strategy_seat] = {"seats": seats, "models": {"a": OpponentModel("a"), "b": OpponentModel("b")},
+        if learning is None:
+            models = {seat: OpponentModel(seat) for seat in ("a", "b")}
+        else:
+            profile = learning[strategy_seat]
+            models = profile.models
+            for seat, bot in zip(("a", "b"), seats):
+                if hasattr(bot, "showdown_model"):
+                    if seat in profile.showdowns:
+                        bot.showdown_model = profile.showdowns[seat]
+                    else:
+                        profile.showdowns[seat] = bot.showdown_model
+        sides[strategy_seat] = {"seats": seats, "models": models,
                                 "net": 0, "illegal": 0, "fallback": 0, "deals": []}
     for index in range(config.session_hands):
         seed = start + index
@@ -179,9 +190,9 @@ def _play_sessions(config: DuplicateConfig, strategy: str, opponent: str, start:
     return sides["a"], sides["b"]
 
 
-def play_duplicate_pair(config: DuplicateConfig, strategy: str, opponent: str, seed: int) -> DuplicatePair:
-    if config.session_hands > 1:
-        side_a, side_b = _play_sessions(config, strategy, opponent, seed)
+def play_duplicate_pair(config: DuplicateConfig, strategy: str, opponent: str, seed: int, *, learning=None) -> DuplicatePair:
+    if config.session_hands > 1 or learning is not None:
+        side_a, side_b = _play_sessions(config, strategy, opponent, seed, learning)
         return DuplicatePair(
             seed=seed, net_seat_a=side_a["net"], net_seat_b=side_b["net"],
             illegal_actions=side_a["illegal"] + side_b["illegal"], fallback_actions=side_a["fallback"] + side_b["fallback"],
