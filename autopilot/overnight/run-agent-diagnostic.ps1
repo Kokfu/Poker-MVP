@@ -136,16 +136,19 @@ if ($Status) {
     return
 }
 
-New-Item -ItemType Directory -Force -Path $jobs | Out-Null
-$planLock = [IO.File]::Open((Join-Path $jobs 'agent-diagnostic.lock'), 'OpenOrCreate', 'ReadWrite', 'None')
 $python = Join-Path $repo 'backend/.venv/Scripts/python.exe'
 $env:OPENBLAS_NUM_THREADS = '1'
 $env:OMP_NUM_THREADS = '1'
 $env:MKL_NUM_THREADS = '1'
 $env:COACH_DB_PATH = Join-Path $env:TEMP ('poker-agent-' + [guid]::NewGuid() + '.sqlite')
 $anyFailed = $false
-Push-Location (Join-Path $repo 'backend')
+$planLock = $null
+$inBackend = $false
 try {
+    New-Item -ItemType Directory -Force -Path $jobs | Out-Null
+    $planLock = [IO.File]::Open((Join-Path $jobs 'agent-diagnostic.lock'), 'OpenOrCreate', 'ReadWrite', 'None')
+    Push-Location (Join-Path $repo 'backend')
+    $inBackend = $true
     foreach ($match in $opponents.GetEnumerator()) {
         $name = "nov26-$($match.Key)"
         $progress = Get-DiagnosticStatus $match.Key $match.Value
@@ -175,10 +178,12 @@ try {
         if ($exitCode -ne 0) { $anyFailed = $true }
     }
 } catch {
-    Add-Content -LiteralPath $logPath -Value ('{0:o} supervisor exception: {1}' -f (Get-Date), $_.Exception.Message)
+    if (Test-Path -LiteralPath $jobs -PathType Container) {
+        Add-Content -LiteralPath $logPath -Value ('{0:o} supervisor exception: {1}' -f (Get-Date), $_.Exception.Message) -ErrorAction Continue
+    }
     throw
 } finally {
-    Pop-Location
-    $planLock.Dispose()
+    if ($inBackend) { Pop-Location }
+    if ($planLock) { $planLock.Dispose() }
 }
 if ($anyFailed) { exit 1 }

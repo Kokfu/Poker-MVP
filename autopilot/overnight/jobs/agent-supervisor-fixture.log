@@ -1,0 +1,2 @@
+Missing interpreter: two exceptions, two exit-1 markers, Failed status, unchanged inspection hash.
+Held supervisor lock: caught and logged setup exception, no worker launch.
