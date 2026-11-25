@@ -5,7 +5,7 @@ import pytest
 
 from coach.store import HandStore
 from main import app
-from practice_table import _TABLES
+from practice_table import _CREATES, _TABLES
 from simulation.actions import Action
 
 
@@ -18,6 +18,7 @@ def close_test_tables(monkeypatch, tmp_path):
             if table.timer is not None:
                 table.timer.cancel()
     _TABLES.clear()
+    _CREATES.clear()
 
 
 def without_clock(table):
@@ -179,3 +180,31 @@ def test_completed_hand_is_saved_once_and_session_review_uses_earlier_history(mo
     assert review["completed_hands"] == 2
     assert [(row["hand"], row["estimated_cost"]) for row in review["hands"]] == [(1, 20.5), (2, 20.5)]
     assert seen_history == [0, 1]
+
+
+def test_independent_tables_and_bounded_requests(monkeypatch):
+    now = [1000.0]
+    monkeypatch.setattr("practice_table.monotonic", lambda: now[0])
+    monkeypatch.setattr("practice_table._CREATE_LIMIT", 2)
+    monkeypatch.setattr("practice_table._READ_LIMIT", 2)
+    client = TestClient(app)
+    assert client.post("/api/practice/table", json={"unexpected": 1}).status_code == 422
+    assert client.post("/api/practice/table", content=b" " * 2049).status_code == 413
+    assert client.post("/api/practice/table", json={"turn_seconds": True}).status_code == 422
+    first = client.post("/api/practice/table", json={"opponent": "First"}).json()
+    second = client.post("/api/practice/table", json={"opponent": "Second"}).json()
+    request = client.post("/api/practice/table", headers={"X-Forwarded-For": "192.0.2.1"})
+    assert request.status_code == 429 and request.headers["retry-after"] == "60"
+    first_headers = {"Authorization": f"Bearer {first['key']}"}
+    second_headers = {"Authorization": f"Bearer {second['key']}"}
+    settled = client.post("/api/practice/table/action", headers=first_headers,
+                          json={"revision": first["table"]["revision"], "action": "fold"}).json()
+    assert settled["status"] == "complete"
+    for _ in range(2):
+        assert client.get("/api/practice/table", headers=first_headers).status_code == 200
+    assert client.get("/api/practice/table", headers=first_headers).status_code == 429
+    assert client.get("/api/practice/table", headers=second_headers).json() == second["table"]
+    assert client.delete("/api/practice/table", headers=first_headers).status_code == 204
+    assert client.get("/api/practice/table", headers=first_headers).status_code == 404
+    now[0] += 60
+    assert client.post("/api/practice/table").status_code == 201

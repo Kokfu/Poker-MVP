@@ -1,8 +1,11 @@
 """In-memory, one-human heads-up practice tables on the existing local app."""
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass
 from logging import getLogger
+from math import ceil
+import re
 from secrets import randbits, token_urlsafe
 from sqlite3 import Error as SQLiteError
 from threading import Lock, Timer
@@ -10,8 +13,9 @@ from time import monotonic
 from types import SimpleNamespace
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Response
-from pydantic import BaseModel, Field, StrictInt, field_validator
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
+from fastapi.routing import APIRoute
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, field_validator
 
 from coach.service import Spot, SpotAction, advise, spot_to_dict
 from coach.store import HandStore, MAX_NAME_LENGTH, normalize_name
@@ -28,15 +32,52 @@ _IDLE_SECONDS = 3600
 _DEFAULT_TURN_SECONDS = 20
 _MAX_TURN_SECONDS = 120
 _DEFAULT_OPPONENT = "Solver bot"
+_REVISION_LIMIT = 2_147_483_647
+_RATE_WINDOW = 60
+_CREATE_LIMIT = 8
+_READ_LIMIT = 60
+_WRITE_LIMIT = 30
+_REVIEW_LIMIT = 20
+_CREATE_CLIENT_LIMIT = 256
+_MAX_BODY_BYTES = 2048
+_KEY = re.compile(r"[A-Za-z0-9_-]{43}")
 _TABLES = {}
 _TABLES_LOCK = Lock()
+_CREATES: dict[str, deque[float]] = {}
 _LOG = getLogger(__name__)
 
 def _prevent_caching(response: Response):
     response.headers["Cache-Control"] = "no-store"
 
 
-router = APIRouter(prefix="/api/practice", dependencies=[Depends(_prevent_caching)])
+class PracticeRoute(APIRoute):
+    def get_route_handler(self):
+        handle = super().get_route_handler()
+
+        async def bounded_request(request):
+            if request.method == "POST":
+                length = request.headers.get("content-length")
+                if request.headers.get("transfer-encoding") is not None:
+                    raise HTTPException(411, "Send practice requests with Content-Length.")
+                if length is not None and (not length.isascii() or not length.isdecimal() or len(length) > 10):
+                    raise HTTPException(400, "Invalid practice request length.")
+                if length is not None and int(length) > _MAX_BODY_BYTES:
+                    raise HTTPException(413, "Practice request is too large.")
+            return await handle(request)
+
+        return bounded_request
+
+
+router = APIRouter(prefix="/api/practice", dependencies=[Depends(_prevent_caching)], route_class=PracticeRoute)
+
+
+def _rate_limit(timestamps: deque[float], count: int, now: float):
+    while timestamps and now - timestamps[0] >= _RATE_WINDOW:
+        timestamps.popleft()
+    if len(timestamps) >= count:
+        wait = max(1, ceil(_RATE_WINDOW - (now - timestamps[0])))
+        raise HTTPException(429, "Too many practice requests. Try again shortly.", headers={"Retry-After": str(wait)})
+    timestamps.append(now)
 
 
 class _HumanTurn(Exception):
@@ -64,6 +105,8 @@ class PracticeTable:
     def __init__(self, turn_seconds: int = _DEFAULT_TURN_SECONDS, opponent: str = _DEFAULT_OPPONENT):
         self.lock = Lock()
         self.review_lock = Lock()
+        self.requests = {"read": deque(), "write": deque(), "review": deque()}
+        self.closed = False
         self.last_used = monotonic()
         self.turn_seconds = turn_seconds
         self.opponent = opponent
@@ -119,6 +162,11 @@ class PracticeTable:
         remaining = None if self.deadline is None else max(0, round(1000 * (self.deadline - monotonic())))
         return {**self.state, "turn_seconds": self.turn_seconds, "remaining_ms": remaining,
                 "opponent": self.opponent, "completed_hands": len(self.completed)}
+
+    def check_rate(self, operation, limit):
+        if self.closed:
+            raise HTTPException(404, "table unavailable")
+        _rate_limit(self.requests[operation], limit, monotonic())
 
     def advance(self, action: Action | None = None, *, timed_out: bool = False):
         trace = list(self.trace)
@@ -242,6 +290,7 @@ class PracticeTable:
     def review(self, revision):
         with self.review_lock:
             with self.lock:
+                self.check_rate("review", _REVIEW_LIMIT)
                 _check_revision(self, revision)
                 if self.state["status"] != "complete":
                     raise HTTPException(409, "finish the current hand first")
@@ -266,6 +315,7 @@ class PracticeTable:
     def session_review(self):
         with self.review_lock:
             with self.lock:
+                self.check_rate("review", _REVIEW_LIMIT)
                 completed = tuple(self.completed.items())
             hands = []
             for revision, hand in completed:
@@ -278,6 +328,8 @@ class PracticeTable:
 
 
 class TableSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     turn_seconds: StrictInt = Field(default=_DEFAULT_TURN_SECONDS, ge=1, le=_MAX_TURN_SECONDS)
     opponent: str = Field(default=_DEFAULT_OPPONENT, min_length=1, max_length=MAX_NAME_LENGTH)
 
@@ -288,19 +340,24 @@ class TableSettings(BaseModel):
 
 
 class Revision(BaseModel):
-    revision: StrictInt = Field(ge=1)
+    model_config = ConfigDict(extra="forbid")
+
+    revision: StrictInt = Field(ge=1, le=_REVISION_LIMIT)
 
 
 class TableAction(Revision):
     action: ActionType
-    amount: StrictInt | None = None
+    amount: StrictInt | None = Field(default=None, ge=1, le=2 * _STARTING_STACK)
 
 
 def _lookup(authorization: str | None) -> PracticeTable:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(401, "table key required")
+    key = authorization[7:]
+    if _KEY.fullmatch(key) is None:
+        raise HTTPException(404, "table unavailable")
     with _TABLES_LOCK:
-        table = _TABLES.get(authorization[7:])
+        table = _TABLES.get(key)
         now = monotonic()
         if table is None or now - table.last_used > _IDLE_SECONDS:
             raise HTTPException(404, "table unavailable")
@@ -314,9 +371,19 @@ def _check_revision(table: PracticeTable, revision: int):
 
 
 @router.post("/table", status_code=201)
-def create_table(settings: TableSettings | None = None):
+def create_table(request: Request, settings: TableSettings | None = None):
     with _TABLES_LOCK:
         now = monotonic()
+        host = request.client.host if request.client is not None else ""
+        # Use the app server's client address, never a header supplied by the
+        # caller. If a local proxy groups clients they share the creation cap.
+        if host not in _CREATES:
+            for address, timestamps in list(_CREATES.items()):
+                if now - timestamps[-1] >= _RATE_WINDOW:
+                    del _CREATES[address]
+            if len(_CREATES) >= _CREATE_CLIENT_LIMIT:
+                raise HTTPException(429, "Too many practice clients. Try again shortly.")
+        _rate_limit(_CREATES.setdefault(host, deque()), _CREATE_LIMIT, now)
         for key, table in list(_TABLES.items()):
             if now - table.last_used > _IDLE_SECONDS:
                 del _TABLES[key]
@@ -336,6 +403,7 @@ TableKey = Annotated[str | None, Header()]
 def get_table(authorization: TableKey = None):
     table = _lookup(authorization)
     with table.lock:
+        table.check_rate("read", _READ_LIMIT)
         table.expire_turn()
         return table.snapshot()
 
@@ -344,6 +412,7 @@ def get_table(authorization: TableKey = None):
 def submit_action(request: TableAction, authorization: TableKey = None):
     table = _lookup(authorization)
     with table.lock:
+        table.check_rate("write", _WRITE_LIMIT)
         table.expire_turn()
         _check_revision(table, request.revision)
         return table.apply(Action(request.action, request.amount))
@@ -353,16 +422,31 @@ def submit_action(request: TableAction, authorization: TableKey = None):
 def next_hand(request: Revision, authorization: TableKey = None):
     table = _lookup(authorization)
     with table.lock:
+        table.check_rate("write", _WRITE_LIMIT)
         table.expire_turn()
         _check_revision(table, request.revision)
         return table.next_hand()
 
 
 @router.get("/table/review")
-def review_hand(revision: int, authorization: TableKey = None):
+def review_hand(revision: Annotated[int, Query(ge=1, le=_REVISION_LIMIT)], authorization: TableKey = None):
     return _lookup(authorization).review(revision)
 
 
 @router.get("/table/session")
 def review_session(authorization: TableKey = None):
     return _lookup(authorization).session_review()
+
+
+@router.delete("/table", status_code=204)
+def close_table(authorization: TableKey = None):
+    table = _lookup(authorization)
+    key = authorization[7:]
+    with _TABLES_LOCK, table.lock:
+        if _TABLES.get(key) is table:
+            del _TABLES[key]
+            table.closed = True
+            if table.timer is not None:
+                table.timer.cancel()
+            table.deadline = None
+    return Response(status_code=204, headers={"Cache-Control": "no-store"})

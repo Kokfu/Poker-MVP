@@ -14,7 +14,7 @@ type Tab = "analyzer" | "coach" | "practice" | "simulator" | "match" | "replay";
 const TABS: [Tab, string][] = [["coach", "Coach"], ["practice", "Practice table"], ["analyzer", "Equity calculator"], ["simulator", "Bot simulator"], ["match", "Bot match"], ["replay", "Replay"]];
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>("coach");
+  const [tab, setTab] = useState<Tab>(() => window.location.hash === "#practice" ? "practice" : "coach");
   const [cards, setCards] = useState<(string | null)[]>(Array(7).fill(null));
   const [form, setForm] = useState({
     pot: "100",
@@ -27,6 +27,15 @@ export default function App() {
   });
   const [result, setResult] = useState<Analysis>();
   const [error, setError] = useState("");
+
+  function chooseTab(item: Tab) {
+    if (item === "practice" || window.location.hash === "#practice") {
+      const url = new URL(window.location.href);
+      url.hash = item === "practice" ? "practice" : "";
+      window.history.replaceState(null, "", url);
+    }
+    setTab(item);
+  }
 
   async function analyze() {
     setError("");
@@ -78,7 +87,7 @@ export default function App() {
       </header>
       <nav className="app-nav" aria-label="Poker tools">
         {TABS.map(([item, label]) => (
-          <button key={item} type="button" aria-current={tab === item ? "page" : undefined} className={tab === item ? "is-on" : ""} onClick={() => setTab(item)}>
+          <button key={item} type="button" aria-current={tab === item ? "page" : undefined} className={tab === item ? "is-on" : ""} onClick={() => chooseTab(item)}>
             {label}
           </button>
         ))}

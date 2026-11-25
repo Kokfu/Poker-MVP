@@ -31,6 +31,10 @@ type Table = {
 type Play = { action: Action; amount: number | null };
 type Review = { street: string; action: Play; advice: Play; timed_out: boolean; explain: { reason: string } | null; estimated_cost: number | null };
 type SessionReview = { completed_hands: number; hands: { hand: number; decisions: Review[]; estimated_cost: number | null }[] };
+type Seat = { key: string; opponent: string };
+type SavedSeats = { seats: Seat[]; active: string };
+const TABLE_STORAGE = "poker.practice.seats";
+const MAX_LOCAL_TABLES = 2;
 
 const LABEL: Record<Action, string> = {
   fold: "Fold", check: "Check", call: "Call", bet: "Bet", raise: "Raise to", all_in: "All-in",
@@ -40,8 +44,69 @@ function playLabel(play: Play) {
   return play.amount === null ? LABEL[play.action] : `${LABEL[play.action]} ${play.amount}`;
 }
 
+function savedSeats(): SavedSeats {
+  try {
+    const value = JSON.parse(sessionStorage.getItem(TABLE_STORAGE) ?? "null");
+    if (Array.isArray(value?.seats)) {
+      const seats: Seat[] = value.seats.filter((seat: Partial<Seat> | null) =>
+        typeof seat?.key === "string" && /^[A-Za-z0-9_-]{43}$/.test(seat.key)
+        && typeof seat.opponent === "string").slice(0, MAX_LOCAL_TABLES);
+      const active = seats.some(seat => seat.key === value.active) ? value.active : "";
+      return { seats, active };
+    }
+  } catch {
+    // The server session can still be used if browser storage is unavailable.
+  }
+  return { seats: [], active: "" };
+}
+
 export default function PracticeTable() {
-  const [key, setKey] = useState("");
+  const [{ seats, active }, setSaved] = useState(savedSeats);
+  const [notice, setNotice] = useState("");
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(TABLE_STORAGE, JSON.stringify({ seats, active }));
+    } catch {
+      // Storage is optional. Open tables still operate in this page.
+    }
+  }, [seats, active]);
+
+  const opened = useCallback((seat: Seat) => {
+    setSaved(previous => ({ seats: [...previous.seats, seat], active: seat.key }));
+  }, []);
+  const closed = useCallback((key: string, message?: string) => {
+    setNotice(message ?? "");
+    setSaved(previous => {
+      const remainingSeats = previous.seats.filter(seat => seat.key !== key);
+      return { seats: remainingSeats, active: previous.active === key ? remainingSeats[0]?.key ?? "" : previous.active };
+    });
+  }, []);
+  const select = (key: string) => {
+    setNotice("");
+    setSaved(previous => ({ ...previous, active: key }));
+  };
+  return (
+    <section className="panel" aria-labelledby="practice-title">
+      <h2 id="practice-title">Heads-up practice</h2>
+      <p className="muted">Play chips · 50/100 blinds · stacks reset each hand.</p>
+      {notice && <p role="status">{notice}</p>}
+      {seats.length > 0 && <nav className="coach-action-row" aria-label="Practice tables">
+        {seats.map((seat, index) => <button className="secondary" key={seat.key}
+          aria-current={active === seat.key ? "true" : undefined} onClick={() => select(seat.key)}>
+          Table {index + 1} · {seat.opponent}
+        </button>)}
+        {active && seats.length < MAX_LOCAL_TABLES && <button className="secondary" onClick={() => select("")}>New table</button>}
+      </nav>}
+      <PracticeSeat key={active || "new"} seatKey={active} onOpen={opened} onClose={closed} />
+    </section>
+  );
+}
+
+function PracticeSeat({ seatKey: key, onOpen, onClose }: {
+  seatKey: string;
+  onOpen: (seat: Seat) => void;
+  onClose: (key: string, message?: string) => void;
+}) {
   const [table, setTable] = useState<Table>();
   const [pending, setPending] = useState(false);
   const [amount, setAmount] = useState("");
@@ -78,6 +143,10 @@ export default function PracticeTable() {
         body: payload ? JSON.stringify(payload) : undefined,
       });
       if (!response.ok) {
+        if (key && response.status === 404) {
+          onClose(key, "That table is no longer available.");
+          return;
+        }
         if (key && response.status === 409) {
           const fresh = await fetch("/api/practice/table", { headers: { Authorization: `Bearer ${key}` } });
           if (fresh.ok) update(await fresh.json());
@@ -85,16 +154,27 @@ export default function PracticeTable() {
         const problem = await response.json();
         throw new Error(typeof problem.detail === "string" ? problem.detail : "Practice table request failed");
       }
+      if (method === "DELETE") {
+        onClose(key);
+        return;
+      }
       const body = await response.json();
-      if (!key) setKey(body.key);
-      update(key ? body : body.table);
+      if (!key) {
+        onOpen({ key: body.key, opponent: body.table.opponent });
+      } else {
+        update(body);
+      }
     } catch (problem) {
       setError(problem instanceof Error ? problem.message : "Practice table request failed");
     } finally {
       pendingRef.current = false;
       setPending(false);
     }
-  }, [key, update]);
+  }, [key, onClose, onOpen, update]);
+
+  useEffect(() => {
+    if (key) void request("", undefined, "GET");
+  }, [key, request]);
 
   useEffect(() => {
     if (deadline === undefined) return;
@@ -150,11 +230,9 @@ export default function PracticeTable() {
   const validTimer = Number.isInteger(+turnSeconds) && +turnSeconds >= 1 && +turnSeconds <= 120;
 
   return (
-    <section className="panel" aria-labelledby="practice-title">
-      <h2 id="practice-title">Heads-up practice</h2>
-      <p className="muted">Play chips · 50/100 blinds · stacks reset each hand.</p>
+    <>
       {error && <p className="error" role="alert">{error}</p>}
-      {!table ? (
+      {!key ? (
         <div className="coach-action-row">
           <label>Seconds per action <input type="number" inputMode="numeric" min="1" max="120" value={turnSeconds}
             onChange={event => setTurnSeconds(event.target.value)} /></label>
@@ -162,6 +240,9 @@ export default function PracticeTable() {
           <button className="primary" disabled={pending || !validTimer || !opponent.trim()}
             onClick={() => request("", { turn_seconds: +turnSeconds, opponent })}>Start practice table</button>
         </div>
+      ) : !table ? (
+        error ? <button onClick={() => request("", undefined, "GET")} disabled={pending}>Reconnect</button> :
+          <p role="status">Connecting to practice table…</p>
       ) : (
         <>
           <p>Hand {table.hand} · {table.position === "BTN" ? "Button / SB" : "Big blind"} · {table.status === "complete" ? "Complete" : table.street}</p>
@@ -224,8 +305,9 @@ export default function PracticeTable() {
                 </li>)}</ul>
               </>}
           </section>}
+          <button className="secondary" disabled={pending} onClick={() => request("", undefined, "DELETE")}>Close table</button>
         </>
       )}
-    </section>
+    </>
   );
 }
