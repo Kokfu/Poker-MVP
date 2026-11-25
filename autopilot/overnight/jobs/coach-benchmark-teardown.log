@@ -1,0 +1,4 @@
+HTTP 422 unwound the benchmark and released its synthetic database.
+The separate sentinel server remained available after the failed benchmark closed.
+The sentinel then released its own scratch directory.
+No dedicated Uvicorn processes remained.
