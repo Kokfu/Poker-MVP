@@ -1,13 +1,9 @@
 """Reuse exact postflop solves across Coach requests for the same hand."""
-from collections import OrderedDict
-from threading import Lock
-
-from solver.bot import AdaptiveSolverBot
+from solver.bot import AdaptiveSolverBot, StreetSolve
+from solver.exact_cache import ExactCache
 
 
-_SOLVES = OrderedDict()
-_SOLVES_LOCK = Lock()
-_MAX_SOLVES = 4  # keep one hand's streets, with room for an off-tree re-solve
+_SOLVES = ExactCache[StreetSolve](4)  # one hand's streets plus an off-tree re-solve
 
 
 class CoachAdvisor(AdaptiveSolverBot):
@@ -33,17 +29,7 @@ class CoachAdvisor(AdaptiveSolverBot):
         key = (root_state, tuple(board), hero_combo, hero, reads,
                tuple((weights.dtype.str, weights.tobytes()) for weights in ranges),
                self.iterations[root_state.street], self.pool_streets, self.postflop_menu, self.flop_runouts, self.prune, self.explain_ev)
-        with _SOLVES_LOCK:
-            cached = _SOLVES.get(key)
-            if cached is not None:
-                _SOLVES.move_to_end(key)
-                return cached
-        solved = super()._solve(root_state, board, ranges, hero_combo, hero, profile)
+        solve_street = super()._solve
         # StreetSolve's policy and EV data are read-only after solving. Compute
         # misses outside the lock so one hand cannot stall unrelated cache hits.
-        with _SOLVES_LOCK:
-            _SOLVES[key] = solved
-            _SOLVES.move_to_end(key)
-            if len(_SOLVES) > _MAX_SOLVES:
-                _SOLVES.popitem(last=False)
-        return solved
+        return _SOLVES.get_or_compute(key, lambda: solve_street(root_state, board, ranges, hero_combo, hero, profile))

@@ -44,20 +44,19 @@ from simulation.expert_bot import ExpertRuleBot
 from .cfr import RangeSolver
 from .combos import CLASS_COMBO_COUNT, COMBO_CLASS, COMBO_COUNT, COMBOS, HAND_CLASSES, card_mask, combo_index
 from .equity import equity_matrix, rank_vector
+from .exact_cache import ExactCache
 from .exploit import gate_locks, locks_key, node_aggregates, sized_locks, sized_needs_aggregates, tree_locks
 from .showdown import ShowdownModel
 from .preflop import CHART_BB, PreflopCharts, load_charts, load_class_equity
 from .tree import POSTFLOP_MENU, SizeMenu, StreetState, StreetTree
 
 STREETS = ("preflop", "flop", "turn", "river")
-_EQUITY_CACHE: OrderedDict[tuple, tuple[np.ndarray, np.ndarray, np.ndarray]] = OrderedDict()
-_EQUITY_CACHE_LOCK = Lock()
 # Session play touches many distinct boards; 6 entries thrashed within a few
 # hands and forced a full equity_matrix recompute on every new board even
 # when the same board recurs later in the same session. Worst case (a
 # river/turn board with no combos pruned) is ~6MB/entry (float32 d + bool
 # compat at up to ~1,081 live combos), so 12 entries stays well under 75MB.
-_EQUITY_CACHE_SIZE = 12
+_EQUITY_CACHE = ExactCache[tuple[np.ndarray, np.ndarray, np.ndarray]](12)
 _PREFLOP_CACHE: OrderedDict[tuple, dict[int, np.ndarray]] = OrderedDict()
 _PREFLOP_CACHE_LOCK = Lock()
 _PREFLOP_PENDING: dict[tuple, Future[dict[int, np.ndarray]]] = {}
@@ -200,21 +199,12 @@ def _size_bracket(actions, kind: str, target: int | None) -> tuple[int, int, flo
 
 
 def _full_equity(board: tuple[str, ...], flop_runouts: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    key = (board, flop_runouts)
-    with _EQUITY_CACHE_LOCK:
-        cached = _EQUITY_CACHE.get(key)
-        if cached is not None:
-            _EQUITY_CACHE.move_to_end(key)
-            return cached
-    live = np.where(~card_mask(board))[0]
-    d, compat = equity_matrix(list(board), live, live, samples=flop_runouts if len(board) == 3 else None)
-    cached = (live, d.astype(np.float32), compat)
-    with _EQUITY_CACHE_LOCK:
-        _EQUITY_CACHE[key] = cached
-        _EQUITY_CACHE.move_to_end(key)
-        if len(_EQUITY_CACHE) > _EQUITY_CACHE_SIZE:
-            _EQUITY_CACHE.popitem(last=False)
-    return cached
+    def compute():
+        live = np.where(~card_mask(board))[0]
+        d, compat = equity_matrix(list(board), live, live, samples=flop_runouts if len(board) == 3 else None)
+        return live, d.astype(np.float32), compat
+
+    return _EQUITY_CACHE.get_or_compute((board, flop_runouts), compute)
 
 
 @dataclass
