@@ -1,0 +1,328 @@
+......................................FFFFF                              [100%]
+================================== FAILURES ===================================
+_____ test_coach_preflop_advice_is_legal_normalized_and_reproducible[15] ______
+
+depth = 15
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001C6A9B04450>
+
+    @pytest.mark.parametrize("depth", DEPTHS)
+    def test_coach_preflop_advice_is_legal_normalized_and_reproducible(depth, monkeypatch):
+        correlation = {"aggressive": 0.89, "call": 0.19}
+        reads = profile()
+        snapshot = OpponentModel("b").snapshot()
+        statistics = {
+            name: StatEstimate(80, round(80 * read.smoothed_frequency), read.smoothed_frequency,
+                               read.smoothed_frequency, read.confidence)
+            for name, read in reads.statistics.items()
+        }
+        reads = replace(snapshot, hands_observed=reads.hands_observed, classification=reads.classification,
+                        statistics={**snapshot.statistics, **statistics})
+        model = SimpleNamespace(hands_observed=reads.hands_observed, snapshot=lambda: reads)
+        monkeypatch.setattr("coach.service.profile_for", lambda *args: model)
+        monkeypatch.setattr(AdaptiveSolverBot, "_strength_correlation", lambda self: correlation)
+        button = Spot(hero_cards=["Jc", "9d"], hero_stack=100 * depth, villain_stack=100 * depth)
+        big_blind = replace(button, hero_position="big_blind", actions=[SpotAction("villain", "raise", 250)])
+        for spot in (button, big_blind):
+            for exploit in (False, True):
+>               first, repeat = (advise(spot, opponent="fixture", exploit=exploit, seed=917) for _ in range(2))
+
+test_solver_phase_4h.py:78: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+test_solver_phase_4h.py:78: in <genexpr>
+    first, repeat = (advise(spot, opponent="fixture", exploit=exploit, seed=917) for _ in range(2))
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+spot = Spot(hero_cards=['Jc', '9d'], board=[], hero_position='button', small_blind=50, big_blind=100, hero_stack=1500, villain_stack=1500, actions=[], villain_cards=None)
+opponent = 'fixture', exploit = False, store = None, seed = 917
+
+    def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store: HandStore | None = None,
+               seed: int = 0, *, through_id: int | None = None, include_preflop_ev: bool = False) -> dict[str, Any]:
+        from solver.bot import AdaptiveSolverBot, SolverBot
+    
+        shadow = getenv("POKER_COACH_RIVER_SHADOW") == "1"
+        started = perf_counter() if shadow else None
+        profile_snapshot = None
+        # Custom history providers, including research fixtures, expose hands()
+        # and may instrument individual solves. Use the original path for them.
+        cache_solves = getenv("POKER_COACH_SOLVE_CACHE") != "0" and (store is None or type(store) is HandStore)
+        use_exploit = bool(exploit and opponent)
+        if cache_solves:
+            from .advisor import CoachAdvisor
+    
+            advisor = CoachAdvisor(seed=seed, exploit=use_exploit, cache_solves=True)
+        else:
+            advisor = AdaptiveSolverBot(seed=seed) if use_exploit else SolverBot(seed=seed)
+        if opponent:
+>           model = profile_for(store or HandStore(), opponent, advisor if advisor.exploit else None, through_id=through_id)
+E           TypeError: test_coach_preflop_advice_is_legal_normalized_and_reproducible.<locals>.<lambda>() got an unexpected keyword argument 'through_id'
+
+coach\service.py:264: TypeError
+_____ test_coach_preflop_advice_is_legal_normalized_and_reproducible[30] ______
+
+depth = 30
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001C6A99F2290>
+
+    @pytest.mark.parametrize("depth", DEPTHS)
+    def test_coach_preflop_advice_is_legal_normalized_and_reproducible(depth, monkeypatch):
+        correlation = {"aggressive": 0.89, "call": 0.19}
+        reads = profile()
+        snapshot = OpponentModel("b").snapshot()
+        statistics = {
+            name: StatEstimate(80, round(80 * read.smoothed_frequency), read.smoothed_frequency,
+                               read.smoothed_frequency, read.confidence)
+            for name, read in reads.statistics.items()
+        }
+        reads = replace(snapshot, hands_observed=reads.hands_observed, classification=reads.classification,
+                        statistics={**snapshot.statistics, **statistics})
+        model = SimpleNamespace(hands_observed=reads.hands_observed, snapshot=lambda: reads)
+        monkeypatch.setattr("coach.service.profile_for", lambda *args: model)
+        monkeypatch.setattr(AdaptiveSolverBot, "_strength_correlation", lambda self: correlation)
+        button = Spot(hero_cards=["Jc", "9d"], hero_stack=100 * depth, villain_stack=100 * depth)
+        big_blind = replace(button, hero_position="big_blind", actions=[SpotAction("villain", "raise", 250)])
+        for spot in (button, big_blind):
+            for exploit in (False, True):
+>               first, repeat = (advise(spot, opponent="fixture", exploit=exploit, seed=917) for _ in range(2))
+
+test_solver_phase_4h.py:78: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+test_solver_phase_4h.py:78: in <genexpr>
+    first, repeat = (advise(spot, opponent="fixture", exploit=exploit, seed=917) for _ in range(2))
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+spot = Spot(hero_cards=['Jc', '9d'], board=[], hero_position='button', small_blind=50, big_blind=100, hero_stack=3000, villain_stack=3000, actions=[], villain_cards=None)
+opponent = 'fixture', exploit = False, store = None, seed = 917
+
+    def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store: HandStore | None = None,
+               seed: int = 0, *, through_id: int | None = None, include_preflop_ev: bool = False) -> dict[str, Any]:
+        from solver.bot import AdaptiveSolverBot, SolverBot
+    
+        shadow = getenv("POKER_COACH_RIVER_SHADOW") == "1"
+        started = perf_counter() if shadow else None
+        profile_snapshot = None
+        # Custom history providers, including research fixtures, expose hands()
+        # and may instrument individual solves. Use the original path for them.
+        cache_solves = getenv("POKER_COACH_SOLVE_CACHE") != "0" and (store is None or type(store) is HandStore)
+        use_exploit = bool(exploit and opponent)
+        if cache_solves:
+            from .advisor import CoachAdvisor
+    
+            advisor = CoachAdvisor(seed=seed, exploit=use_exploit, cache_solves=True)
+        else:
+            advisor = AdaptiveSolverBot(seed=seed) if use_exploit else SolverBot(seed=seed)
+        if opponent:
+>           model = profile_for(store or HandStore(), opponent, advisor if advisor.exploit else None, through_id=through_id)
+E           TypeError: test_coach_preflop_advice_is_legal_normalized_and_reproducible.<locals>.<lambda>() got an unexpected keyword argument 'through_id'
+
+coach\service.py:264: TypeError
+_____ test_coach_preflop_advice_is_legal_normalized_and_reproducible[60] ______
+
+depth = 60
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001C6A5449ED0>
+
+    @pytest.mark.parametrize("depth", DEPTHS)
+    def test_coach_preflop_advice_is_legal_normalized_and_reproducible(depth, monkeypatch):
+        correlation = {"aggressive": 0.89, "call": 0.19}
+        reads = profile()
+        snapshot = OpponentModel("b").snapshot()
+        statistics = {
+            name: StatEstimate(80, round(80 * read.smoothed_frequency), read.smoothed_frequency,
+                               read.smoothed_frequency, read.confidence)
+            for name, read in reads.statistics.items()
+        }
+        reads = replace(snapshot, hands_observed=reads.hands_observed, classification=reads.classification,
+                        statistics={**snapshot.statistics, **statistics})
+        model = SimpleNamespace(hands_observed=reads.hands_observed, snapshot=lambda: reads)
+        monkeypatch.setattr("coach.service.profile_for", lambda *args: model)
+        monkeypatch.setattr(AdaptiveSolverBot, "_strength_correlation", lambda self: correlation)
+        button = Spot(hero_cards=["Jc", "9d"], hero_stack=100 * depth, villain_stack=100 * depth)
+        big_blind = replace(button, hero_position="big_blind", actions=[SpotAction("villain", "raise", 250)])
+        for spot in (button, big_blind):
+            for exploit in (False, True):
+>               first, repeat = (advise(spot, opponent="fixture", exploit=exploit, seed=917) for _ in range(2))
+
+test_solver_phase_4h.py:78: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+test_solver_phase_4h.py:78: in <genexpr>
+    first, repeat = (advise(spot, opponent="fixture", exploit=exploit, seed=917) for _ in range(2))
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+spot = Spot(hero_cards=['Jc', '9d'], board=[], hero_position='button', small_blind=50, big_blind=100, hero_stack=6000, villain_stack=6000, actions=[], villain_cards=None)
+opponent = 'fixture', exploit = False, store = None, seed = 917
+
+    def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store: HandStore | None = None,
+               seed: int = 0, *, through_id: int | None = None, include_preflop_ev: bool = False) -> dict[str, Any]:
+        from solver.bot import AdaptiveSolverBot, SolverBot
+    
+        shadow = getenv("POKER_COACH_RIVER_SHADOW") == "1"
+        started = perf_counter() if shadow else None
+        profile_snapshot = None
+        # Custom history providers, including research fixtures, expose hands()
+        # and may instrument individual solves. Use the original path for them.
+        cache_solves = getenv("POKER_COACH_SOLVE_CACHE") != "0" and (store is None or type(store) is HandStore)
+        use_exploit = bool(exploit and opponent)
+        if cache_solves:
+            from .advisor import CoachAdvisor
+    
+            advisor = CoachAdvisor(seed=seed, exploit=use_exploit, cache_solves=True)
+        else:
+            advisor = AdaptiveSolverBot(seed=seed) if use_exploit else SolverBot(seed=seed)
+        if opponent:
+>           model = profile_for(store or HandStore(), opponent, advisor if advisor.exploit else None, through_id=through_id)
+E           TypeError: test_coach_preflop_advice_is_legal_normalized_and_reproducible.<locals>.<lambda>() got an unexpected keyword argument 'through_id'
+
+coach\service.py:264: TypeError
+_____ test_coach_preflop_advice_is_legal_normalized_and_reproducible[100] _____
+
+depth = 100
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001C6A9B04790>
+
+    @pytest.mark.parametrize("depth", DEPTHS)
+    def test_coach_preflop_advice_is_legal_normalized_and_reproducible(depth, monkeypatch):
+        correlation = {"aggressive": 0.89, "call": 0.19}
+        reads = profile()
+        snapshot = OpponentModel("b").snapshot()
+        statistics = {
+            name: StatEstimate(80, round(80 * read.smoothed_frequency), read.smoothed_frequency,
+                               read.smoothed_frequency, read.confidence)
+            for name, read in reads.statistics.items()
+        }
+        reads = replace(snapshot, hands_observed=reads.hands_observed, classification=reads.classification,
+                        statistics={**snapshot.statistics, **statistics})
+        model = SimpleNamespace(hands_observed=reads.hands_observed, snapshot=lambda: reads)
+        monkeypatch.setattr("coach.service.profile_for", lambda *args: model)
+        monkeypatch.setattr(AdaptiveSolverBot, "_strength_correlation", lambda self: correlation)
+        button = Spot(hero_cards=["Jc", "9d"], hero_stack=100 * depth, villain_stack=100 * depth)
+        big_blind = replace(button, hero_position="big_blind", actions=[SpotAction("villain", "raise", 250)])
+        for spot in (button, big_blind):
+            for exploit in (False, True):
+>               first, repeat = (advise(spot, opponent="fixture", exploit=exploit, seed=917) for _ in range(2))
+
+test_solver_phase_4h.py:78: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+test_solver_phase_4h.py:78: in <genexpr>
+    first, repeat = (advise(spot, opponent="fixture", exploit=exploit, seed=917) for _ in range(2))
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+spot = Spot(hero_cards=['Jc', '9d'], board=[], hero_position='button', small_blind=50, big_blind=100, hero_stack=10000, villain_stack=10000, actions=[], villain_cards=None)
+opponent = 'fixture', exploit = False, store = None, seed = 917
+
+    def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store: HandStore | None = None,
+               seed: int = 0, *, through_id: int | None = None, include_preflop_ev: bool = False) -> dict[str, Any]:
+        from solver.bot import AdaptiveSolverBot, SolverBot
+    
+        shadow = getenv("POKER_COACH_RIVER_SHADOW") == "1"
+        started = perf_counter() if shadow else None
+        profile_snapshot = None
+        # Custom history providers, including research fixtures, expose hands()
+        # and may instrument individual solves. Use the original path for them.
+        cache_solves = getenv("POKER_COACH_SOLVE_CACHE") != "0" and (store is None or type(store) is HandStore)
+        use_exploit = bool(exploit and opponent)
+        if cache_solves:
+            from .advisor import CoachAdvisor
+    
+            advisor = CoachAdvisor(seed=seed, exploit=use_exploit, cache_solves=True)
+        else:
+            advisor = AdaptiveSolverBot(seed=seed) if use_exploit else SolverBot(seed=seed)
+        if opponent:
+>           model = profile_for(store or HandStore(), opponent, advisor if advisor.exploit else None, through_id=through_id)
+E           TypeError: test_coach_preflop_advice_is_legal_normalized_and_reproducible.<locals>.<lambda>() got an unexpected keyword argument 'through_id'
+
+coach\service.py:264: TypeError
+_____ test_coach_preflop_advice_is_legal_normalized_and_reproducible[200] _____
+
+depth = 200
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001C6A5479310>
+
+    @pytest.mark.parametrize("depth", DEPTHS)
+    def test_coach_preflop_advice_is_legal_normalized_and_reproducible(depth, monkeypatch):
+        correlation = {"aggressive": 0.89, "call": 0.19}
+        reads = profile()
+        snapshot = OpponentModel("b").snapshot()
+        statistics = {
+            name: StatEstimate(80, round(80 * read.smoothed_frequency), read.smoothed_frequency,
+                               read.smoothed_frequency, read.confidence)
+            for name, read in reads.statistics.items()
+        }
+        reads = replace(snapshot, hands_observed=reads.hands_observed, classification=reads.classification,
+                        statistics={**snapshot.statistics, **statistics})
+        model = SimpleNamespace(hands_observed=reads.hands_observed, snapshot=lambda: reads)
+        monkeypatch.setattr("coach.service.profile_for", lambda *args: model)
+        monkeypatch.setattr(AdaptiveSolverBot, "_strength_correlation", lambda self: correlation)
+        button = Spot(hero_cards=["Jc", "9d"], hero_stack=100 * depth, villain_stack=100 * depth)
+        big_blind = replace(button, hero_position="big_blind", actions=[SpotAction("villain", "raise", 250)])
+        for spot in (button, big_blind):
+            for exploit in (False, True):
+>               first, repeat = (advise(spot, opponent="fixture", exploit=exploit, seed=917) for _ in range(2))
+
+test_solver_phase_4h.py:78: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+test_solver_phase_4h.py:78: in <genexpr>
+    first, repeat = (advise(spot, opponent="fixture", exploit=exploit, seed=917) for _ in range(2))
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+spot = Spot(hero_cards=['Jc', '9d'], board=[], hero_position='button', small_blind=50, big_blind=100, hero_stack=20000, villain_stack=20000, actions=[], villain_cards=None)
+opponent = 'fixture', exploit = False, store = None, seed = 917
+
+    def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store: HandStore | None = None,
+               seed: int = 0, *, through_id: int | None = None, include_preflop_ev: bool = False) -> dict[str, Any]:
+        from solver.bot import AdaptiveSolverBot, SolverBot
+    
+        shadow = getenv("POKER_COACH_RIVER_SHADOW") == "1"
+        started = perf_counter() if shadow else None
+        profile_snapshot = None
+        # Custom history providers, including research fixtures, expose hands()
+        # and may instrument individual solves. Use the original path for them.
+        cache_solves = getenv("POKER_COACH_SOLVE_CACHE") != "0" and (store is None or type(store) is HandStore)
+        use_exploit = bool(exploit and opponent)
+        if cache_solves:
+            from .advisor import CoachAdvisor
+    
+            advisor = CoachAdvisor(seed=seed, exploit=use_exploit, cache_solves=True)
+        else:
+            advisor = AdaptiveSolverBot(seed=seed) if use_exploit else SolverBot(seed=seed)
+        if opponent:
+>           model = profile_for(store or HandStore(), opponent, advisor if advisor.exploit else None, through_id=through_id)
+E           TypeError: test_coach_preflop_advice_is_legal_normalized_and_reproducible.<locals>.<lambda>() got an unexpected keyword argument 'through_id'
+
+coach\service.py:264: TypeError
+============================== warnings summary ===============================
+.venv\Lib\site-packages\starlette\formparsers.py:12
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\starlette\formparsers.py:12: PendingDeprecationWarning: Please use `import python_multipart` instead.
+    import multipart
+
+.venv\Lib\site-packages\eval7\rangestring.py:149
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:149: PyparsingDeprecationWarning: 'setName' deprecated - use 'set_name'
+    suitedness = pyparsing.Word("os", exact=1).setName("suitedness")
+
+.venv\Lib\site-packages\eval7\rangestring.py:150
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:150: PyparsingDeprecationWarning: 'setName' deprecated - use 'set_name'
+    card = pyparsing.Word(ranks_str, suits_str, exact=2).setName("card")
+
+.venv\Lib\site-packages\eval7\rangestring.py:152
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:152: PyparsingDeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    hand.setParseAction(lambda s, loc, toks: ''.join(toks))
+
+.venv\Lib\site-packages\eval7\rangestring.py:160
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:160: PyparsingDeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    decimal.setParseAction(lambda s, loc, toks: ''.join(toks))
+
+.venv\Lib\site-packages\eval7\rangestring.py:167
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:167: PyparsingDeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    handtype.setParseAction(lambda s, loc, toks: ''.join(toks))
+
+.venv\Lib\site-packages\eval7\rangestring.py:175
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:175: PyparsingDeprecationWarning: 'delimitedList' deprecated - use 'DelimitedList'
+    hand_group_list = pyparsing.Group(pyparsing.delimitedList(handtype_group))
+
+.venv\Lib\site-packages\eval7\rangestring.py:180
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:180: PyparsingDeprecationWarning: 'delimitedList' deprecated - use 'DelimitedList'
+    handrange = pyparsing.Optional(pyparsing.delimitedList(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED test_solver_phase_4h.py::test_coach_preflop_advice_is_legal_normalized_and_reproducible[15]
+FAILED test_solver_phase_4h.py::test_coach_preflop_advice_is_legal_normalized_and_reproducible[30]
+FAILED test_solver_phase_4h.py::test_coach_preflop_advice_is_legal_normalized_and_reproducible[60]
+FAILED test_solver_phase_4h.py::test_coach_preflop_advice_is_legal_normalized_and_reproducible[100]
+FAILED test_solver_phase_4h.py::test_coach_preflop_advice_is_legal_normalized_and_reproducible[200]
+5 failed, 38 passed, 8 warnings in 28.23s
