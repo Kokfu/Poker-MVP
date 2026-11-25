@@ -6,7 +6,7 @@ Hands           : 720
 BBPer100        : 94.55
 IllegalActions  : 0
 EngineFallbacks : 0
-SolverFallbacks : 
+SolverFallbacks :
 SolverCoverage  : 0/6
 DealMismatches  : 0
 HandsPerMinute  : 11.68
@@ -16,40 +16,40 @@ Opponent        : equity
 State           : Pending
 Sessions        : 0
 Hands           : 0
-BBPer100        : 
-IllegalActions  : 
-EngineFallbacks : 
-SolverFallbacks : 
+BBPer100        :
+IllegalActions  :
+EngineFallbacks :
+SolverFallbacks :
 SolverCoverage  : 0/0
 DealMismatches  : 0
 HandsPerMinute  : 0
-EstimatedEnd    : 
+EstimatedEnd    :
 
 Opponent        : expert
 State           : Pending
 Sessions        : 0
 Hands           : 0
-BBPer100        : 
-IllegalActions  : 
-EngineFallbacks : 
-SolverFallbacks : 
+BBPer100        :
+IllegalActions  :
+EngineFallbacks :
+SolverFallbacks :
 SolverCoverage  : 0/0
 DealMismatches  : 0
 HandsPerMinute  : 0
-EstimatedEnd    : 
+EstimatedEnd    :
 
 Opponent        : range_expert
 State           : Pending
 Sessions        : 0
 Hands           : 0
-BBPer100        : 
-IllegalActions  : 
-EngineFallbacks : 
-SolverFallbacks : 
+BBPer100        :
+IllegalActions  :
+EngineFallbacks :
+SolverFallbacks :
 SolverCoverage  : 0/0
 DealMismatches  : 0
 HandsPerMinute  : 0
-EstimatedEnd    : 
+EstimatedEnd    :
 
 
 A synthetic fixture with one complete record and a partial last line returned 120 hands, 5 bb/100, two solver fallbacks and an ETA. The ledger hash was unchanged.

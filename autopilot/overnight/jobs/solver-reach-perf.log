@@ -1,0 +1,4 @@
+169 combos, 0 locks: 77.57 ms direct, 61.25 ms cached; 6 exact 60-iteration pairs
+169 combos, 1 locks: 93.24 ms direct, 94.53 ms cached; 6 exact 60-iteration pairs
+640 combos, 0 locks: 275.72 ms direct, 250.82 ms cached; 6 exact 60-iteration pairs
+640 combos, 1 locks: 282.86 ms direct, 273.63 ms cached; 6 exact 60-iteration pairs
