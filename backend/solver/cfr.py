@@ -124,6 +124,7 @@ class RangeSolver:
         # player's own regrets, so they are reused until those regrets change.
         self._regret_version = [0, 0]
         self._player_cache: list[tuple[int, dict[int, np.ndarray]] | None] = [None, None]
+        self._reach_cache: list[tuple[int, np.ndarray] | None] = [None, None]
 
     # ------------------------------------------------------------------ core
     def current(self, node: Node) -> np.ndarray:
@@ -160,6 +161,25 @@ class RangeSolver:
                     own[child] = own_row
                     opp[child] = opp_row * sigma[action]
         return own, opp
+
+    def _current_reaches(self, traverser: int, strategies):
+        reaches = []
+        for player, version in enumerate(self._regret_version):
+            cached = self._reach_cache[player]
+            if cached is None or cached[0] != version:
+                reach = np.empty((self._num_nodes, self.sizes[player]))
+                reach[self.tree.root] = self.ranges[player]
+                for node in self.decisions:
+                    own = reach[node.index]
+                    if node.player == player:
+                        for action, child in enumerate(node.children):
+                            reach[child] = own * strategies[node.index][action]
+                    else:
+                        for child in node.children:
+                            reach[child] = own
+                cached = self._reach_cache[player] = (version, reach)
+            reaches.append(cached[1])
+        return reaches[traverser], reaches[1 - traverser]
 
     def _terminal_values(self, traverser: int, opp: np.ndarray) -> np.ndarray:
         values = np.zeros((self._num_nodes, self.sizes[traverser]))
@@ -201,7 +221,12 @@ class RangeSolver:
         average_weight = (t / (t + 1)) ** GAMMA
         for traverser in (0, 1):
             strategies = self.policy(self.current)
-            own, opp = self._reaches(traverser, lambda node: strategies[node.index])
+            if type(self) is RangeSolver and self._policy_cache:
+                # Only the last traverser's regrets changed. The other
+                # player's reach is determined by their own policy alone.
+                own, opp = self._current_reaches(traverser, strategies)
+            else:
+                own, opp = self._reaches(traverser, lambda node: strategies[node.index])
             values = self._terminal_values(traverser, opp)
             for node in reversed(self.decisions):
                 children = values[self._children[node.index]]
@@ -272,6 +297,7 @@ class RangeSolver:
     def solve(self, iterations: int, measure: bool = False) -> SolveResult:
         for _ in range(iterations):
             self.iterate()
+        self._reach_cache[:] = [None, None]
         return SolveResult(self.tree, self.final_policy(), self.iterations,
                            self.exploitability() if measure else None)
 

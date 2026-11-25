@@ -165,6 +165,29 @@ def test_action_values_match_with_the_already_calculated_policy(monkeypatch):
     assert np.array_equal(actual.view(np.uint64), expected.view(np.uint64))
 
 
+def test_cached_reach_matches_direct_traversal_with_locks():
+    class DirectSolver(RangeSolver):
+        pass
+
+    tree = StreetTree(StreetState("flop", 1, (0, 0), (1800, 1800), (200, 200), 100), POSTFLOP_MENU)
+    rng = np.random.default_rng(71)
+    ranges = (rng.random(17), rng.random(25))
+    values = rng.random((17, 25)) * 2 - 1
+    compat = rng.random((17, 25)) > .1
+    root = tree.nodes[tree.root]
+    group = tuple(range(len(root.actions)))
+    locks = {tree.root: (.6, (((group[0],), .23), (group[1:], .77)))}
+    direct = DirectSolver(tree, ranges, values, compat, locks=locks)
+    cached = RangeSolver(tree, ranges, values, compat, locks=locks)
+    for _ in range(25):
+        direct.iterate()
+        cached.iterate()
+    for node in cached.decisions:
+        index = node.index
+        assert np.array_equal(cached.regret[index].view(np.uint64), direct.regret[index].view(np.uint64))
+        assert np.array_equal(cached.strategy_sum[index].view(np.uint64), direct.strategy_sum[index].view(np.uint64))
+
+
 def test_fit_frequencies_matches_targets_and_keeps_ordering():
     from solver.cfr import fit_frequencies
     sigma = np.array([[0.9, 0.5, 0.1], [0.1, 0.5, 0.9]])  # combo 0 prefers action 0
