@@ -32,3 +32,27 @@ backend/.venv/Scripts/python.exe autopilot/overnight/time_coach.py
 One direct profiling run used a synthetic opponent with 150 logged hands and one BLAS worker. The first named preflop request took 5.82 s under cProfile, including 1.07 s to import the solver, 0.97 s to rebuild the opponent profile, and 3.65 s to compute the locked chart policy. The first named flop request took 7.56 s, including 3.75 s for the other seat's locked preflop policy, 0.87 s for new-board equity, and 3.76 s for the full street solve including equity. Profiling shared the machine with the diagnostic and regression, so these numbers are a breakdown under load.
 
 The server now loads charts and class equity before serving requests. A background thread prepares the default 100 bb preflop policy for both hero positions against each of the two opponents with the most logged hands. It uses the normal advisory path and only reads existing Coach profiles. An unseen postflop board still incurs an exact solve.
+
+Three fresh processes each served 48 distinct inputs through the ASGI API with one BLAS worker and synthetic SQLite data. The set contained 12 preflop and 36 postflop requests. Each request was measured on its first use. The agent diagnostic shared the machine.
+
+| Version | Startup (ms) | Preflop median / p95 (ms) | Postflop median / p95 (ms) |
+| --- | ---: | ---: | ---: |
+| Warmup off | 39 | 11 / 4,222 | 2,255 / 4,360 |
+| Warmup on | 640 | 13 / 30 | 3,140 / 5,071 |
+| Warmup and faster board equity | 1,099 | 7 / 56 | 1,248 / 4,939 |
+
+All 48 advice hashes matched in both comparisons. Preflop met the 300 ms target. Postflop exceeded the 600 ms target. The timed cohort includes requests arriving while the warmup thread runs. Raw samples and process start and finish times are in [jobs](jobs/coach-48-spots.log).
+
+For a local comparison, run from the repository root with the backend virtual environment installed:
+
+```powershell
+$env:OPENBLAS_NUM_THREADS = '1'
+$env:POKER_COACH_SOLVE_CACHE = '1'
+$control = Join-Path $env:TEMP 'poker-coach-48-unwarmed.json'
+$env:POKER_COACH_WARMUP = '0'
+backend/.venv/Scripts/python.exe autopilot/overnight/time_coach.py --suit-variants 3 --repeats 1 > $control
+$env:POKER_COACH_WARMUP = '1'
+backend/.venv/Scripts/python.exe autopilot/overnight/time_coach.py --suit-variants 3 --repeats 1 --expect $control
+```
+
+The board microbenchmark alternated the control and candidate six times in the same process. Median matrix construction dropped from 429 to 327 ms on the sampled flop, 881 to 708 ms on the exact turn, and 93 to 68 ms on the river. Both matrices and compatibility masks matched bit for bit. A separate buffer-reuse experiment in the lock fitter was slower in all four measured shapes, so the fitter stays on its prior implementation.

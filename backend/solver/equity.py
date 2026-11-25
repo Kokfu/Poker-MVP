@@ -75,23 +75,38 @@ def equity_matrix(board: list[str], rows: np.ndarray, cols: np.ndarray, samples:
     boards = runout_boards(board, samples)
     total = np.zeros(shape, dtype=np.int16 if len(boards) < 30_000 else np.int32)
     valid = np.zeros((len(boards), len(union)), dtype=np.float32)
-    # Scratch buffers reused every board instead of the four temporaries
-    # (two gathers, a broadcast subtract, a sign) the naive expression below
-    # would allocate on each of possibly thousands of iterations.
-    row_buf, col_buf, diff = np.empty(len(rows), dtype=np.int16), np.empty(len(cols), dtype=np.int16), np.empty(shape, dtype=np.int16)
+    # A square matrix with identical combo order is antisymmetric. Visit
+    # its upper blocks, then reflect the accumulated integer tallies once.
+    symmetric = len(rows) > 96 and np.array_equal(rows, cols)
+    block_size = 96 if symmetric else max(1, len(rows))
+    diff = np.empty((block_size, len(cols)), dtype=np.int16)
+    row_buf = np.empty(len(rows), dtype=np.int16)
+    col_buf = row_buf if symmetric else np.empty(len(cols), dtype=np.int16)
     for index, full_board in enumerate(boards):
         ordinal = _ordinal_ranks(full_board, union)
         valid[index] = ordinal > 0
         # Blocked combos rank lowest here; their pairs are corrected below.
         np.take(ordinal, row_pos, out=row_buf)
-        np.take(ordinal, col_pos, out=col_buf)
-        np.subtract(row_buf[:, None], col_buf[None, :], out=diff)
-        np.sign(diff, out=diff)
-        total += diff
+        if not symmetric:
+            np.take(ordinal, col_pos, out=col_buf)
+        for start in range(0, len(rows), block_size):
+            end = min(start + block_size, len(rows))
+            first_column = start if symmetric else 0
+            block = diff[:end - start, first_column:]
+            np.subtract(row_buf[start:end, None], col_buf[None, first_column:], out=block)
+            np.sign(block, out=block)
+            total[start:end, first_column:] += block
+    if symmetric:
+        for start in range(block_size, len(rows), block_size):
+            end = min(start + block_size, len(rows))
+            total[start:end, :start] = -total[:start, start:end].T
     row_valid, col_valid = valid[:, row_pos], valid[:, col_pos]
-    row_blocked, col_blocked = 1.0 - row_valid, 1.0 - col_valid
-    # Remove (valid row vs blocked col: +1) and (blocked row vs valid col: -1).
-    corrected = total - (row_valid.T @ col_blocked) + (row_blocked.T @ col_valid)
+    # Per runout, row_valid * (1 - col_valid) - (1 - row_valid) * col_valid
+    # is row_valid - col_valid. The correction needs two counts, not two
+    # matrix products. These sums count runouts exactly.
+    row_count = row_valid.sum(axis=0)
+    col_count = row_count if symmetric else col_valid.sum(axis=0)
+    corrected = total - row_count[:, None] + col_count
     count = row_valid.T @ col_valid
     compat = compatible(rows, cols) & (count > 0)
     d = np.zeros(shape, dtype=np.float64)

@@ -1,0 +1,7 @@
+3 board cards: baseline 428.798 ms, candidate 327.344 ms; bit-identical in 6 runs
+4 board cards: baseline 880.919 ms, candidate 707.552 ms; bit-identical in 6 runs
+5 board cards: baseline 93.098 ms, candidate 68.259 ms; bit-identical in 6 runs
+C 169-combo lock: baseline 1.022 ms, candidate 1.093 ms; bit-identical in 7 runs
+C 900-combo lock: baseline 1.452 ms, candidate 1.651 ms; bit-identical in 7 runs
+F 169-combo lock: baseline 1.251 ms, candidate 1.304 ms; bit-identical in 7 runs
+F 900-combo lock: baseline 3.420 ms, candidate 3.854 ms; bit-identical in 7 runs

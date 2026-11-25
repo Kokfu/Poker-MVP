@@ -69,6 +69,17 @@ def test_turn_matrix_is_exact_average_over_rivers():
     assert compat[0, 0] and d[0, 0] == pytest.approx(total / count)
 
 
+@pytest.mark.parametrize("board", [["As", "Kd", "7c"], ["As", "Kd", "7c", "2h"]])
+def test_symmetric_equity_tally_is_bit_identical_to_rectangular(board):
+    ids = np.random.default_rng(80).choice(COMBO_COUNT, size=227, replace=False)
+    rows = ids[:-1]
+    samples = 30 if len(board) == 3 else None
+    symmetric, valid = equity_matrix(board, rows, rows, samples)
+    rectangular, rectangle_valid = equity_matrix(board, rows, ids, samples)
+    assert np.array_equal(symmetric.view(np.uint64), rectangular[:, :-1].view(np.uint64))
+    assert np.array_equal(valid, rectangle_valid[:, :-1])
+
+
 def test_runout_sampling_is_deterministic_and_complete():
     assert len(runout_boards(["As", "Kd", "7c", "2h"], None)) == 48
     assert len(runout_boards(["As", "Kd", "7c"], None)) == 1176
