@@ -83,7 +83,7 @@ test("Coach publishes quick advice only while the matching full request is pendi
     });
     const obsolete = requestCoachAdvice({ signal: controller.signal }, (value) => observed.push(value));
     controller.abort();
-    await obsolete;
+    await assert.rejects(obsolete, { name: "AbortError" });
     await flush();
     assert.deepEqual(observed, []);
 

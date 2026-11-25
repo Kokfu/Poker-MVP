@@ -77,12 +77,17 @@ type QuickAdvice = { status: "quick"; advice: { action: ActionKind }; reason: st
 export async function requestCoachAdvice(input: RequestInit, onQuick?: (preview: QuickAdvice) => void): Promise<CoachResponse> {
   let fullFinished = false;
   if (onQuick) {
-    void fetch("/api/coach/advise/quick", input).then(async (response) => {
+    const previewRequest = fetch("/api/coach/advise/quick", input).then(async (response) => {
       const preview: QuickAdvice | null = response.ok ? await response.json() : null;
       if (!fullFinished && !input.signal?.aborted && preview?.status === "quick") onQuick(preview);
     }).catch(() => { /* The full request supplies the advice. */ });
+    // Let a fast preview arrive before starting the CPU-heavy solve, but cap the wait.
+    let headStart: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([previewRequest, new Promise<void>((resolve) => { headStart = setTimeout(resolve, 50); })]);
+    clearTimeout(headStart);
   }
   try {
+    input.signal?.throwIfAborted();
     const response = await fetch("/api/coach/advise", input);
     const body = await response.json();
     if (!response.ok) throw new Error(describeError(body, "Coach request failed"));
@@ -247,7 +252,7 @@ export default function Coach() {
   const [typed, setTyped] = useState(false);
   const [villainCards, setVillainCards] = useState<string[]>([]);
   const [result, setResult] = useState<CoachResponse>();
-  const [quick, setQuick] = useState<QuickAdvice>();
+  const [quick, setQuick] = useState<QuickAdvice & { actions: SpotAction[] }>();
   const [reviewMode, setReviewMode] = useState(false);
   const [view, setView] = useState<"play" | "review" | "data">("play");
   const [players, setPlayers] = useState(prefs.players ?? 1);
@@ -376,7 +381,7 @@ export default function Coach() {
     };
     try {
       const body = await requestCoachAdvice(input, nextBoard.length >= 3 ? (preview) => {
-        if (adviceRequest.current === request) setQuick(preview);
+        if (adviceRequest.current === request) setQuick({ ...preview, actions: nextActions });
       } : undefined);
       if (request.signal.aborted) return;
       if (options.remember && result) setPast((current) => [...current, { actions, board }]);
@@ -585,6 +590,7 @@ export default function Coach() {
   const state = result && "state" in result ? result.state : undefined;
   const displayedState = quick?.state ?? state;
   const displayedBoard = quick?.state.board ?? board;
+  const displayedActions = quick?.actions ?? actions;
   const usedForHero = new Set([...board, ...boardDraft, ...villainCards]);
   const usedForBoard = new Set([...heroCards, ...villainCards, ...board]);
   const usedForVillain = new Set([...heroCards, ...board]);
@@ -802,9 +808,9 @@ export default function Coach() {
               {!quick && result.status === "need_board" && result.pot !== undefined && <div><span className="field-label">Pot</span><strong>{result.pot}</strong></div>}
             </div>
 
-            {actions.length > 0 && (
+            {displayedActions.length > 0 && (
               <ol className="coach-log">
-                {actions.map((step, index) => <li key={index}>{describeAction(step)}</li>)}
+                {displayedActions.map((step, index) => <li key={index}>{describeAction(step)}</li>)}
               </ol>
             )}
             {!reviewMode && <button type="button" className="link-button" onClick={undo} disabled={loading}>{past.length > 0 ? "Undo last step" : "Back to my cards"} <kbd>Z</kbd></button>}

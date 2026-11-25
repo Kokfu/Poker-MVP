@@ -76,6 +76,14 @@ def test_river_uses_exact_990_combinations():
     assert result["hands_checked"] == 990
 
 
+def test_river_preview_can_use_a_bounded_seeded_sample():
+    hero, board = ["As", "Qs"], ["Js", "8s", "3d", "2c", "Kh"]
+    result = calculate_equity(hero, board, 160, seed=7, exact_river=False)
+    assert result == calculate_equity(hero, board, 160, seed=7, exact_river=False)
+    assert result["calculation_method"] == "monte_carlo"
+    assert result["hands_checked"] == 160
+
+
 def test_river_equity_matches_count_of_hands_holding_the_royal_flush_out():
     result = calculate_equity(["9s", "3c"], ["As", "Ks", "Qs", "Js", "2d"], 10000)
     # Only Ts beats Hero. It can be paired with any of the other 44 unseen cards.

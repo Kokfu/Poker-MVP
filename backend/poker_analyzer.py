@@ -136,9 +136,10 @@ def recommendation(equity: float, required: float, call: float) -> str:
     if equity < required + .10: return "Call"
     return "Consider raising"
 
-def calculate_equity(hero: list[str], board: list[str], iterations: int, seed: int | None = None) -> dict:
+def calculate_equity(hero: list[str], board: list[str], iterations: int, seed: int | None = None,
+                     *, exact_river: bool = True) -> dict:
     unseen = [c for c in FULL_DECK if c not in hero + board]
-    if len(board) == 5:
+    if len(board) == 5 and exact_river:
         deals: Iterable[tuple[str, ...]] = combinations(unseen, 2); method = "exact_enumeration"
     else:
         rng = random.Random(seed)

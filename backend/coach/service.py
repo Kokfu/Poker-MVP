@@ -253,7 +253,7 @@ def quick_advice(spot: Spot) -> dict[str, Any] | None:
         action = "check"
         basis = "Checking is free."
     else:
-        equity = calculate_equity(spot.hero_cards, state["board"], iterations=160, seed=0)["equity"]
+        equity = calculate_equity(spot.hero_cards, state["board"], iterations=160, seed=0, exact_river=False)["equity"]
         call = min(state["to_call"], state["hero_stack"])
         contested_pot = state["pot"] - (state["to_call"] - call)
         required = call / (contested_pot + call)
