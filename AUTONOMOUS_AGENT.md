@@ -24,6 +24,14 @@ Run from `backend/`. Reuse the same options and add `--resume` after an interrup
 
 The outputs are `benchmark-results/agent/demo.jsonl` and `demo.summary.json`. Pass `--output-dir` to keep a test run elsewhere.
 
+To inspect a running or interrupted independent ledger, run from `backend/`:
+
+```powershell
+./.venv/Scripts/python.exe -m simulation.agent_cli --inspect ../benchmark-results/agent/demo.jsonl
+```
+
+Inspection reads complete lines without changing the ledger. It reports the number of committed sessions and a bootstrap interval when at least two sessions are available.
+
 Pass `--profile-dir` to carry public opponent models and showdown statistics across sessions and invocations. Both orientations remain separate. The per-opponent checkpoint saves the latest profiles and the completed session together. Finish or resume an active run before starting another run for the same checkpoint. Use fresh deal seeds in a new run. Reports give early, late, and per-session bb/100. These sessions share learning state and are unsuitable for the independent-session confidence interval. [Example commands](README.md#offline-agent-cli)
 
 ## Slumbot benchmark (optional)

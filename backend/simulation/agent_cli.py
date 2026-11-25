@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 from contextlib import contextmanager
 from dataclasses import asdict
+from io import BytesIO
 import json
 import os
 from pathlib import Path
@@ -50,15 +51,18 @@ def _decode_session(record):
     return DuplicatePair(**fields), fallback
 
 
-def _read_sessions(handle, header, seeds):
+def _read_sessions(handle, header, seeds, *, repair=True):
     records = []
     for index, line in enumerate(handle):
         if not line.endswith(b"\n"):
             # Only the final incomplete record is recoverable after a crash.
-            handle.seek(-len(line), os.SEEK_CUR)
-            handle.truncate()
+            if repair:
+                handle.seek(-len(line), os.SEEK_CUR)
+                handle.truncate()
             break
         record = json.loads(line)
+        if not isinstance(record, dict):
+            raise ValueError("each agent ledger record must be a JSON object")
         if index == 0:
             if record != header:
                 raise ValueError("resume parameters do not match the run header")
@@ -70,9 +74,10 @@ def _read_sessions(handle, header, seeds):
                 or not pair.deal_verified):
             raise ValueError("session ledger has inconsistent deal metadata")
         records.append((pair, fallback))
-    if handle.tell() == 0:
-        _append(handle, header)
-    handle.seek(0, os.SEEK_END)
+    if repair:
+        if handle.tell() == 0:
+            _append(handle, header)
+        handle.seek(0, os.SEEK_END)
     return records
 
 
@@ -117,6 +122,30 @@ def _run_report(header, sessions, config, ledger, *, learning=False):
                     "unpaired_standard_error_bb_per_100", "variance_reduction"):
             result.pop(key, None)
     return {**header, **result, "sessions": len(pairs), "ledger": ledger.name}
+
+
+def inspect_ledger(ledger: Path) -> dict:
+    """Summarize complete records from an independent run without opening it for writes."""
+    with BytesIO(ledger.read_bytes()) as snapshot:
+        first = snapshot.readline()
+        if not first.endswith(b"\n"):
+            raise ValueError("agent ledger has no complete header")
+        header = json.loads(first)
+        if (not isinstance(header, dict) or header.get("format_version") != 1 or header.get("agent") != AGENT
+                or header.get("opponent") not in BOT_TYPES):
+            raise ValueError("file is not a supported independent agent ledger")
+        config = DuplicateConfig(**header["configuration"])
+        snapshot.seek(0)
+        sessions = _read_sessions(snapshot, header, config.seeds(), repair=False)
+    report = _run_report(header, sessions, config, ledger)
+    report["planned_sessions"] = config.pairs
+    report["complete"] = len(sessions) == config.pairs
+    if len(sessions) < 2:
+        report["confidence_interval"] = None
+        report["interpretation"] = None
+    if not sessions:
+        report["bb_per_100"] = None
+    return report
 
 
 def _learning_run(profile_dir, output, name, opponent, config, *, resume):
@@ -217,7 +246,9 @@ def run_sessions(output: Path, name: str, opponent: str, config: DuplicateConfig
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--run", required=True, help="name of this run and its output files")
+    entry = parser.add_mutually_exclusive_group(required=True)
+    entry.add_argument("--run", help="name of this run and its output files")
+    entry.add_argument("--inspect", type=Path, metavar="LEDGER", help="report complete sessions from an independent JSONL ledger")
     parser.add_argument("--opponent", choices=BOT_TYPES, default="tight")
     parser.add_argument("--sessions", type=int, default=10)
     parser.add_argument("--session-hands", type=int, default=20, help="hands in each of two orientations")
@@ -227,9 +258,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--resume", action="store_true", help="continue the same run with identical parameters")
     args = parser.parse_args(argv)
     try:
-        config = DuplicateConfig(pairs=args.sessions, session_hands=args.session_hands, seed_offset=args.seed_offset)
-        report = run_sessions(args.output_dir, args.run, args.opponent, config, resume=args.resume,
-                              profile_dir=args.profile_dir)
+        if args.inspect is not None:
+            if args.resume or args.profile_dir is not None:
+                parser.error("--inspect reads an independent ledger and cannot resume a run")
+            report = inspect_ledger(args.inspect)
+        else:
+            config = DuplicateConfig(pairs=args.sessions, session_hands=args.session_hands, seed_offset=args.seed_offset)
+            report = run_sessions(args.output_dir, args.run, args.opponent, config, resume=args.resume,
+                                  profile_dir=args.profile_dir)
     except (OSError, ValueError, TypeError, KeyError) as error:
         parser.error(str(error))
     print(json.dumps(report, sort_keys=True, indent=2))

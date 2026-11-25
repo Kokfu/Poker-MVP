@@ -128,3 +128,28 @@ def test_agent_counts_solver_fallbacks_separately_from_engine_fallbacks(monkeypa
     assert report["solver_fallback_actions"] == 4 * session_hands
     assert report["solver_fallback_coverage_sessions"] == 2
     assert report["fallback_actions"] == report["illegal_actions"] == report["deal_mismatches"] == 0
+
+
+def test_inspect_reads_complete_sessions_without_repairing_a_partial_line(tmp_path, capsys):
+    config = DuplicateConfig(pairs=3, session_hands=5, seed_offset=23)
+    seeds = config.seeds()
+    ledger = tmp_path / "running.jsonl"
+    with ledger.open("wb") as handle:
+        agent_cli._append(handle, {"format_version": 1, "agent": agent_cli.AGENT,
+                                   "opponent": "tight", "configuration": config.as_dict()})
+    assert agent_cli.inspect_ledger(ledger)["bb_per_100"] is None
+    with ledger.open("ab") as handle:
+        for index, seed in enumerate(seeds[:2], start=1):
+            agent_cli._append(handle, {"session": index, "seed": seed, "net_seat_a": 100 * index,
+                                       "net_seat_b": 0, "illegal_actions": 0, "fallback_actions": 0,
+                                       "deal_verified": True, "hands_per_seat": 5, "solver_fallback_actions": 1})
+        handle.write(b'{"session":3')
+    before = ledger.read_bytes()
+    assert agent_cli.main(["--inspect", str(ledger)]) == 0
+    report = json.loads(capsys.readouterr().out)
+    assert report["sessions"] == 2 and report["planned_sessions"] == 3 and not report["complete"]
+    assert report["hands"] == 20 and report["bb_per_100"] == 15.0
+    assert report["confidence_interval"]["lower"] <= 15 <= report["confidence_interval"]["upper"]
+    assert report["solver_fallback_coverage_sessions"] == 2 and report["solver_fallback_actions"] == 2
+    assert ledger.read_bytes() == before
+    assert tuple(tmp_path.iterdir()) == (ledger,)
