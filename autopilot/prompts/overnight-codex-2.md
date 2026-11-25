@@ -91,6 +91,9 @@ Work in order. Start long jobs as early as possible and work on other items whil
 19. **Exact solver traversal.** Check whether reusing an unchanged player's reach calculations reduces CFR time. Keep it only if numerical checks, advice hashes, and timing support the change.
 20. **Partial diagnostic intervals.** Add a read-only CLI view of committed sessions so an interrupted or still-running ledger can report bb/100 and uncertainty without rewriting its results.
 21. **Practice proxy identity.** Verify that the LAN launcher gives the practice rate limiter a trustworthy client address. Keep changes confined to local deployment and add a configuration check.
+22. **Release finished solver state.** Verify that a settled practice hand releases its per-hand solver matrices while keeping the opponent model for its next hand.
+23. **Update privacy and practice architecture.** Bring the existing documentation in line with timed turns, the seat capability, saved practice hands, and the flagged multiway model.
+24. **Quiet-machine Coach benchmark.** After the ordered agent workload finishes, repeat all 48 cold spots with warmup off and on under comparable load. Record both p95s and the advice check.
 
 ## At 06:30
 - Collect the background job results.
