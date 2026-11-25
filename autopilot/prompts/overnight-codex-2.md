@@ -103,6 +103,10 @@ Work in order. Start long jobs as early as possible and work on other items whil
 29. **Exact runout batching.** Compare bounded batches of integer rank tallies with the existing per-runout loop. Keep it only if equity matrices match bit for bit and both the microbenchmarks and advice timings support it.
 30. **Local HTTP cold latency.** Measure the representative workload through an isolated Uvicorn process on loopback. Check advice hashes and record how its latency compares with the in-process benchmark.
 
+31. **Postflop request overlap.** Measure actual duplicate work for advice requests on the same board. If useful, share exact pending matrix or street work while keeping different keys independent and preserving failure recovery.
+32. **Later-street replay cost.** Compare independent turns and rivers with the same decisions reached after prior street requests. Attribute latency to replay, equity, and new-street CFR using the representative fixtures.
+33. **Numerical worker reproducibility.** Check the wider workload at fixed one and two workers and distinguish solver changes from worker-count differences. Document how to reproduce each advice comparison.
+
 ## At 06:30
 - Collect the background job results.
 - Run the full backend suite, `npx.cmd tsc -b`, `node --test test/coach-strategy.test.mjs` and `npm.cmd run build`.

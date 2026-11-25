@@ -106,3 +106,16 @@ backend/.venv/Scripts/python.exe autopilot/overnight/time_coach.py --representat
 ```
 
 In a direct profile of the 12 representative preflop requests, eight first-use locked chart solves consumed 8.26 s of the 10.06 s measured under cProfile. The lock fitter accounted for 4.13 s. Anonymous requests read the public chart. Calling the exact NumPy reductions directly preserved all 48 hashes but did not improve p95 consistently across balanced runs. [Profile and timings](jobs/coach-representative-preflop-profile.log) [Balanced comparison](jobs/coach-lock-reduction-48.log)
+
+### Real loopback HTTP
+
+The same representative spots were measured through Uvicorn on an ephemeral loopback port and through the in-process client. Both transports matched all 48 normalized hashes with either warmup setting.
+
+| Transport | Warmup | Startup (ms) | Preflop p95 (ms) | Postflop p95 (ms) |
+| --- | --- | ---: | ---: | ---: |
+| In process | Off | 15 | 1,387 | 2,981 |
+| Loopback HTTP | Off | 2,797 | 1,323 | 2,991 |
+| Loopback HTTP | On | 2,726 | 2,476 | 2,998 |
+| In process | On | 359 | 2,364 | 2,992 |
+
+The HTTP startup includes launching a separate interpreter and importing the application. The request timings begin once that process is listening. Use the same environment and add --http to the representative commands above. [Run log](jobs/coach-loopback-48.log)

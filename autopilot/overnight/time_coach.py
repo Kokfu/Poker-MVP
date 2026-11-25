@@ -8,14 +8,18 @@ import math
 import os
 from pathlib import Path
 from random import Random
+import re
 from statistics import median
+import subprocess
 import sys
 from tempfile import TemporaryDirectory
-from time import perf_counter
+from time import perf_counter, sleep
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "backend"))
+BACKEND = Path(__file__).resolve().parents[2] / "backend"
+sys.path.insert(0, str(BACKEND))
 
 from fastapi.testclient import TestClient
+import httpx
 from coach.service import spot_to_dict
 from coach.store import HandStore
 from main import app
@@ -98,7 +102,36 @@ def representative_scenarios():
             }
 
 
-def measure(repeats, suit_variants, wait_for_warmup, representative=False):
+def http_client(stack, scratch):
+    server_log = Path(scratch) / "uvicorn.log"
+    with server_log.open("w", encoding="utf-8") as output:
+        server = subprocess.Popen(
+            [sys.executable, "-B", "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "0",
+             "--no-access-log", "--no-proxy-headers"],
+            cwd=BACKEND, stdout=output, stderr=subprocess.STDOUT,
+            creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+        )
+
+    def stop_server():
+        if server.poll() is None:
+            server.terminate()
+            try:
+                server.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                server.kill()
+                server.wait(timeout=5)
+
+    stack.callback(stop_server)
+    deadline = perf_counter() + 30
+    while server.poll() is None and perf_counter() < deadline:
+        startup = server_log.read_text(encoding="utf-8", errors="replace")
+        if address := re.search(r"Uvicorn running on (http://127\.0\.0\.1:\d+)", startup):
+            return stack.enter_context(httpx.Client(base_url=address[1], timeout=60, trust_env=False))
+        sleep(0.025)
+    raise RuntimeError(f"Local Uvicorn did not start: {server_log.read_text(encoding='utf-8', errors='replace')}")
+
+
+def measure(repeats, suit_variants, wait_for_warmup, representative=False, http=False):
     measurements = []
     with TemporaryDirectory() as scratch, ExitStack() as stack:
         # SQLite connection cycles can retain Windows file handles until GC.
@@ -111,7 +144,7 @@ def measure(repeats, suit_variants, wait_for_warmup, representative=False):
             for spot in simulated_spots("aggressive", 150, seed0=2_000):
                 store.add("Aggressive synthetic", spot_to_dict(spot))
         startup = perf_counter()
-        client = stack.enter_context(TestClient(app))
+        client = http_client(stack, scratch) if http else stack.enter_context(TestClient(app))
         startup_ms = 1000 * (perf_counter() - startup)
         if wait_for_warmup and (worker := app.state.coach_warmup):
             worker.join()
@@ -159,12 +192,15 @@ if __name__ == "__main__":
                         help="48 distinct spots with varied boards and action paths")
     parser.add_argument("--expect", type=Path, help="fail if advice differs from this baseline report")
     parser.add_argument("--wait-for-warmup", action="store_true")
+    parser.add_argument("--http", action="store_true", help="use a fresh loopback Uvicorn process")
     args = parser.parse_args()
     if args.repeats < 1:
         parser.error("--repeats must be positive")
     if args.representative and args.suit_variants != 1:
         parser.error("--representative cannot be combined with multiple suit variants")
-    report = measure(args.repeats, args.suit_variants, args.wait_for_warmup, args.representative)
+    if args.http and args.wait_for_warmup:
+        parser.error("--wait-for-warmup requires in-process requests")
+    report = measure(args.repeats, args.suit_variants, args.wait_for_warmup, args.representative, args.http)
     if args.expect:
         def hashes(rows):
             return {(row["spot"], row["repeat"]): row["advice_sha256"] for row in rows}
