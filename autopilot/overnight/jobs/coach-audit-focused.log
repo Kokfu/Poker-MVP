@@ -26,7 +26,7 @@ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001C6A9B04450>
             for exploit in (False, True):
 >               first, repeat = (advise(spot, opponent="fixture", exploit=exploit, seed=917) for _ in range(2))
 
-test_solver_phase_4h.py:78: 
+test_solver_phase_4h.py:78:
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 test_solver_phase_4h.py:78: in <genexpr>
     first, repeat = (advise(spot, opponent="fixture", exploit=exploit, seed=917) for _ in range(2))
@@ -38,7 +38,7 @@ opponent = 'fixture', exploit = False, store = None, seed = 917
     def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store: HandStore | None = None,
                seed: int = 0, *, through_id: int | None = None, include_preflop_ev: bool = False) -> dict[str, Any]:
         from solver.bot import AdaptiveSolverBot, SolverBot
-    
+
         shadow = getenv("POKER_COACH_RIVER_SHADOW") == "1"
         started = perf_counter() if shadow else None
         profile_snapshot = None
@@ -48,7 +48,7 @@ opponent = 'fixture', exploit = False, store = None, seed = 917
         use_exploit = bool(exploit and opponent)
         if cache_solves:
             from .advisor import CoachAdvisor
-    
+
             advisor = CoachAdvisor(seed=seed, exploit=use_exploit, cache_solves=True)
         else:
             advisor = AdaptiveSolverBot(seed=seed) if use_exploit else SolverBot(seed=seed)
@@ -83,7 +83,7 @@ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001C6A99F2290>
             for exploit in (False, True):
 >               first, repeat = (advise(spot, opponent="fixture", exploit=exploit, seed=917) for _ in range(2))
 
-test_solver_phase_4h.py:78: 
+test_solver_phase_4h.py:78:
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 test_solver_phase_4h.py:78: in <genexpr>
     first, repeat = (advise(spot, opponent="fixture", exploit=exploit, seed=917) for _ in range(2))
@@ -95,7 +95,7 @@ opponent = 'fixture', exploit = False, store = None, seed = 917
     def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store: HandStore | None = None,
                seed: int = 0, *, through_id: int | None = None, include_preflop_ev: bool = False) -> dict[str, Any]:
         from solver.bot import AdaptiveSolverBot, SolverBot
-    
+
         shadow = getenv("POKER_COACH_RIVER_SHADOW") == "1"
         started = perf_counter() if shadow else None
         profile_snapshot = None
@@ -105,7 +105,7 @@ opponent = 'fixture', exploit = False, store = None, seed = 917
         use_exploit = bool(exploit and opponent)
         if cache_solves:
             from .advisor import CoachAdvisor
-    
+
             advisor = CoachAdvisor(seed=seed, exploit=use_exploit, cache_solves=True)
         else:
             advisor = AdaptiveSolverBot(seed=seed) if use_exploit else SolverBot(seed=seed)
@@ -140,7 +140,7 @@ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001C6A5449ED0>
             for exploit in (False, True):
 >               first, repeat = (advise(spot, opponent="fixture", exploit=exploit, seed=917) for _ in range(2))
 
-test_solver_phase_4h.py:78: 
+test_solver_phase_4h.py:78:
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 test_solver_phase_4h.py:78: in <genexpr>
     first, repeat = (advise(spot, opponent="fixture", exploit=exploit, seed=917) for _ in range(2))
@@ -152,7 +152,7 @@ opponent = 'fixture', exploit = False, store = None, seed = 917
     def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store: HandStore | None = None,
                seed: int = 0, *, through_id: int | None = None, include_preflop_ev: bool = False) -> dict[str, Any]:
         from solver.bot import AdaptiveSolverBot, SolverBot
-    
+
         shadow = getenv("POKER_COACH_RIVER_SHADOW") == "1"
         started = perf_counter() if shadow else None
         profile_snapshot = None
@@ -162,7 +162,7 @@ opponent = 'fixture', exploit = False, store = None, seed = 917
         use_exploit = bool(exploit and opponent)
         if cache_solves:
             from .advisor import CoachAdvisor
-    
+
             advisor = CoachAdvisor(seed=seed, exploit=use_exploit, cache_solves=True)
         else:
             advisor = AdaptiveSolverBot(seed=seed) if use_exploit else SolverBot(seed=seed)
@@ -197,7 +197,7 @@ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001C6A9B04790>
             for exploit in (False, True):
 >               first, repeat = (advise(spot, opponent="fixture", exploit=exploit, seed=917) for _ in range(2))
 
-test_solver_phase_4h.py:78: 
+test_solver_phase_4h.py:78:
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 test_solver_phase_4h.py:78: in <genexpr>
     first, repeat = (advise(spot, opponent="fixture", exploit=exploit, seed=917) for _ in range(2))
@@ -209,7 +209,7 @@ opponent = 'fixture', exploit = False, store = None, seed = 917
     def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store: HandStore | None = None,
                seed: int = 0, *, through_id: int | None = None, include_preflop_ev: bool = False) -> dict[str, Any]:
         from solver.bot import AdaptiveSolverBot, SolverBot
-    
+
         shadow = getenv("POKER_COACH_RIVER_SHADOW") == "1"
         started = perf_counter() if shadow else None
         profile_snapshot = None
@@ -219,7 +219,7 @@ opponent = 'fixture', exploit = False, store = None, seed = 917
         use_exploit = bool(exploit and opponent)
         if cache_solves:
             from .advisor import CoachAdvisor
-    
+
             advisor = CoachAdvisor(seed=seed, exploit=use_exploit, cache_solves=True)
         else:
             advisor = AdaptiveSolverBot(seed=seed) if use_exploit else SolverBot(seed=seed)
@@ -254,7 +254,7 @@ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001C6A5479310>
             for exploit in (False, True):
 >               first, repeat = (advise(spot, opponent="fixture", exploit=exploit, seed=917) for _ in range(2))
 
-test_solver_phase_4h.py:78: 
+test_solver_phase_4h.py:78:
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 test_solver_phase_4h.py:78: in <genexpr>
     first, repeat = (advise(spot, opponent="fixture", exploit=exploit, seed=917) for _ in range(2))
@@ -266,7 +266,7 @@ opponent = 'fixture', exploit = False, store = None, seed = 917
     def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store: HandStore | None = None,
                seed: int = 0, *, through_id: int | None = None, include_preflop_ev: bool = False) -> dict[str, Any]:
         from solver.bot import AdaptiveSolverBot, SolverBot
-    
+
         shadow = getenv("POKER_COACH_RIVER_SHADOW") == "1"
         started = perf_counter() if shadow else None
         profile_snapshot = None
@@ -276,7 +276,7 @@ opponent = 'fixture', exploit = False, store = None, seed = 917
         use_exploit = bool(exploit and opponent)
         if cache_solves:
             from .advisor import CoachAdvisor
-    
+
             advisor = CoachAdvisor(seed=seed, exploit=use_exploit, cache_solves=True)
         else:
             advisor = AdaptiveSolverBot(seed=seed) if use_exploit else SolverBot(seed=seed)
