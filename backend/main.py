@@ -2,6 +2,7 @@ from typing import Literal
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, StrictInt, field_validator, model_validator
+from coach.multiway import MAX_PUBLIC_ACTIONS, PublicAction, advise_multiway, ranges_enabled
 from coach.warmup import coach_lifespan
 from poker_analyzer import RANKS, SUITS, analyze
 from practice_table import router as practice_router
@@ -322,12 +323,20 @@ def coach_delete_all(confirm: Literal["delete-all"]):
     return {"deleted": HandStore().delete_all()}
 
 
+class CoachMultiwayAction(BaseModel):
+    seat: StrictInt = Field(ge=1, le=8)
+    street: Literal["preflop", "flop", "turn", "river"]
+    action: Literal["check", "call", "limp", "bet", "raise", "3-bet", "all_in"]
+    pot_fraction: float | None = Field(default=None, ge=0, le=100)
+
+
 class CoachMultiwayRequest(BaseModel):
     hero_cards: list[str]
     board: list[str] = Field(default_factory=list)
     opponents: StrictInt = Field(ge=1, le=8)
     pot: float = Field(ge=0, le=100_000_000)
     to_call: float = Field(default=0, ge=0, le=100_000_000)
+    actions: list[CoachMultiwayAction] = Field(default_factory=list, max_length=MAX_PUBLIC_ACTIONS)
 
     @field_validator("hero_cards", "board", mode="before")
     @classmethod
@@ -337,5 +346,13 @@ class CoachMultiwayRequest(BaseModel):
 
 @app.post("/api/coach/multiway")
 def coach_multiway(request: CoachMultiwayRequest):
-    from coach.multiway import advise_multiway
-    return _coach_call(advise_multiway, request.hero_cards, request.board, request.opponents, request.pot, request.to_call)
+    if request.actions and not ranges_enabled():
+        raise HTTPException(422, "Multiway opponent actions are disabled.")
+    actions = tuple(PublicAction(**action.model_dump()) for action in request.actions)
+    return _coach_call(advise_multiway, request.hero_cards, request.board, request.opponents, request.pot,
+                       request.to_call, actions=actions)
+
+
+@app.get("/api/coach/multiway/settings")
+def multiway_settings():
+    return {"opponent_actions": ranges_enabled()}

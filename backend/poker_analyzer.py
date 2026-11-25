@@ -7,7 +7,7 @@ comparisons, categories, and seeded results are unchanged.
 """
 from __future__ import annotations
 from collections import Counter
-from itertools import combinations, combinations_with_replacement
+from itertools import accumulate, combinations, combinations_with_replacement
 import os
 import random
 import time
@@ -155,19 +155,47 @@ def calculate_equity(hero: list[str], board: list[str], iterations: int, seed: i
 
 MIN_OPPONENTS, MAX_OPPONENTS = 1, 8
 
+
+def _weighted_multiway_deals(rng, unseen, missing, opponents, opponent_ranges, iterations):
+    # Weighted seats are drawn independently, then conditioned on the entire
+    # tuple being collision-free. Rejecting individual later seats alone
+    # would instead bias the estimate toward cards in earlier seat ranges.
+    remaining_count = missing + 2 * (opponents - len(opponent_ranges))
+    distributions = [(cards, list(accumulate(weights))) for cards, weights in opponent_ranges]
+    accepted = 0
+    for _ in range(iterations * 100):
+        chosen = []
+        used = set()
+        for cards, cumulative in distributions:
+            first, second = rng.choices(cards, cum_weights=cumulative, k=1)[0]
+            if first in used or second in used:
+                break
+            used.update((first, second))
+            chosen.extend((first, second))
+        else:
+            yield rng.sample([card for card in unseen if card not in used], remaining_count) + chosen
+            accepted += 1
+            if accepted == iterations:
+                return
+    raise ValueError("the supplied opponent ranges overlap too heavily to estimate equity")
+
+
 def multiway_equity(hero: list[str], board: list[str], opponents: int, iterations: int = 20_000,
-                    seed: int | None = None) -> dict[str, float]:
-    """Hero's share of the pot against ``opponents`` random hands (ties split evenly)."""
+                    seed: int | None = None, *, opponent_ranges=()) -> dict[str, float]:
+    """Hero's share of the pot against random hands or supplied non-colliding ranges."""
     if not MIN_OPPONENTS <= opponents <= MAX_OPPONENTS:
         raise ValueError(f"opponents must be {MIN_OPPONENTS}-{MAX_OPPONENTS}")
     unseen = [card for card in FULL_DECK if card not in set(hero) | set(board)]
     rng = random.Random(seed)
     missing = 5 - len(board)
     draw = 2 * opponents + missing
+    if len(opponent_ranges) > opponents:
+        raise ValueError("more ranges than opponents")
+    deals = (_weighted_multiway_deals(rng, unseen, missing, opponents, opponent_ranges, iterations) if opponent_ranges
+             else (rng.sample(unseen, draw) for _ in range(iterations)))
     wins = ties = 0
     share = 0.0
-    for _ in range(iterations):
-        deal = rng.sample(unseen, draw)
+    for deal in deals:
         final_board = board + deal[:missing]
         hero_score = EVALUATOR.score(hero, final_board)
         others = [EVALUATOR.score(deal[missing + 2 * i: missing + 2 * i + 2], final_board) for i in range(opponents)]

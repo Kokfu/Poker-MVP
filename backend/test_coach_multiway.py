@@ -1,11 +1,16 @@
 """Coach multiway advisor and saved-data controls."""
+from collections import Counter
+from random import Random
+
 import pytest
 from fastapi.testclient import TestClient
 
 import main
-from coach.multiway import advise_multiway, multiway_equity
+from coach.multiway import PublicAction, advise_multiway, multiway_equity
 from coach.service import Spot, SpotAction, log_hand
 from coach.store import HandStore
+from poker_analyzer import FULL_DECK, _weighted_multiway_deals
+from simulation.range_intelligence import PublicRangeTracker, legal_opponent_combos
 
 
 @pytest.fixture()
@@ -61,6 +66,67 @@ def test_multiway_api(store):
     assert body["opponents"] == 3 and 0 < body["equity"] < 1 and body["action"] in {"fold", "call", "raise"}
     assert client.post("/api/coach/multiway", json={"hero_cards": ["Ah", "Kh"], "opponents": 9, "pot": 1}).status_code == 422
     assert client.post("/api/coach/multiway", json={"hero_cards": ["Ah", "Ah"], "opponents": 2, "pot": 1}).status_code == 422
+
+
+def test_uniform_range_matches_published_aces_equity():
+    # DeucesCracked published 73.6%, 55.8%, and 34.5% for 2, 4, and 8 opponents.
+    hero = ["As", "Ad"]
+    candidates = [combo.cards for combo in legal_opponent_combos(hero, [])]
+    uniform = (candidates, [1.0] * len(candidates))
+    for opponents, published in [(2, .736), (4, .558), (8, .345)]:
+        result = multiway_equity(hero, [], opponents, 8000, seed=511,
+                                 opponent_ranges=[uniform, uniform])
+        assert result["equity"] == pytest.approx(published, abs=.018)
+
+
+def test_weighted_sampler_draws_the_joint_conditional_distribution():
+    first = ([("Qc", "Jc"), ("2h", "3h")], [4, 1])
+    second = ([("Qc", "Td"), ("4h", "5h")], [4, 1])
+    samples = Counter()
+    for deal in _weighted_multiway_deals(Random(19), FULL_DECK, 3, 2, [first, second], 6000):
+        assert len(deal) == len(set(deal)) == 7
+        samples[tuple(deal[3:])] += 1
+    # Non-colliding pairs have weights 4, 4, and 1.
+    assert sorted(samples.values()) == pytest.approx([6000 / 9, 24000 / 9, 24000 / 9], rel=.10)
+
+
+def test_action_ranges_use_only_the_board_visible_at_each_action(monkeypatch):
+    seen = []
+    observe = PublicRangeTracker.observe
+
+    def track(self, action, board, fraction):
+        seen.append((action, tuple(board)))
+        return observe(self, action, board, fraction)
+
+    monkeypatch.setattr(PublicRangeTracker, "observe", track)
+    hero = ["7s", "2d"]
+    board = ["As", "Ks", "Qs", "Js", "Ts"]
+    actions = (PublicAction(2, "preflop", "raise"), PublicAction(1, "flop", "bet", .8))
+    result = advise_multiway(hero, board, 3, 100, 10, 500, 14, actions=actions)
+    assert result == advise_multiway(hero, board, 3, 100, 10, 500, 14, actions=actions)
+    assert seen == [("raise", ()), ("bet", tuple(board[:3]))] * 2
+    assert result["tie_rate"] == 1 and result["equity"] == pytest.approx(.25)
+    assert [item["seat"] for item in result["opponent_ranges"]] == [1, 2]
+    assert all(0 < item["effective_combos"] < 990 for item in result["opponent_ranges"])
+
+
+def test_multiway_action_api_flag_and_validation(store, monkeypatch):
+    monkeypatch.delenv("POKER_COACH_MULTIWAY_RANGES", raising=False)
+    client = TestClient(main.app)
+    path = "/api/coach/multiway"
+    request = {"hero_cards": ["As", "Kd"], "opponents": 3, "pot": 150}
+    action = {"seat": 2, "action": "call", "street": "preflop"}
+    assert client.get(path + "/settings").json() == {"opponent_actions": False}
+    assert client.post(path, json={**request, "actions": [action]}).status_code == 422
+    assert "opponent_ranges" not in client.post(path, json=request).json()
+    monkeypatch.setenv("POKER_COACH_MULTIWAY_RANGES", "1")
+    assert client.get(path + "/settings").json() == {"opponent_actions": True}
+    assert client.post(path, json={**request, "actions": [{**action, "street": "turn"}]}).status_code == 422
+    assert client.post(path, json={**request, "actions": [{**action, "seat": 4}]}).status_code == 422
+    assert client.post(path, json={**request, "board": ["2h", "3d", "4c"],
+                                  "actions": [{**action, "street": "flop"}, action]}).status_code == 422
+    response = client.post(path, json={**request, "actions": [action]})
+    assert response.status_code == 200 and response.json()["opponent_ranges"][0]["effective_combos"] < 1225
 
 
 def test_storage_summary_and_delete_all(store):
