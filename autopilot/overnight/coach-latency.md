@@ -155,3 +155,15 @@ The driver creates its own synthetic history and checks matching advice hashes f
 Heads-up Coach requests an approximate postflop recommendation while the existing full solver request runs. The quick card is explicitly labeled and shows the current board and pot. The full recommendation replaces it when ready and enables the hand controls. The preview uses a free check when available and compares public-card equity against an unknown hand with the effective call price when facing a bet.
 
 Over loopback, quick p95 was 22.63 ms on 36 original and 38.38 ms on 36 representative postflop spots. The respective maxima were 26.09 and 43.54 ms. Both full 48-spot sets reproduced all advice hashes. The 600 ms target for the full solver remains open. [Timings](jobs/coach-quick-48.log)
+
+The 48 facing-bet river stress run exposed one 687 ms preview when full and preview requests started simultaneously. The final implementation caps the preview at 160 sampled deals across all streets and starts the full request as soon as the preview arrives or after 50 ms. With browser-equivalent scheduling, facing-bet river preview p95 was 18.24 ms and the maximum was 53.28 ms. Original and representative maxima were 39.83 and 19.03 ms, with all 96 full responses matching their reference hashes. [Focused results and timing](jobs/coach-quick-budget.log)
+
+```powershell
+$env:OPENBLAS_NUM_THREADS = '1'
+$env:OMP_NUM_THREADS = '1'
+$env:MKL_NUM_THREADS = '1'
+$env:POKER_COACH_WARMUP = '0'
+$env:POKER_COACH_SOLVE_CACHE = '1'
+backend/.venv/Scripts/python.exe autopilot/overnight/time_coach_quick.py river
+backend/.venv/Scripts/python.exe autopilot/overnight/time_coach_quick.py representative
+```

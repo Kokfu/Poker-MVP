@@ -1,0 +1,78 @@
+2026-11-26T00:36:51.1719193+08:00 controlled quick advice budget verification
+........................................................................ [100%]
+============================== warnings summary ===============================
+.venv\Lib\site-packages\starlette\formparsers.py:12
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\starlette\formparsers.py:12: PendingDeprecationWarning: Please use `import python_multipart` instead.
+    import multipart
+
+.venv\Lib\site-packages\eval7\rangestring.py:149
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:149: PyparsingDeprecationWarning: 'setName' deprecated - use 'set_name'
+    suitedness = pyparsing.Word("os", exact=1).setName("suitedness")
+
+.venv\Lib\site-packages\eval7\rangestring.py:150
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:150: PyparsingDeprecationWarning: 'setName' deprecated - use 'set_name'
+    card = pyparsing.Word(ranks_str, suits_str, exact=2).setName("card")
+
+.venv\Lib\site-packages\eval7\rangestring.py:152
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:152: PyparsingDeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    hand.setParseAction(lambda s, loc, toks: ''.join(toks))
+
+.venv\Lib\site-packages\eval7\rangestring.py:160
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:160: PyparsingDeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    decimal.setParseAction(lambda s, loc, toks: ''.join(toks))
+
+.venv\Lib\site-packages\eval7\rangestring.py:167
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:167: PyparsingDeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    handtype.setParseAction(lambda s, loc, toks: ''.join(toks))
+
+.venv\Lib\site-packages\eval7\rangestring.py:175
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:175: PyparsingDeprecationWarning: 'delimitedList' deprecated - use 'DelimitedList'
+    hand_group_list = pyparsing.Group(pyparsing.delimitedList(handtype_group))
+
+.venv\Lib\site-packages\eval7\rangestring.py:180
+  C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Lib\site-packages\eval7\rangestring.py:180: PyparsingDeprecationWarning: 'delimitedList' deprecated - use 'DelimitedList'
+    handrange = pyparsing.Optional(pyparsing.delimitedList(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+72 passed, 8 warnings in 11.31s
+✔ Coach strategy renders solver frequencies and allows an empty fallback (1105.0434ms)
+✔ Coach selects the newest same-kind villain size within the current total limits (435.6934ms)
+▶ Coach publishes quick advice only while the matching full request is pending
+  ✔ an early preview is followed by the full response (16.8991ms)
+  ✔ a late preview cannot overwrite full advice (52.3276ms)
+  ✔ aborting suppresses a stale preview and a preview failure leaves full advice available (8.7315ms)
+✔ Coach publishes quick advice only while the matching full request is pending (489.9882ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3817.9531
+
+> build
+> tsc -b && vite build
+
+vite v8.1.5 building client environment for production...
+[2K
+transforming...✓ 32 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.40 kB │ gzip:  0.28 kB
+dist/assets/index-DEV9_ZuZ.css   19.44 kB │ gzip:  5.01 kB
+dist/assets/index-tplHlkH3.js   283.95 kB │ gzip: 82.83 kB
+
+✓ built in 428ms
+TypeScript 0, Node 0, build 0
+2026-11-26T00:37:20.5242284+08:00 start river
+river: 48 previews, median 10.54 ms, p95 18.24 ms, max 53.28 ms; full p95 3117.78 ms; legal actions {'call': 27, 'all_in': 4, 'fold': 17}.
+2026-11-26T00:39:19.4697699+08:00 river exit 0
+2026-11-26T00:39:19.5356239+08:00 start original
+original: all 48 full advice hashes matched.
+original: 36 previews, median 7.05 ms, p95 32.38 ms, max 39.83 ms; full p95 2221.37 ms; legal actions {'check': 36}.
+2026-11-26T00:40:29.6305301+08:00 original exit 0
+2026-11-26T00:40:29.6714487+08:00 start representative
+representative: all 48 full advice hashes matched.
+representative: 36 previews, median 5.42 ms, p95 15.59 ms, max 19.03 ms; full p95 2853.33 ms; legal actions {'check': 24, 'call': 12}.
+2026-11-26T00:42:12.4142341+08:00 representative exit 0

@@ -1,0 +1,8 @@
+12 of 48 river pairs complete; quick max 96.91 ms
+24 of 48 river pairs complete; quick max 687.19 ms
+36 of 48 river pairs complete; quick max 687.19 ms
+48 of 48 river pairs complete; quick max 687.19 ms
+48 facing-bet river spots: quick median 15.85 ms, p95 81.56 ms, max 687.19 ms; full p95 2904.41 ms; legal outputs {'call': 27, 'all_in': 5, 'fold': 16}.
+Traceback (most recent call last):
+  File "<stdin>", line 52, in <module>
+AssertionError
