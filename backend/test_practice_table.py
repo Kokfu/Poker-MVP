@@ -1,13 +1,17 @@
+from sqlite3 import OperationalError
+
 from fastapi.testclient import TestClient
 import pytest
 
+from coach.store import HandStore
 from main import app
 from practice_table import _TABLES
 from simulation.actions import Action
 
 
 @pytest.fixture(autouse=True)
-def close_test_tables():
+def close_test_tables(monkeypatch, tmp_path):
+    monkeypatch.setenv("COACH_DB_PATH", str(tmp_path / "practice.sqlite"))
     yield
     for table in _TABLES.values():
         with table.lock:
@@ -78,7 +82,7 @@ def test_timer_folds_without_a_check_and_hides_review_until_settlement(monkeypat
     monkeypatch.setattr("practice_table.monotonic", lambda: now[0])
     seen = []
 
-    def coach(spot):
+    def coach(spot, *args, **kwargs):
         seen.append(spot)
         return {"advice": {"action": "call", "amount": None}, "explain": None}
 
@@ -104,7 +108,8 @@ def test_timer_folds_without_a_check_and_hides_review_until_settlement(monkeypat
     path = f"/api/practice/table/review?revision={settled['revision']}"
     review = client.get(path, headers=headers).json()
     assert review == [{"street": "preflop", "action": {"action": "fold", "amount": None},
-                       "timed_out": True, "advice": {"action": "call", "amount": None}, "explain": None}]
+                       "timed_out": True, "advice": {"action": "call", "amount": None}, "explain": None,
+                       "estimated_cost": None}]
     assert client.get(path, headers=headers).json() == review
     assert len(seen) == 1 and seen[0].board == [] and seen[0].villain_cards is None
 
@@ -125,3 +130,52 @@ def test_timer_checks_when_legal_and_rearms_for_next_decision(monkeypatch):
     assert turn["street"] == "turn" and turn["remaining_ms"] == 5000
     assert turn["revision"] > flop["revision"]
     assert turn["actions"][-2] == {"player": "a", "type": "check"}
+
+
+def test_completed_hand_is_saved_once_and_session_review_uses_earlier_history(monkeypatch):
+    client = TestClient(app)
+    created = client.post("/api/practice/table", json={"opponent": "  Practice   opponent  "}).json()
+    key = created["key"]
+    headers = {"Authorization": f"Bearer {key}"}
+    table = _TABLES[key]
+    opponent = "Practice opponent"
+    assert created["table"]["opponent"] == opponent
+    assert HandStore().hands(opponent) == []
+
+    save = table.store.add
+
+    def committed_then_disconnected(*args, **kwargs):
+        save(*args, **kwargs)
+        raise OperationalError("injected failure after commit")
+
+    monkeypatch.setattr(table.store, "add", committed_then_disconnected)
+    fold = {"revision": created["table"]["revision"], "action": "fold"}
+    assert client.post("/api/practice/table/action", headers=headers, json=fold).status_code == 503
+    monkeypatch.setattr(table.store, "add", save)
+    settled = client.post("/api/practice/table/action", headers=headers, json=fold).json()
+    assert settled["status"] == "complete" and settled["learned_hands"] == 1
+    saved, = HandStore().hands(opponent)
+    assert saved["actions"] == [{"actor": "hero", "action": "fold", "amount": None}]
+    assert saved.get("villain_cards") is None
+
+    seen_history = []
+
+    def coach(spot, player, *, store, through_id, include_preflop_ev):
+        assert player == opponent and include_preflop_ev
+        assert spot.board == [] and spot.villain_cards is None
+        seen_history.append(len(store.hands(player, through_id=through_id)))
+        return {"advice": {"action": "call", "amount": None}, "explain": {
+            "chosen": "call", "options": [{"label": "fold", "ev": 0.0}, {"label": "call", "ev": 20.5}]}}
+
+    monkeypatch.setattr("practice_table.advise", coach)
+    monkeypatch.setattr(table.bot, "decide_decision", lambda obs: Action("raise", 250))
+    next_turn = client.post("/api/practice/table/next", headers=headers, json={"revision": settled["revision"]}).json()
+    assert next_turn["hand"] == 2 and next_turn["status"] == "your_turn"
+    second = client.post("/api/practice/table/action", headers=headers,
+                         json={"revision": next_turn["revision"], "action": "fold"}).json()
+    assert second["completed_hands"] == 2
+    assert len(HandStore().hands(opponent)) == 2
+    review = client.get("/api/practice/table/session", headers=headers).json()
+    assert review["completed_hands"] == 2
+    assert [(row["hand"], row["estimated_cost"]) for row in review["hands"]] == [(1, 20.5), (2, 20.5)]
+    assert seen_history == [0, 1]

@@ -295,15 +295,16 @@ class RangeSolver:
             results.append(float(self.ranges[traverser] @ values[self.tree.root]) / self.deal_mass())
         return results[0], results[1]
 
-    def action_values(self, node: Node, position: int) -> np.ndarray:
+    def action_values(self, node: Node, position: int, policy=None) -> np.ndarray:
         """Chips one combo expects from each action at ``node`` under the final
         (locked) play, measured against giving up the hand right now.
 
         ``position`` indexes the acting player's range.  Read-only: it neither
         iterates nor touches regrets, so it cannot change any strategy.
         """
-        strategies = self.final_policy()
-        policy = lambda n: strategies[n.index]  # noqa: E731
+        if policy is None:
+            strategies = self.final_policy()
+            policy = lambda n: strategies[n.index]  # noqa: E731
         traverser = node.player
         _, opp = self._reaches(traverser, policy)
         values = self._backward(traverser, self._terminal_values(traverser, opp), policy)

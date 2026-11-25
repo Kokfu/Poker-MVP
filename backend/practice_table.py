@@ -1,17 +1,20 @@
 """In-memory, one-human heads-up practice tables on the existing local app."""
 from __future__ import annotations
 
+from dataclasses import dataclass
 from logging import getLogger
 from secrets import randbits, token_urlsafe
+from sqlite3 import Error as SQLiteError
 from threading import Lock, Timer
 from time import monotonic
 from types import SimpleNamespace
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response
-from pydantic import BaseModel, Field, StrictInt
+from pydantic import BaseModel, Field, StrictInt, field_validator
 
-from coach.service import Spot, SpotAction, advise
+from coach.service import Spot, SpotAction, advise, spot_to_dict
+from coach.store import HandStore, MAX_NAME_LENGTH, normalize_name
 from simulation.actions import Action, ActionType
 from simulation.bots import BOT_TYPES
 from simulation.engine import HandEngine
@@ -24,6 +27,7 @@ _TABLE_LIMIT = 16
 _IDLE_SECONDS = 3600
 _DEFAULT_TURN_SECONDS = 20
 _MAX_TURN_SECONDS = 120
+_DEFAULT_OPPONENT = "Solver bot"
 _TABLES = {}
 _TABLES_LOCK = Lock()
 _LOG = getLogger(__name__)
@@ -39,12 +43,33 @@ class _HumanTurn(Exception):
     pass
 
 
+@dataclass(frozen=True)
+class ReviewHand:
+    hand: int
+    through_id: int
+    decisions: tuple[tuple[str, Spot, Action, bool], ...]
+
+
+def _estimated_loss(action, result):
+    options = (result["explain"] or {}).get("options", [])
+    values = {option["label"]: option["ev"] for option in options if "ev" in option}
+    label = action.type if action.amount is None else f"{action.type}_{action.amount}"
+    advice_label = (result["explain"] or {}).get("chosen")
+    if label in values and advice_label in values:
+        return round(max(0.0, values[advice_label] - values[label]), 1)
+    return None
+
+
 class PracticeTable:
-    def __init__(self, turn_seconds: int = _DEFAULT_TURN_SECONDS):
+    def __init__(self, turn_seconds: int = _DEFAULT_TURN_SECONDS, opponent: str = _DEFAULT_OPPONENT):
         self.lock = Lock()
         self.review_lock = Lock()
         self.last_used = monotonic()
         self.turn_seconds = turn_seconds
+        self.opponent = opponent
+        self.source = token_urlsafe(24)
+        self.store = HandStore()
+        self.through_id = self.store.latest_hand_id()
         self.deadline: float | None = None
         self.timer: Timer | None = None
         self.bot = BOT_TYPES["solver_adaptive"](seed=randbits(63))
@@ -54,7 +79,8 @@ class PracticeTable:
         self.revision = 0
         self.trace: list[tuple[str, Action]] = []
         self.decisions: list[tuple[str, Spot, Action, bool]] = []
-        self.reviewed: list[dict] | None = None
+        self.completed: dict[int, ReviewHand] = {}
+        self.reviewed: dict[int, list[dict]] = {}
         self.state = self.advance()
         self._arm_timer()
 
@@ -91,9 +117,10 @@ class PracticeTable:
 
     def snapshot(self):
         remaining = None if self.deadline is None else max(0, round(1000 * (self.deadline - monotonic())))
-        return {**self.state, "turn_seconds": self.turn_seconds, "remaining_ms": remaining}
+        return {**self.state, "turn_seconds": self.turn_seconds, "remaining_ms": remaining,
+                "opponent": self.opponent, "completed_hands": len(self.completed)}
 
-    def advance(self, action: Action | None = None):
+    def advance(self, action: Action | None = None, *, timed_out: bool = False):
         trace = list(self.trace)
         if action is not None:
             trace.append(("a", action))
@@ -141,18 +168,19 @@ class PracticeTable:
             "actions": [entry for entry in observation.action_history if entry["type"] in
                         ("fold", "check", "call", "bet", "raise", "all_in")],
         }
+        decisions = list(self.decisions)
+        if action is not None:
+            decisions.append((self.state["street"], self.spot, action, timed_out))
         if settled:
             history = settled["history"]
             net_a = settled["stacks"]["a"] - _STARTING_STACK
             net_b = settled["stacks"]["b"] - _STARTING_STACK
             _validate_history_and_conservation(history, net_a, net_b)
-            self.profile.update(history)
-            self.bot.observe_completed_hand(history, "b")
             state["net_chips"] = net_a
             if settled["showdown"]:
                 showdown = next(event for event in history.events if event.event_type == "showdown")
                 state["shown_bot_cards"] = showdown.revealed_hole_cards["b"]
-        self.spot = Spot(
+        spot = Spot(
             list(state["your_cards"]), list(state["board"]),
             "button" if self.hand % 2 else "big_blind",
             hero_stack=_STARTING_STACK, villain_stack=_STARTING_STACK,
@@ -163,7 +191,17 @@ class PracticeTable:
             ],
             villain_cards=state.get("shown_bot_cards"),
         )
+        if settled:
+            try:
+                self.store.add(self.opponent, spot_to_dict(spot), practice_source=f"{self.source}:{self.hand}")
+            except SQLiteError as error:
+                raise HTTPException(503, "Coach could not save this hand. Try again.") from error
+            self.profile.update(history)
+            self.bot.observe_completed_hand(history, "b")
+            self.completed[self.revision + 1] = ReviewHand(self.hand, self.through_id, tuple(decisions))
+        self.spot = spot
         self.trace = trace
+        self.decisions = decisions
         self.revision += 1
         state["revision"] = self.revision
         state["learned_hands"] = self.profile.hands_observed
@@ -178,27 +216,26 @@ class PracticeTable:
                 raise HTTPException(422, "enter a legal street-total target")
         elif action.amount is not None:
             raise HTTPException(422, "only bets and raises take a target")
-        spot = self.spot
-        self.state = self.advance(action)
+        self.state = self.advance(action, timed_out=timed_out)
         self.state["last_action_timed_out"] = timed_out
-        self.decisions.append((state["street"], spot, action, timed_out))
         self._arm_timer()
         return self.snapshot()
 
     def next_hand(self):
         if self.state["status"] != "complete":
             raise HTTPException(409, "finish the current hand first")
-        previous = self.hand, self.seed, self.trace
+        through_id = self.store.latest_hand_id()
+        previous = self.hand, self.seed, self.trace, self.decisions, self.through_id
         self.hand += 1
         self.seed = randbits(63)
         self.trace = []
+        self.decisions = []
+        self.through_id = through_id
         try:
             self.state = self.advance()
         except Exception:
-            self.hand, self.seed, self.trace = previous
+            self.hand, self.seed, self.trace, self.decisions, self.through_id = previous
             raise
-        self.decisions = []
-        self.reviewed = None
         self._arm_timer()
         return self.snapshot()
 
@@ -208,23 +245,46 @@ class PracticeTable:
                 _check_revision(self, revision)
                 if self.state["status"] != "complete":
                     raise HTTPException(409, "finish the current hand first")
-                if self.reviewed is not None:
-                    return self.reviewed
-                decisions = tuple(self.decisions)
+                hand = self.completed[revision]
+            return self._review_hand(revision, hand)
 
+    def _review_hand(self, revision: int, hand: ReviewHand):
+        # The review lock serializes lazy computation. The table lock is free
+        # during the solve so a player can continue from the next hand.
+        if revision not in self.reviewed:
             rows = []
-            for street, spot, action, timed_out in decisions:
-                result = advise(spot)
-                rows.append({"street": street, "action": {"action": action.type, "amount": action.amount},
-                             "timed_out": timed_out, "advice": result["advice"], "explain": result["explain"]})
+            for street, spot, action, timed_out in hand.decisions:
+                result = advise(spot, self.opponent, store=self.store, through_id=hand.through_id,
+                                include_preflop_ev=True)
+                play = {"action": action.type, "amount": action.amount}
+                rows.append({"street": street, "action": play, "timed_out": timed_out,
+                             "advice": result["advice"], "explain": result["explain"],
+                             "estimated_cost": _estimated_loss(action, result)})
+            self.reviewed[revision] = rows
+        return self.reviewed[revision]
+
+    def session_review(self):
+        with self.review_lock:
             with self.lock:
-                if self.revision == revision:
-                    self.reviewed = rows
-            return rows
+                completed = tuple(self.completed.items())
+            hands = []
+            for revision, hand in completed:
+                differences = [row for row in self._review_hand(revision, hand) if row["action"] != row["advice"]]
+                if differences:
+                    costs = [row["estimated_cost"] for row in differences]
+                    cost = None if None in costs else round(sum(costs), 1)
+                    hands.append({"hand": hand.hand, "decisions": differences, "estimated_cost": cost})
+            return {"completed_hands": len(completed), "hands": hands}
 
 
 class TableSettings(BaseModel):
     turn_seconds: StrictInt = Field(default=_DEFAULT_TURN_SECONDS, ge=1, le=_MAX_TURN_SECONDS)
+    opponent: str = Field(default=_DEFAULT_OPPONENT, min_length=1, max_length=MAX_NAME_LENGTH)
+
+    @field_validator("opponent")
+    @classmethod
+    def valid_opponent(cls, value):
+        return normalize_name(value)
 
 
 class Revision(BaseModel):
@@ -263,7 +323,8 @@ def create_table(settings: TableSettings | None = None):
         if len(_TABLES) >= _TABLE_LIMIT:
             raise HTTPException(503, "practice tables are full; try later")
         key = token_urlsafe(32)
-        table = _TABLES[key] = PracticeTable((settings or TableSettings()).turn_seconds)
+        settings = settings or TableSettings()
+        table = _TABLES[key] = PracticeTable(settings.turn_seconds, settings.opponent)
     with table.lock:
         return {"key": key, "table": table.snapshot()}
 
@@ -300,3 +361,8 @@ def next_hand(request: Revision, authorization: TableKey = None):
 @router.get("/table/review")
 def review_hand(revision: int, authorization: TableKey = None):
     return _lookup(authorization).review(revision)
+
+
+@router.get("/table/session")
+def review_session(authorization: TableKey = None):
+    return _lookup(authorization).session_review()

@@ -203,11 +203,11 @@ def hand_result(spot: Spot) -> dict[str, Any] | None:
     return {"showdown": summary["showdown"], "hero_net": summary.get("hero_net")}
 
 
-def profile_for(store: HandStore, opponent: str, observer=None):
+def profile_for(store: HandStore, opponent: str, observer=None, *, through_id: int | None = None):
     """Rebuild the opponent model; ``observer`` (a bot) also sees each history."""
     profile_key = None
     if observer is not None and getattr(observer, "cache_solves", False):
-        rows = store.hand_payloads(opponent)
+        rows = store.hand_payloads(opponent, through_id=through_id) if through_id is not None else store.hand_payloads(opponent)
         digest = sha256()
         for row in rows:
             encoded = row.encode("utf-8")
@@ -224,7 +224,7 @@ def profile_for(store: HandStore, opponent: str, observer=None):
                 return model
         hands = map(json.loads, rows)
     else:
-        hands = store.hands(opponent)
+        hands = store.hands(opponent, through_id=through_id) if through_id is not None else store.hands(opponent)
     model = OpponentModel(VILLAIN)
     for stored in hands:
         spot = spot_from_dict(stored)
@@ -243,7 +243,8 @@ def profile_for(store: HandStore, opponent: str, observer=None):
     return model
 
 
-def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store: HandStore | None = None, seed: int = 0) -> dict[str, Any]:
+def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store: HandStore | None = None,
+           seed: int = 0, *, through_id: int | None = None, include_preflop_ev: bool = False) -> dict[str, Any]:
     from solver.bot import AdaptiveSolverBot, SolverBot
 
     shadow = getenv("POKER_COACH_RIVER_SHADOW") == "1"
@@ -260,13 +261,14 @@ def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store:
     else:
         advisor = AdaptiveSolverBot(seed=seed) if use_exploit else SolverBot(seed=seed)
     if opponent:
-        model = profile_for(store or HandStore(), opponent, advisor if advisor.exploit else None)
+        model = profile_for(store or HandStore(), opponent, advisor if advisor.exploit else None, through_id=through_id)
         profile_snapshot = model.snapshot() if model.hands_observed else None
     if advisor.exploit and profile_snapshot is None:
         advisor = (CoachAdvisor(seed=seed, exploit=False, cache_solves=True)
                    if cache_solves else SolverBot(seed=seed))
     advisor.persistent_ranges = getenv("POKER_COACH_PERSISTENT_RANGES") == "1"
     advisor.explain_ev = True
+    advisor.explain_preflop_ev = include_preflop_ev
     if shadow:
         advisor.capture_river_shadow = True
     status, payload, engine = _replay(spot, advisor, profile_snapshot)

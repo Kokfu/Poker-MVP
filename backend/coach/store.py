@@ -33,6 +33,10 @@ class HandStore:
                 "created_at TEXT NOT NULL, spot TEXT NOT NULL)"
             )
             connection.execute("CREATE INDEX IF NOT EXISTS hands_by_opponent ON hands (opponent)")
+            connection.execute(
+                "CREATE TABLE IF NOT EXISTS practice_hands (source TEXT PRIMARY KEY, "
+                "hand_id INTEGER NOT NULL REFERENCES hands(id) ON DELETE CASCADE)"
+            )
             # Proposal B (bet-size-conditioned reads): a derived cache of the opponent's responses to our
             # bets by size bucket.  Created if missing; the hands table is untouched, and the cache can
             # always be rebuilt by replaying the stored hands.
@@ -43,24 +47,46 @@ class HandStore:
             )
 
     def _connect(self) -> sqlite3.Connection:
-        return sqlite3.connect(self.path)
+        connection = sqlite3.connect(self.path)
+        connection.execute("PRAGMA foreign_keys = ON")
+        return connection
 
-    def add(self, opponent: str, spot: dict[str, Any]) -> int:
+    def add(self, opponent: str, spot: dict[str, Any], *, practice_source: str | None = None) -> int:
         with self._connect() as connection:
+            if practice_source is not None:
+                connection.execute("BEGIN IMMEDIATE")
+                previous = connection.execute(
+                    "SELECT hand_id FROM practice_hands WHERE source = ?", (practice_source,)
+                ).fetchone()
+                if previous:
+                    return previous[0]
             cursor = connection.execute(
                 "INSERT INTO hands (opponent, created_at, spot) VALUES (?, ?, ?)",
                 (normalize_name(opponent), datetime.now(timezone.utc).isoformat(), json.dumps(spot, sort_keys=True)),
             )
+            if practice_source is not None:
+                connection.execute(
+                    "INSERT INTO practice_hands (source, hand_id) VALUES (?, ?)", (practice_source, cursor.lastrowid)
+                )
             return int(cursor.lastrowid)
 
-    def hands(self, opponent: str) -> list[dict[str, Any]]:
-        return [json.loads(row) for row in self.hand_payloads(opponent)]
+    def hands(self, opponent: str, *, through_id: int | None = None) -> list[dict[str, Any]]:
+        return [json.loads(row) for row in self.hand_payloads(opponent, through_id=through_id)]
 
-    def hand_payloads(self, opponent: str) -> list[str]:
+    def hand_payloads(self, opponent: str, *, through_id: int | None = None) -> list[str]:
         """Read the opponent's current, ordered history in one SQLite query."""
+        query = "SELECT spot FROM hands WHERE opponent = ?"
+        parameters = (normalize_name(opponent),)
+        if through_id is not None:
+            query += " AND id <= ?"
+            parameters += (through_id,)
         with self._connect() as connection:
-            rows = connection.execute("SELECT spot FROM hands WHERE opponent = ? ORDER BY id", (normalize_name(opponent),)).fetchall()
+            rows = connection.execute(query + " ORDER BY id", parameters).fetchall()
         return [row[0] for row in rows]
+
+    def latest_hand_id(self) -> int:
+        with self._connect() as connection:
+            return connection.execute("SELECT COALESCE(MAX(id), 0) FROM hands").fetchone()[0]
 
     def hands_with_meta(self, opponent: str) -> list[dict[str, Any]]:
         """Logged hands for one opponent, newest first, with id and created_at."""

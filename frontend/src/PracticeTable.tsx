@@ -24,10 +24,13 @@ type Table = {
   turn_seconds: number;
   remaining_ms: number | null;
   last_action_timed_out?: boolean;
+  opponent: string;
+  completed_hands: number;
 };
 
 type Play = { action: Action; amount: number | null };
-type Review = { street: string; action: Play; advice: Play; timed_out: boolean; explain: { reason: string } | null };
+type Review = { street: string; action: Play; advice: Play; timed_out: boolean; explain: { reason: string } | null; estimated_cost: number | null };
+type SessionReview = { completed_hands: number; hands: { hand: number; decisions: Review[]; estimated_cost: number | null }[] };
 
 const LABEL: Record<Action, string> = {
   fold: "Fold", check: "Check", call: "Call", bet: "Bet", raise: "Raise to", all_in: "All-in",
@@ -44,10 +47,14 @@ export default function PracticeTable() {
   const [amount, setAmount] = useState("");
   const [error, setError] = useState("");
   const [turnSeconds, setTurnSeconds] = useState("20");
+  const [opponent, setOpponent] = useState("Solver bot");
   const [deadline, setDeadline] = useState<number>();
   const [remaining, setRemaining] = useState(0);
   const [review, setReview] = useState<Review[]>();
   const [reviewError, setReviewError] = useState("");
+  const [showSession, setShowSession] = useState(false);
+  const [session, setSession] = useState<SessionReview>();
+  const [sessionError, setSessionError] = useState("");
   const pendingRef = useRef(false);
 
   const update = useCallback((state: Table) => {
@@ -121,6 +128,25 @@ export default function PracticeTable() {
     return () => abort.abort();
   }, [completedRevision, key]);
 
+  const completedHands = table?.completed_hands;
+  useEffect(() => {
+    setSession(undefined);
+    setSessionError("");
+    if (!showSession || !key) return;
+    const abort = new AbortController();
+    fetch("/api/practice/table/session", {
+      headers: { Authorization: `Bearer ${key}` }, signal: abort.signal,
+    }).then(response => {
+      if (!response.ok) throw new Error("Session review could not be loaded.");
+      return response.json();
+    }).then(summary => {
+      if (!abort.signal.aborted) setSession(summary);
+    }).catch(() => {
+      if (!abort.signal.aborted) setSessionError("Session review could not be loaded.");
+    });
+    return () => abort.abort();
+  }, [completedHands, key, showSession]);
+
   const validTimer = Number.isInteger(+turnSeconds) && +turnSeconds >= 1 && +turnSeconds <= 120;
 
   return (
@@ -132,15 +158,16 @@ export default function PracticeTable() {
         <div className="coach-action-row">
           <label>Seconds per action <input type="number" inputMode="numeric" min="1" max="120" value={turnSeconds}
             onChange={event => setTurnSeconds(event.target.value)} /></label>
-          <button className="primary" disabled={pending || !validTimer}
-            onClick={() => request("", { turn_seconds: +turnSeconds })}>Start practice table</button>
+          <label>Opponent name <input maxLength={60} value={opponent} onChange={event => setOpponent(event.target.value)} /></label>
+          <button className="primary" disabled={pending || !validTimer || !opponent.trim()}
+            onClick={() => request("", { turn_seconds: +turnSeconds, opponent })}>Start practice table</button>
         </div>
       ) : (
         <>
           <p>Hand {table.hand} · {table.position === "BTN" ? "Button / SB" : "Big blind"} · {table.status === "complete" ? "Complete" : table.street}</p>
           <div className="coach-action-row">
             <p><strong>You</strong> · {table.your_stack} chips</p>
-            <p><strong>Solver bot</strong> · {table.bot_stack} chips</p>
+            <p><strong>{table.opponent}</strong> <span>BOT</span> · {table.bot_stack} chips</p>
           </div>
           <div className="coach-action-row" aria-label="Your cards">{table.your_cards.map(card => <PlayingCard key={card} card={card} />)}</div>
           <p>Pot {table.pot}{table.to_call > 0 && ` · ${table.to_call} to call`}</p>
@@ -148,7 +175,7 @@ export default function PracticeTable() {
           {table.board.length > 0 && <div className="coach-action-row" aria-label="Board">{table.board.map(card => <PlayingCard key={card} card={card} />)}</div>}
           {table.shown_bot_cards && <div className="coach-action-row" aria-label="Solver bot showdown cards">{table.shown_bot_cards.map(card => <PlayingCard key={card} card={card} />)}</div>}
           {table.actions.length > 0 && <ul aria-label="Recent actions">{table.actions.slice(-6).map((action, index) => (
-            <li key={index}>{action.player === "a" ? "You" : "Solver bot"} · {action.type === "raise" ? "Raise" : LABEL[action.type]}{action.amount ? ` · ${action.amount} chips added` : ""}</li>
+            <li key={index}>{action.player === "a" ? "You" : table.opponent} · {action.type === "raise" ? "Raise" : LABEL[action.type]}{action.amount ? ` · ${action.amount} chips added` : ""}</li>
           ))}</ul>}
           {table.status === "complete" ? (
             <>
@@ -180,6 +207,23 @@ export default function PracticeTable() {
               </div>
             </>
           )}
+          {table.completed_hands > 0 && <button className="secondary" type="button" aria-expanded={showSession}
+            onClick={() => setShowSession(value => !value)}>{showSession ? "Hide session review" : "Review last session"}</button>}
+          {showSession && <section aria-label="Session review">
+            <h3>Session review</h3>
+            {sessionError ? <p role="alert">{sessionError}</p> : !session ? <p role="status">Loading session review…</p> :
+              session.hands.length === 0 ? <p>Your plays matched the Coach advice in the completed hands.</p> :
+              <>
+                <p className="muted">Estimated cost compares the two plays in the Coach model. Custom sizes may have no estimate.</p>
+                <ul>{session.hands.map(hand => <li key={hand.hand}>
+                  <strong>Hand {hand.hand}</strong> · {hand.estimated_cost === null ? "Total cost unavailable" : `Estimated cost ${hand.estimated_cost} chips`}
+                  <ul>{hand.decisions.map((decision, index) => <li key={index}>
+                    {decision.street} · {playLabel(decision.action)} instead of {playLabel(decision.advice)} ·
+                    {decision.estimated_cost === null ? " cost unavailable" : ` ${decision.estimated_cost} chips`}
+                  </li>)}</ul>
+                </li>)}</ul>
+              </>}
+          </section>}
         </>
       )}
     </section>

@@ -75,9 +75,12 @@ def build(advice: dict[str, Any], explanation: dict[str, Any] | None) -> dict[st
         "exploiting": bool(exploit.get("active")), "reason": reason(explanation, options, chosen),
     }
     if evs is not None:
-        result["ev_note"] = ("EV is the chips you expect to win from here on, counting only the chips you still have to put in "
-                             "(folding is 0). Flop and turn values treat the end of the street as equity over the remaining cards, "
-                             "so they are approximate.")
+        if source.startswith("preflop_"):
+            result["ev_note"] = "Preflop EV uses the chart's stack depth and bet sizes. It values reaching the flop by all-in equity."
+        else:
+            result["ev_note"] = ("EV is the chips you expect to win from here on, counting only the chips you still have to put in "
+                                 "(folding is 0). Flop and turn values treat the end of the street as equity over the remaining cards, "
+                                 "so they are approximate.")
     return result
 
 

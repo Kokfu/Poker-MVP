@@ -50,6 +50,7 @@ from .tree import POSTFLOP_MENU, SizeMenu, StreetState, StreetTree
 
 STREETS = ("preflop", "flop", "turn", "river")
 _EQUITY_CACHE: OrderedDict[tuple, tuple[np.ndarray, np.ndarray, np.ndarray]] = OrderedDict()
+_EQUITY_CACHE_LOCK = Lock()
 # Session play touches many distinct boards; 6 entries thrashed within a few
 # hands and forced a full equity_matrix recompute on every new board even
 # when the same board recurs later in the same session. Worst case (a
@@ -60,6 +61,7 @@ _PREFLOP_CACHE: OrderedDict[tuple, dict[int, np.ndarray]] = OrderedDict()
 _PREFLOP_CACHE_LOCK = Lock()
 _PREFLOP_CACHE_SIZE = 128
 PREFLOP_LOCKED_ITERATIONS = 250
+_CLASS_REPRESENTATIVES = np.unique(COMBO_CLASS, return_index=True)[1]
 
 
 class ReplayError(ValueError):
@@ -197,15 +199,20 @@ def _size_bracket(actions, kind: str, target: int | None) -> tuple[int, int, flo
 
 def _full_equity(board: tuple[str, ...], flop_runouts: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     key = (board, flop_runouts)
-    if key in _EQUITY_CACHE:
-        _EQUITY_CACHE.move_to_end(key)
-        return _EQUITY_CACHE[key]
+    with _EQUITY_CACHE_LOCK:
+        cached = _EQUITY_CACHE.get(key)
+        if cached is not None:
+            _EQUITY_CACHE.move_to_end(key)
+            return cached
     live = np.where(~card_mask(board))[0]
     d, compat = equity_matrix(list(board), live, live, samples=flop_runouts if len(board) == 3 else None)
-    _EQUITY_CACHE[key] = (live, d.astype(np.float32), compat)
-    if len(_EQUITY_CACHE) > _EQUITY_CACHE_SIZE:
-        _EQUITY_CACHE.popitem(last=False)
-    return _EQUITY_CACHE[key]
+    cached = (live, d.astype(np.float32), compat)
+    with _EQUITY_CACHE_LOCK:
+        _EQUITY_CACHE[key] = cached
+        _EQUITY_CACHE.move_to_end(key)
+        if len(_EQUITY_CACHE) > _EQUITY_CACHE_SIZE:
+            _EQUITY_CACHE.popitem(last=False)
+    return cached
 
 
 @dataclass
@@ -241,6 +248,7 @@ class SolverBot(PokerBot):
     range_selection = None  # optional bounded research projection override
     persistent_ranges = False  # enabled independently by the local Coach and Match services
     explain_ev = False  # add per-action EV to postflop explanations (read-only; the Coach turns it on)
+    explain_preflop_ev = False  # approximate class-chart EV for settled practice review
     capture_river_shadow = False  # Coach-only handoff after the incumbent action is selected
     river_shadow_context = None
     iterations = {"flop": 60, "turn": 70, "river": 80}
@@ -345,9 +353,18 @@ class SolverBot(PokerBot):
             self._info["unlocked_action_differs"] = bool(self._pick(ds, self.charts.strategy(depth, node)[:, hero_combo]) != choice)
             action = self._concrete_preflop(ds, chart_node, choice, scale)
             concrete = [self._concrete_preflop(ds, chart_node, i, scale) for i in range(len(chart_node.actions))]
+            action_ev = None
+            if self.explain_preflop_ev:
+                class_d, class_w = load_class_equity()
+                counts = CLASS_COMBO_COUNT.astype(float)
+                evaluator = RangeSolver(chart_tree, (counts, counts), class_d, class_w)
+                values = evaluator.action_values(chart_node, int(COMBO_CLASS[hero_combo]),
+                                                 policy=lambda n: policy(n.index)[:, _CLASS_REPRESENTATIVES])
+                action_ev = [round(float(value) / scale, 1) for value in values]
             return action, {"source": "preflop_chart" if not preflop_locks else "preflop_exploit", "depth_bb": depth, "labels": chart_node.labels,
                             "concrete_labels": [item.type if item.amount is None else f"{item.type}_{item.amount}" for item in concrete],
                             "probabilities": [round(float(p), 4) for p in probabilities], "chosen": chart_node.labels[choice],
+                            **({"action_ev": action_ev} if action_ev is not None else {}),
                             "exploit": {**exploit_info, "locked_nodes": len(preflop_locks)},
                             "instrumentation": self._instrumentation("preflop", preflop_candidates, len(preflop_locks)),
                             **self._range_report((), hero_combo, ranges[opponent] if beliefs is None else beliefs.opponent),
