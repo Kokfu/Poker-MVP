@@ -3,7 +3,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, StrictInt, field_validator, model_validator
 from coach.multiway import MAX_PUBLIC_ACTIONS, PublicAction, advise_multiway, ranges_enabled
-from coach.warmup import coach_lifespan
+from drills import app_lifespan, router as drills_router
 from poker_analyzer import RANKS, SUITS, analyze
 from practice_table import router as practice_router
 from simulation.bots import BOT_TYPES
@@ -27,8 +27,9 @@ from simulation.match_service import (
 BotName = Literal[tuple(BOT_TYPES)]
 
 app = FastAPI(title="Poker Analyzer MVP", openapi_url="/api/openapi.json", docs_url=None, redoc_url=None,
-              lifespan=coach_lifespan)
+              lifespan=app_lifespan)
 app.include_router(practice_router)
+app.include_router(drills_router)
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"], allow_methods=["GET", "POST", "DELETE"], allow_headers=["Content-Type"])
 
 class AnalyzeRequest(BaseModel):

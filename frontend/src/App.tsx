@@ -5,13 +5,14 @@ import { DeckVisualizer } from "./components/DeckVisualizer";
 import { InputForm } from "./components/InputForm";
 import { Simulator } from "./components/Simulator";
 import Coach from "./Coach";
+import Drills from "./Drills";
 import PracticeTable from "./PracticeTable";
 import Match from "./Match";
 import Replay from "./Replay";
 import type { Analysis } from "./types";
 
-type Tab = "analyzer" | "coach" | "practice" | "simulator" | "match" | "replay";
-const TABS: [Tab, string][] = [["coach", "Coach"], ["practice", "Practice table"], ["analyzer", "Equity calculator"], ["simulator", "Bot simulator"], ["match", "Bot match"], ["replay", "Replay"]];
+type Tab = "analyzer" | "coach" | "drills" | "practice" | "simulator" | "match" | "replay";
+const TABS: [Tab, string][] = [["coach", "Coach"], ["drills", "Drills"], ["practice", "Practice table"], ["analyzer", "Equity calculator"], ["simulator", "Bot simulator"], ["match", "Bot match"], ["replay", "Replay"]];
 
 export default function App() {
   const [tab, setTab] = useState<Tab>(() => window.location.hash === "#practice" ? "practice" : "coach");
@@ -93,7 +94,7 @@ export default function App() {
         ))}
       </nav>
 
-      {tab === "coach" ? <Coach /> : tab === "practice" ? <PracticeTable /> : tab === "replay" ? <Replay /> : tab === "match" ? (
+      {tab === "coach" ? <Coach /> : tab === "drills" ? <Drills /> : tab === "practice" ? <PracticeTable /> : tab === "replay" ? <Replay /> : tab === "match" ? (
         <Match />
       ) : tab === "simulator" ? (
         <Simulator />
