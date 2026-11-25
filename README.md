@@ -4,13 +4,13 @@ Poker Analyzer MVP is a local, educational, offline-first Texas Hold'em analyzer
 
 ## Status (2026-11-25)
 
-Phase 5 is COMPLETE under the owner's revised criterion (see ROADMAP; the original pool-score criterion is still unmet). Opponent-model proposals A (`solver_adaptive_gated`) and B (`solver_adaptive_sized`, bet-size-conditioned reads) were both built and both failed their pre-registered tests; neither is the default. Since then the Coach got a click-to-pick card UI, 1-8 opponents (multiway is equity and pot odds only), a Saved data view, and a one-click launcher for playing with friends on the same Wi-Fi; see RELEASE_NOTES.md. The backend suite has 1,098 tests. The project status and how to resume the autopilot are in DEVELOPMENT.md ("Project status and how to resume autopilot").
+Phase 5 is COMPLETE under the owner's revised criterion. The original pool-score criterion remains open. Opponent-model proposals A (`solver_adaptive_gated`) and B (`solver_adaptive_sized`, bet-size-conditioned reads) failed their pre-registered tests and remain opt-in. See [ROADMAP.md](ROADMAP.md) and [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## Phase 5 at a glance
 
 - **`solver` bot** — preflop charts solved offline plus a real-time range solve of every postflop street (discounted CFR over both players' public ranges). Select it anywhere a bot is chosen.
 - **`solver_adaptive` bot** — the same solver, adjusting to confident reads of its opponent's public tendencies (node locking), learned hand by hand.
-- **Coach tab** — enter your own heads-up hand as it happens by clicking cards in a four-colour 52-card deck; quick 1/3, 1/2, 3/4, pot, and all-in buttons fill a legal bet/raise size. When it is your turn the solver recommends a play with its full action mix, your equity against the villain's estimated range, and that range's make-up. Log finished hands under an opponent's name to build their profile — the Coach then adjusts to it — and browse, reload, or delete an opponent's hand history from the profile panel. Each recommendation comes with a one-line reason, the per-action frequency and (postflop) EV, and each opponent's type label with its confidence and sample size; the **Review** view shows your own stats, results, and possible leaks. Choose **Opponents 2-8** for a multiway pot: the Coach then gives equity-and-pot-odds advice against that many random hands (no solver, no opponent tracking). The **Saved data** view shows where logged hands are stored (`backend/data/coach.sqlite`, or `COACH_DB_PATH`) and deletes one opponent or everything. Actions can also be entered from the keyboard (F fold, C check/call, B bet/raise, A all-in).
+- **Coach tab** — enter heads-up hands by clicking cards in a four-colour deck or using the keyboard. The solver recommends a play with action frequencies, postflop EV, and an estimated opponent range. Logging finished hands under an opponent's name builds their profile. **Review** shows your results and possible leaks. **Saved data** shows the database path and controls for deleting logged hands. With **Opponents 2–8**, the default advice compares random-hand equity with pot odds. The optional action model is described below.
 - **Duplicate-deal evaluation** — every deal is replayed with seats swapped to cancel card luck; learning sessions measure opponent adaptation; a Slumbot bridge benchmarks against a strong outside bot.
 
 ### Fast entry in the Coach
@@ -89,6 +89,52 @@ Double-click **`Start Poker Coach.cmd`** in this folder.
 - Everyone shares one saved-hands file, and anyone who can open the page can delete hands, so share the address only on a network you trust.
 - Different ports: set `POKER_API_PORT` / `POKER_WEB_PORT` before starting. Logs are in `.run/`.
 
+## Timed practice table
+
+From the repository root in PowerShell, the following starts Coach with a disposable saved-hands database:
+
+```powershell
+$env:COACH_DB_PATH = Join-Path $env:TEMP ('poker-practice-' + [guid]::NewGuid() + '.sqlite')
+& '.\Start Poker Coach.cmd'
+```
+
+1. Open **Practice table**, enter a name for the opponent labelled **BOT**, and click **Start practice table**.
+2. The clock starts at 20 seconds on each turn. Set **Seconds per action** before starting to choose a different limit, from 1 to 120 seconds. At expiry, the table checks if possible and otherwise folds. Sized actions use the total committed on the current street.
+3. After each hand, Coach shows what it would have played and saves the hand under the opponent's name. **Review last session** lists differences and the estimated chip cost where the solver provides comparable EVs. Postflop custom sizes can show cost unavailable.
+4. Use **New table** to open a second table. Refresh in the same browser tab to reconnect to the selected seat while the server is running. Each table's clock continues while the other table is selected.
+
+To test on a second device, follow the [LAN checklist](docs/practice-table-lan-checklist.md).
+
+To enable optional **Opponent actions** in multiway Coach, set the flag before starting:
+
+```powershell
+$env:POKER_COACH_MULTIWAY_RANGES = '1'
+& '.\Start Poker Coach.cmd'
+```
+
+Choose two or more opponents, enter cards and the pot, then record each active opponent's visible actions in street order. The model uses those actions to reweight each opponent's range.
+
+## Offline agent CLI
+
+From the repository root in PowerShell, run a paired session diagnostic. Each hand is replayed with the agent in the other seat. To continue an interrupted run, repeat the same command and include `--resume`.
+
+```powershell
+Set-Location backend
+$env:OPENBLAS_NUM_THREADS = '1'
+.\.venv\Scripts\python.exe -m simulation.agent_cli --run practice-demo --opponent tight --sessions 3 --session-hands 4 --seed-offset 27000
+.\.venv\Scripts\python.exe -m simulation.agent_cli --run practice-demo --opponent tight --sessions 3 --session-hands 4 --seed-offset 27000 --resume
+```
+
+The ledger and summary are under `benchmark-results/agent/`. The summary includes bb/100, a bootstrap interval, per-session results, illegal actions, engine and solver fallbacks, and deal mismatches. For a local learning experiment, use the same `--profile-dir` and opponent across runs. Give each run a unique name and a fresh, non-overlapping seed offset.
+
+```powershell
+# From backend
+.\.venv\Scripts\python.exe -m simulation.agent_cli --run learning-1 --opponent tight --sessions 3 --session-hands 4 --seed-offset 61000 --profile-dir ..\benchmark-results\agent\profiles
+.\.venv\Scripts\python.exe -m simulation.agent_cli --run learning-2 --opponent tight --sessions 3 --session-hands 4 --seed-offset 62000 --profile-dir ..\benchmark-results\agent\profiles
+```
+
+Learning reports include early and late bb/100 and the numbers of hands in each profile. Sessions share learning state, so their results are descriptive. [Agent architecture and replay contract](AUTONOMOUS_AGENT.md)
+
 ## Requirements
 
 - Python 3.11; the accepted Windows environment uses Python 3.11.9.
@@ -125,7 +171,7 @@ npm.cmd install
 npm.cmd run dev
 ```
 
-Open `http://127.0.0.1:5173`. The backend listens on `http://127.0.0.1:8000`. When running the frontend outside Docker, point Vite at the local backend with `$env:API_PROXY = "http://127.0.0.1:8000"` before `npm.cmd run dev`. Tabs: Coach (default), Equity calculator, Bot simulator, Bot match, Replay.
+Open `http://127.0.0.1:5173`. The backend listens on `http://127.0.0.1:8000`. When running the frontend outside Docker, point Vite at the local backend with `$env:API_PROXY = "http://127.0.0.1:8000"` before `npm.cmd run dev`. The tabs are Coach (default), Practice table, Equity calculator, Bot simulator, Bot match, and Replay.
 
 ## Docker
 
