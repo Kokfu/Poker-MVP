@@ -1,0 +1,2 @@
+1,200,000 direct evaluator comparisons across 3,000 seeded boards, 2.02 s
+66 paired square and rectangular matrices and masks matched bit for bit in 5.40 s.

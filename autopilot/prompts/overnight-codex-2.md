@@ -111,6 +111,10 @@ Work in order. Start long jobs as early as possible and work on other items whil
 35. **Reproducible later-street profiling.** Preserve the alternating isolated-versus-sequential timing driver using the shared representative fixture and check it through the documented command.
 36. **Broader exact rank coverage.** Cross-check board ranks against direct eval7 calls on a seeded distribution, and compare random square and rectangular matrices bit for bit with the previous board-ranking implementation.
 
+37. **Parallel loopback advice.** Compare the 48 representative responses with the sequential reference while two clients submit different requests concurrently. Verify process cleanup and consistent exact advice.
+38. **Benchmark error teardown.** Interrupt the isolated benchmark with an invalid request and verify that it closes its own Uvicorn process and releases its scratch database.
+39. **Resumed change audit.** Review the exact cache, benchmark, and diagnostic status changes made during the resumed run. Fix reproducible errors and verify the final baseline for the 06:30 regression.
+
 ## At 06:30
 - Collect the background job results.
 - Run the full backend suite, `npx.cmd tsc -b`, `node --test test/coach-strategy.test.mjs` and `npm.cmd run build`.
