@@ -64,12 +64,15 @@ def test_all_in_reveals_bot_cards_at_showdown_only(monkeypatch):
     created = client.post("/api/practice/table").json()
     headers = {"Authorization": f"Bearer {created['key']}"}
     seen = []
+    bot = _TABLES[created["key"]].bot
+    completed_memory = object()
 
     def call_all_in(observation):
         seen.append(observation)
+        bot.memory = completed_memory
         return Action("all_in")
 
-    monkeypatch.setattr(_TABLES[created["key"]].bot, "decide_decision", call_all_in)
+    monkeypatch.setattr(bot, "decide_decision", call_all_in)
     response = client.post("/api/practice/table/action", headers=headers,
                            json={"revision": created["table"]["revision"], "action": "all_in"})
     assert response.status_code == 200
@@ -79,6 +82,8 @@ def test_all_in_reveals_bot_cards_at_showdown_only(monkeypatch):
     assert len(set(settled["your_cards"] + settled["shown_bot_cards"] + settled["board"])) == 9
     assert len(seen) == 1
     assert tuple(settled["shown_bot_cards"]) == seen[0].decision_state.hole_cards
+    assert bot.memory is None and bot.showdown_model.hands == 1
+    assert settled["learned_hands"] == 1
 
 
 def test_timer_folds_without_a_check_and_hides_review_until_settlement(monkeypatch):

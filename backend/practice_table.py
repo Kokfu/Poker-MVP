@@ -247,6 +247,9 @@ class PracticeTable:
                 raise HTTPException(503, "Coach could not save this hand. Try again.") from error
             self.profile.update(history)
             self.bot.observe_completed_hand(history, "b")
+            # Completed-hand learning lives in the public profiles. The next
+            # hand starts fresh and has no use for these large street solves.
+            self.bot.memory = None
             self.completed[self.revision + 1] = ReviewHand(self.hand, self.through_id, tuple(decisions))
         self.spot = spot
         self.trace = trace
