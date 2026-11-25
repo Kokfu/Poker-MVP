@@ -13,29 +13,27 @@ import random
 import eval7
 import numpy as np
 
-from .combos import CARD_INDEX, CARDS, COMBO_CARDS, compatible
+from .combos import CARD_INDEX, CARDS, COMBOS, compatible
 
-_EVAL_CARDS = [eval7.Card(card) for card in CARDS]
+_EVAL_CARDS = {card: eval7.Card(card) for card in CARDS}
+_EVAL_COMBOS = tuple((_EVAL_CARDS[a], _EVAL_CARDS[b]) for a, b in COMBOS)
+_CARD_BITS = {card: 1 << index for card, index in CARD_INDEX.items()}
+_COMBO_MASKS = np.array([_CARD_BITS[a] | _CARD_BITS[b] for a, b in COMBOS], dtype=np.uint64)
 
 
 def rank_vector(board: list[str], combos: np.ndarray) -> np.ndarray:
     """eval7 strength (higher is better) for ``combos``; -1 where a combo hits the board."""
-    board_indices = [CARD_INDEX[card] for card in board]
-    board_cards = [_EVAL_CARDS[i] for i in board_indices]
-    evaluate = eval7.evaluate
+    board_mask = np.uint64(sum(_CARD_BITS[card] for card in set(board)))
+    live = np.flatnonzero((_COMBO_MASKS[combos] & board_mask) == 0)
     ranks = np.full(len(combos), -1, dtype=np.int64)
-    pairs = COMBO_CARDS[combos]
-    # eval7 has no batch entry point, so the call itself stays a Python loop;
-    # this only removes the per-combo list-concat and fancy-index overhead
-    # around it (a fixed two-slot tail reused every call, and one vectorized
-    # gather of every combo's card pair up front instead of one per combo).
-    live = np.flatnonzero(~np.isin(pairs, board_indices).any(axis=1)) if board_indices else np.arange(len(combos))
-    hand = board_cards + [None, None]
-    for position in live:
-        first, second = pairs[position]
-        hand[-2] = _EVAL_CARDS[first]
-        hand[-1] = _EVAL_CARDS[second]
-        ranks[position] = evaluate(hand)
+    hand = [_EVAL_CARDS[card] for card in board] + [None, None]
+    evaluate = eval7.evaluate
+    # Convert the live combo ids once and reuse the existing card pairs.
+    strengths = []
+    for combo in combos[live].tolist():
+        hand[-2], hand[-1] = _EVAL_COMBOS[combo]
+        strengths.append(evaluate(hand))
+    ranks[live] = strengths
     return ranks
 
 

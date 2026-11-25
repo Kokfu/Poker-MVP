@@ -2,6 +2,7 @@
 import random
 from itertools import combinations
 
+import eval7
 import numpy as np
 import pytest
 
@@ -10,7 +11,7 @@ from solver.cfr import RangeSolver
 from solver.combos import (
     CLASS_COMBO_COUNT, COMBO_CLASS, COMBO_COUNT, COMBOS, HAND_CLASSES, card_mask, combo_index, compatible, hand_class,
 )
-from solver.equity import equity_matrix, runout_boards
+from solver.equity import equity_matrix, rank_vector, runout_boards
 from solver.tree import POSTFLOP_MENU, PREFLOP_MENU, SizeMenu, StreetState, StreetTree, legal_abstract_actions
 
 
@@ -36,6 +37,18 @@ def test_compatibility_and_card_masks():
     mask = card_mask(["As", "Kd"])
     assert mask.sum() == 101  # 51 + 51 - 1 shared combo
     assert all(mask[i] == bool({"As", "Kd"} & set(COMBOS[i])) for i in range(COMBO_COUNT))
+
+
+def test_board_ranks_preserve_combo_order_and_mask_blocked_cards():
+    board = ["As", "Kd", "7c", "2h", "9s"]
+    cards = [("Qc", "Qd"), ("As", "Kh"), ("2c", "2d"), ("Qc", "Qd"), ("7c", "9s")]
+    combos = np.array([combo_index(pair) for pair in cards])
+    expected = [
+        -1 if set(board).intersection(pair)
+        else eval7.evaluate([eval7.Card(card) for card in [*board, *pair]])
+        for pair in cards
+    ]
+    np.testing.assert_array_equal(rank_vector(board, combos), expected)
 
 
 def test_river_matrix_matches_reference_evaluator():
