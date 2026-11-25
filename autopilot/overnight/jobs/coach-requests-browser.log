@@ -1,0 +1,43 @@
+INFO:     Started server process [22688]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:18026 (Press CTRL+C to quit)
+INFO:     127.0.0.1:59866 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59866 - "GET /assets/index-ovTmFOnq.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57778 - "GET /assets/index-DEV9_ZuZ.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57778 - "GET /api/coach/opponents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60130 - "GET /api/coach/opponents/Before%20edit HTTP/1.1" 200 OK
+holding completed response /api/coach/advise 1
+INFO:     127.0.0.1:51138 - "GET /api/coach/opponents/After%20edit HTTP/1.1" 200 OK
+releasing /api/coach/advise 2
+INFO:     127.0.0.1:60664 - "POST /api/coach/advise HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55538 - "GET /api/coach/opponents/After%20edit/hands HTTP/1.1" 200 OK
+releasing superseded history
+releasing /api/coach/advise 1
+INFO:     127.0.0.1:49926 - "GET /api/coach/opponents/Before%20edit/hands HTTP/1.1" 200 OK
+releasing /api/coach/advise 3
+INFO:     127.0.0.1:55120 - "POST /api/coach/advise HTTP/1.1" 200 OK
+releasing /api/coach/advise 4
+INFO:     127.0.0.1:55120 - "POST /api/coach/advise HTTP/1.1" 200 OK
+releasing /api/coach/advise 5
+INFO:     127.0.0.1:58456 - "POST /api/coach/advise HTTP/1.1" 200 OK
+releasing /api/coach/advise 6
+INFO:     127.0.0.1:58456 - "POST /api/coach/advise HTTP/1.1" 200 OK
+releasing /api/coach/advise 7
+INFO:     127.0.0.1:61028 - "POST /api/coach/advise HTTP/1.1" 200 OK
+releasing /api/coach/advise 8
+INFO:     127.0.0.1:61028 - "POST /api/coach/advise HTTP/1.1" 200 OK
+releasing /api/coach/advise 9
+INFO:     127.0.0.1:61028 - "POST /api/coach/advise HTTP/1.1" 200 OK
+releasing /api/coach/advise 10
+INFO:     127.0.0.1:61028 - "POST /api/coach/advise HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61028 - "GET / HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:61028 - "GET /assets/index-ovTmFOnq.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63606 - "GET /assets/index-DEV9_ZuZ.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63606 - "GET /api/coach/opponents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63606 - "GET /api/coach/multiway/settings HTTP/1.1" 200 OK
+holding completed response /api/coach/multiway 1
+releasing /api/coach/multiway 2
+INFO:     127.0.0.1:54051 - "POST /api/coach/multiway HTTP/1.1" 200 OK
+releasing /api/coach/multiway 1
+INFO:     127.0.0.1:60550 - "GET /_clear HTTP/1.1" 204 No Content
