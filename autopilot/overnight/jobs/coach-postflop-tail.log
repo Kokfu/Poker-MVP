@@ -1,0 +1,264 @@
+preflop-0: 0.0032 s, preflop_chart
+flop-0: 0.5691 s, postflop_solve
+         28531 function calls (28456 primitive calls) in 0.569 seconds
+
+   Ordered by: cumulative time
+   List reduced from 328 to 35 due to restriction <35>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    0.569    0.569 main.py:259(coach_advise)
+        1    0.000    0.000    0.569    0.569 main.py:252(_coach_call)
+        1    0.000    0.000    0.569    0.569 service.py:246(advise)
+        1    0.000    0.000    0.569    0.569 service.py:160(_replay)
+        1    0.000    0.000    0.568    0.568 engine.py:764(play)
+        2    0.000    0.000    0.568    0.284 engine.py:629(_round)
+        2    0.000    0.000    0.567    0.284 service.py:151(decide_decision)
+        1    0.000    0.000    0.567    0.567 bot.py:289(decide_decision)
+        1    0.000    0.000    0.567    0.567 bot.py:307(_decide)
+        1    0.000    0.000    0.553    0.553 bot.py:452(_street_solve)
+        1    0.000    0.000    0.553    0.553 advisor.py:22(_solve)
+        1    0.006    0.006    0.552    0.552 bot.py:460(_solve)
+        1    0.000    0.000    0.331    0.331 cfr.py:272(solve)
+       60    0.053    0.001    0.330    0.006 cfr.py:196(iterate)
+        2    0.001    0.000    0.200    0.100 bot.py:200(_full_equity)
+        1    0.106    0.106    0.196    0.196 equity.py:67(equity_matrix)
+      121    0.181    0.001    0.189    0.002 cfr.py:164(_terminal_values)
+       30    0.001    0.000    0.074    0.002 equity.py:42(_ordinal_ranks)
+       31    0.064    0.002    0.071    0.002 equity.py:21(rank_vector)
+      122    0.004    0.000    0.039    0.000 cfr.py:224(policy)
+      121    0.032    0.000    0.039    0.000 cfr.py:141(_reaches)
+     1210    0.027    0.000    0.034    0.000 cfr.py:129(current)
+     3800    0.004    0.000    0.021    0.000 {method 'sum' of 'numpy.ndarray' objects}
+     3800    0.002    0.000    0.017    0.000 _methods.py:47(_sum)
+     4005    0.016    0.000    0.016    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+        1    0.014    0.014    0.015    0.015 combos.py:30(compatible)
+        1    0.000    0.000    0.014    0.014 bot.py:427(_postflop_advice)
+        1    0.004    0.004    0.012    0.012 cfr.py:63(__init__)
+      478    0.011    0.000    0.011    0.000 {built-in method numpy.zeros}
+        1    0.006    0.006    0.009    0.009 cfr.py:298(action_values)
+       34    0.000    0.000    0.006    0.000 arraysetops.py:766(isin)
+       34    0.003    0.000    0.006    0.000 arraysetops.py:524(in1d)
+       31    0.000    0.000    0.005    0.000 arraysetops.py:138(unique)
+      155    0.004    0.000    0.004    0.000 {method 'astype' of 'numpy.ndarray' objects}
+        1    0.001    0.001    0.004    0.004 bot.py:538(_range_report)
+
+
+turn-0: 0.7691 s, postflop_solve
+         34046 function calls (33975 primitive calls) in 0.769 seconds
+
+   Ordered by: cumulative time
+   List reduced from 324 to 35 due to restriction <35>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    0.769    0.769 main.py:259(coach_advise)
+        1    0.000    0.000    0.769    0.769 main.py:252(_coach_call)
+        1    0.000    0.000    0.769    0.769 service.py:246(advise)
+        1    0.000    0.000    0.769    0.769 service.py:160(_replay)
+        1    0.000    0.000    0.768    0.768 engine.py:764(play)
+        3    0.000    0.000    0.768    0.256 engine.py:629(_round)
+        3    0.000    0.000    0.766    0.255 service.py:151(decide_decision)
+        1    0.000    0.000    0.766    0.766 bot.py:289(decide_decision)
+        1    0.000    0.000    0.766    0.766 bot.py:307(_decide)
+        2    0.000    0.000    0.759    0.380 bot.py:452(_street_solve)
+        2    0.000    0.000    0.759    0.380 advisor.py:22(_solve)
+        1    0.003    0.003    0.759    0.759 bot.py:460(_solve)
+        2    0.001    0.000    0.441    0.220 bot.py:200(_full_equity)
+        1    0.214    0.214    0.438    0.438 equity.py:67(equity_matrix)
+        1    0.000    0.000    0.309    0.309 cfr.py:272(solve)
+       70    0.058    0.001    0.309    0.004 cfr.py:196(iterate)
+       48    0.003    0.000    0.213    0.004 equity.py:42(_ordinal_ranks)
+       49    0.180    0.004    0.200    0.004 equity.py:21(rank_vector)
+      141    0.153    0.001    0.161    0.001 cfr.py:164(_terminal_values)
+      142    0.004    0.000    0.040    0.000 cfr.py:224(policy)
+      141    0.032    0.000    0.039    0.000 cfr.py:141(_reaches)
+     1410    0.027    0.000    0.034    0.000 cfr.py:129(current)
+     4420    0.004    0.000    0.023    0.000 {method 'sum' of 'numpy.ndarray' objects}
+     4738    0.020    0.000    0.020    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+     4420    0.002    0.000    0.019    0.000 _methods.py:47(_sum)
+       53    0.001    0.000    0.016    0.000 arraysetops.py:766(isin)
+       53    0.008    0.000    0.015    0.000 arraysetops.py:524(in1d)
+       49    0.000    0.000    0.011    0.000 arraysetops.py:138(unique)
+       49    0.004    0.000    0.010    0.000 arraysetops.py:323(_unique1d)
+      578    0.010    0.000    0.010    0.000 {built-in method numpy.zeros}
+        1    0.007    0.007    0.008    0.008 combos.py:30(compatible)
+        1    0.000    0.000    0.005    0.005 bot.py:427(_postflop_advice)
+        1    0.002    0.002    0.005    0.005 cfr.py:63(__init__)
+      193    0.004    0.000    0.004    0.000 {method 'astype' of 'numpy.ndarray' objects}
+      157    0.001    0.000    0.003    0.000 fromnumeric.py:53(_wrapfunc)
+
+
+river-0: 0.4393 s, postflop_solve
+         31995 function calls (31924 primitive calls) in 0.439 seconds
+
+   Ordered by: cumulative time
+   List reduced from 321 to 35 due to restriction <35>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    0.439    0.439 main.py:259(coach_advise)
+        1    0.000    0.000    0.439    0.439 main.py:252(_coach_call)
+        1    0.000    0.000    0.439    0.439 service.py:246(advise)
+        1    0.000    0.000    0.439    0.439 service.py:160(_replay)
+        1    0.000    0.000    0.439    0.439 engine.py:764(play)
+        4    0.000    0.000    0.438    0.110 engine.py:629(_round)
+        4    0.000    0.000    0.436    0.109 service.py:151(decide_decision)
+        1    0.000    0.000    0.436    0.436 bot.py:289(decide_decision)
+        1    0.000    0.000    0.436    0.436 bot.py:307(_decide)
+        3    0.000    0.000    0.428    0.143 bot.py:452(_street_solve)
+        3    0.000    0.000    0.428    0.143 advisor.py:22(_solve)
+        1    0.002    0.002    0.428    0.428 bot.py:460(_solve)
+        1    0.000    0.000    0.386    0.386 cfr.py:272(solve)
+       80    0.081    0.001    0.385    0.005 cfr.py:196(iterate)
+      161    0.171    0.001    0.180    0.001 cfr.py:164(_terminal_values)
+      162    0.006    0.000    0.059    0.000 cfr.py:224(policy)
+      161    0.043    0.000    0.050    0.000 cfr.py:141(_reaches)
+     1610    0.039    0.000    0.049    0.000 cfr.py:129(current)
+        2    0.001    0.000    0.034    0.017 bot.py:200(_full_equity)
+     5040    0.006    0.000    0.033    0.000 {method 'sum' of 'numpy.ndarray' objects}
+        1    0.017    0.017    0.031    0.031 equity.py:67(equity_matrix)
+     5040    0.003    0.000    0.027    0.000 _methods.py:47(_sum)
+     5081    0.024    0.000    0.024    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+        1    0.010    0.010    0.010    0.010 combos.py:30(compatible)
+      548    0.010    0.000    0.010    0.000 {built-in method numpy.zeros}
+        1    0.000    0.000    0.006    0.006 bot.py:427(_postflop_advice)
+        2    0.004    0.002    0.005    0.002 equity.py:21(rank_vector)
+        1    0.000    0.000    0.004    0.004 equity.py:42(_ordinal_ranks)
+      166    0.004    0.000    0.004    0.000 {method 'astype' of 'numpy.ndarray' objects}
+        1    0.000    0.000    0.004    0.004 cfr.py:298(action_values)
+        1    0.001    0.001    0.003    0.003 cfr.py:63(__init__)
+        1    0.001    0.001    0.002    0.002 bot.py:538(_range_report)
+        2    0.000    0.000    0.002    0.001 cfr.py:268(final_policy)
+       40    0.001    0.000    0.002    0.000 cfr.py:135(average)
+        1    0.000    0.000    0.002    0.002 tree.py:72(__init__)
+
+
+preflop-1: 0.0077 s, preflop_exploit
+flop-1: 1.5253 s, postflop_solve
+         100866 function calls (100795 primitive calls) in 1.525 seconds
+
+   Ordered by: cumulative time
+   List reduced from 423 to 35 due to restriction <35>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    1.525    1.525 main.py:259(coach_advise)
+        1    0.000    0.000    1.525    1.525 main.py:252(_coach_call)
+        1    0.000    0.000    1.525    1.525 service.py:246(advise)
+        1    0.000    0.000    1.518    1.518 service.py:160(_replay)
+        1    0.000    0.000    1.518    1.518 engine.py:764(play)
+        2    0.000    0.000    1.518    0.759 engine.py:629(_round)
+        2    0.000    0.000    1.517    0.759 service.py:151(decide_decision)
+        1    0.000    0.000    1.517    1.517 bot.py:289(decide_decision)
+        1    0.000    0.000    1.517    1.517 bot.py:307(_decide)
+        1    0.000    0.000    1.502    1.502 bot.py:452(_street_solve)
+        1    0.000    0.000    1.502    1.502 advisor.py:22(_solve)
+        1    0.011    0.011    1.501    1.501 bot.py:460(_solve)
+        1    0.012    0.012    1.190    1.190 cfr.py:272(solve)
+       60    0.089    0.001    1.172    0.020 cfr.py:196(iterate)
+      121    0.523    0.004    0.541    0.004 cfr.py:164(_terminal_values)
+      122    0.044    0.000    0.472    0.004 cfr.py:224(policy)
+      630    0.203    0.000    0.317    0.001 cfr.py:27(fit_frequencies)
+        2    0.001    0.001    0.284    0.142 bot.py:200(_full_equity)
+        1    0.144    0.144    0.281    0.281 equity.py:67(equity_matrix)
+    22952    0.024    0.000    0.149    0.000 {method 'sum' of 'numpy.ndarray' objects}
+    22952    0.013    0.000    0.125    0.000 _methods.py:47(_sum)
+       30    0.001    0.000    0.120    0.004 equity.py:42(_ordinal_ranks)
+    23165    0.114    0.000    0.114    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+       31    0.102    0.003    0.113    0.004 equity.py:21(rank_vector)
+      121    0.047    0.000    0.068    0.001 cfr.py:141(_reaches)
+     1210    0.043    0.000    0.053    0.000 cfr.py:129(current)
+      630    0.037    0.000    0.053    0.000 exploit.py:201(group_target)
+     1108    0.032    0.000    0.032    0.000 {built-in method numpy.zeros}
+        1    0.014    0.014    0.015    0.015 combos.py:30(compatible)
+        1    0.000    0.000    0.014    0.014 bot.py:427(_postflop_advice)
+        1    0.005    0.005    0.013    0.013 cfr.py:63(__init__)
+        2    0.000    0.000    0.012    0.006 cfr.py:268(final_policy)
+        1    0.000    0.000    0.010    0.010 cfr.py:298(action_values)
+       34    0.000    0.000    0.009    0.000 arraysetops.py:766(isin)
+       34    0.005    0.000    0.008    0.000 arraysetops.py:524(in1d)
+
+
+turn-1: 1.2287 s, postflop_solve
+         118186 function calls (118115 primitive calls) in 1.228 seconds
+
+   Ordered by: cumulative time
+   List reduced from 419 to 35 due to restriction <35>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    1.229    1.229 main.py:259(coach_advise)
+        1    0.000    0.000    1.229    1.229 main.py:252(_coach_call)
+        1    0.000    0.000    1.229    1.229 service.py:246(advise)
+        1    0.000    0.000    1.224    1.224 service.py:160(_replay)
+        1    0.000    0.000    1.223    1.223 engine.py:764(play)
+        3    0.000    0.000    1.223    0.408 engine.py:629(_round)
+        3    0.000    0.000    1.222    0.407 service.py:151(decide_decision)
+        1    0.000    0.000    1.222    1.222 bot.py:289(decide_decision)
+        1    0.000    0.000    1.222    1.222 bot.py:307(_decide)
+        2    0.000    0.000    1.207    0.604 bot.py:452(_street_solve)
+        2    0.001    0.001    1.207    0.604 advisor.py:22(_solve)
+        1    0.006    0.006    1.206    1.206 bot.py:460(_solve)
+        1    0.001    0.001    0.902    0.902 cfr.py:272(solve)
+       70    0.074    0.001    0.897    0.013 cfr.py:196(iterate)
+      142    0.039    0.000    0.439    0.003 cfr.py:224(policy)
+      141    0.324    0.002    0.335    0.002 cfr.py:164(_terminal_values)
+      730    0.198    0.000    0.307    0.000 cfr.py:27(fit_frequencies)
+        2    0.001    0.000    0.288    0.144 bot.py:200(_full_equity)
+        1    0.133    0.133    0.285    0.285 equity.py:67(equity_matrix)
+       48    0.001    0.000    0.142    0.003 equity.py:42(_ordinal_ranks)
+    26612    0.022    0.000    0.137    0.000 {method 'sum' of 'numpy.ndarray' objects}
+       49    0.124    0.003    0.137    0.003 equity.py:21(rank_vector)
+    26612    0.012    0.000    0.114    0.000 _methods.py:47(_sum)
+    26940    0.104    0.000    0.104    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+      730    0.035    0.000    0.050    0.000 exploit.py:201(group_target)
+      141    0.036    0.000    0.046    0.000 cfr.py:141(_reaches)
+     1410    0.033    0.000    0.040    0.000 cfr.py:129(current)
+     1308    0.014    0.000    0.014    0.000 {built-in method numpy.zeros}
+        1    0.000    0.000    0.013    0.013 bot.py:427(_postflop_advice)
+       53    0.000    0.000    0.010    0.000 arraysetops.py:766(isin)
+       53    0.005    0.000    0.009    0.000 arraysetops.py:524(in1d)
+        1    0.009    0.009    0.009    0.009 combos.py:30(compatible)
+        2    0.000    0.000    0.008    0.004 cfr.py:268(final_policy)
+       49    0.000    0.000    0.007    0.000 arraysetops.py:138(unique)
+        1    0.000    0.000    0.007    0.007 cfr.py:298(action_values)
+
+
+river-1: 0.9835 s, postflop_solve
+         127353 function calls (127282 primitive calls) in 0.983 seconds
+
+   Ordered by: cumulative time
+   List reduced from 417 to 35 due to restriction <35>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    0.983    0.983 main.py:259(coach_advise)
+        1    0.000    0.000    0.983    0.983 main.py:252(_coach_call)
+        1    0.000    0.000    0.983    0.983 service.py:246(advise)
+        1    0.000    0.000    0.979    0.979 service.py:160(_replay)
+        1    0.000    0.000    0.978    0.978 engine.py:764(play)
+        4    0.000    0.000    0.978    0.245 engine.py:629(_round)
+        4    0.000    0.000    0.976    0.244 service.py:151(decide_decision)
+        1    0.000    0.000    0.976    0.976 bot.py:289(decide_decision)
+        1    0.000    0.000    0.976    0.976 bot.py:307(_decide)
+        3    0.000    0.000    0.955    0.318 bot.py:452(_street_solve)
+        3    0.002    0.001    0.955    0.318 advisor.py:22(_solve)
+        1    0.005    0.005    0.953    0.953 bot.py:460(_solve)
+        1    0.000    0.000    0.909    0.909 cfr.py:272(solve)
+       80    0.078    0.001    0.902    0.011 cfr.py:196(iterate)
+      162    0.042    0.000    0.486    0.003 cfr.py:224(policy)
+      830    0.224    0.000    0.343    0.000 cfr.py:27(fit_frequencies)
+      161    0.281    0.002    0.291    0.002 cfr.py:164(_terminal_values)
+    30272    0.024    0.000    0.150    0.000 {method 'sum' of 'numpy.ndarray' objects}
+    30272    0.013    0.000    0.126    0.000 _methods.py:47(_sum)
+    30325    0.113    0.000    0.113    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+      830    0.037    0.000    0.053    0.000 exploit.py:201(group_target)
+      161    0.038    0.000    0.048    0.000 cfr.py:141(_reaches)
+     1610    0.036    0.000    0.045    0.000 cfr.py:129(current)
+        2    0.001    0.000    0.029    0.014 bot.py:200(_full_equity)
+        1    0.019    0.019    0.026    0.026 equity.py:67(equity_matrix)
+        1    0.000    0.000    0.020    0.020 bot.py:427(_postflop_advice)
+        2    0.000    0.000    0.016    0.008 cfr.py:268(final_policy)
+     1378    0.015    0.000    0.015    0.000 {built-in method numpy.zeros}
+        1    0.001    0.001    0.013    0.013 cfr.py:298(action_values)
+      831    0.002    0.000    0.007    0.000 fromnumeric.py:2100(clip)
+        1    0.002    0.002    0.007    0.007 cfr.py:63(__init__)
+        1    0.001    0.001    0.006    0.006 bot.py:538(_range_report)
+        2    0.006    0.003    0.006    0.003 equity.py:21(rank_vector)
+      845    0.001    0.000    0.006    0.000 fromnumeric.py:53(_wrapfunc)
+        1    0.005    0.005    0.005    0.005 combos.py:30(compatible)
