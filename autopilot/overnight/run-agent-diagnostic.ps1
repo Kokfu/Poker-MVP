@@ -169,7 +169,7 @@ try {
         }
         $options = @('-u', '-m', 'simulation.agent_cli', '--run', $name, '--opponent', $match.Key,
                      '--sessions', $sessions, '--session-hands', $handsPerSeat, '--seed-offset', $match.Value,
-                     '--output-dir', $resultDirectory)
+                     '--output-dir', $resultDirectory, '--progress')
         for ($attempt = 1; $attempt -le 2; $attempt++) {
             if ($attempt -gt 1) { $progress = Get-DiagnosticStatus $match.Key $match.Value }
             $resume = @()

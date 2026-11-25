@@ -119,6 +119,10 @@ Work in order. Start long jobs as early as possible and work on other items whil
 41. **River preview latency under load.** Time 48 independent river spots facing bets while their full requests run. Verify the legal recommendation and report p95 and maximum.
 42. **Supervisor exception proof.** Exercise an isolated missing-worker launch and verify both logged exception and exit markers, retry handling, and the resulting read-only failure status.
 
+43. **Durable worker checkpoint messages.** Log each committed session separately from the JSON summary. Verify messages occur only after persistence and resume reports only new sessions.
+44. **Quick advice calibration.** Compare the approximate preview with exact uniform-river equity on the facing-bet fixture and with full solver actions. Record what the preview can tell the user.
+45. **Full solve tail profile.** Isolate the remaining slow sequential turn and river requests by stage, and test one exact optimization only if the profile supports it.
+
 ## At 06:30
 - Collect the background job results.
 - Run the full backend suite, `npx.cmd tsc -b`, `node --test test/coach-strategy.test.mjs` and `npm.cmd run build`.

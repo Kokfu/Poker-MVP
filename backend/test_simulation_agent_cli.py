@@ -8,7 +8,7 @@ from simulation.duplicate_evaluation import DuplicateConfig, DuplicatePair
 from solver.showdown import ShowdownModel
 
 
-def test_resume_replays_only_an_uncommitted_session(monkeypatch, tmp_path):
+def test_resume_replays_only_an_uncommitted_session(monkeypatch, tmp_path, capsys):
     config = DuplicateConfig(pairs=3, session_hands=5)
     first, second, third = config.seeds()
     played = []
@@ -24,8 +24,11 @@ def test_resume_replays_only_an_uncommitted_session(monkeypatch, tmp_path):
 
     monkeypatch.setattr(agent_cli, "play_duplicate_pair", play)
     with pytest.raises(KeyboardInterrupt):
-        agent_cli.run_sessions(tmp_path, "test", "tight", config, resume=False)
+        agent_cli.run_sessions(tmp_path, "test", "tight", config, resume=False, progress=True)
     assert played == [first, second]
+    checkpoint = capsys.readouterr()
+    assert not checkpoint.out
+    assert checkpoint.err.rstrip().endswith("checkpoint test 1/3 sessions committed")
     ledger_path = tmp_path / "test.jsonl"
     header, legacy_session = ledger_path.read_text().splitlines()
     legacy_record = json.loads(legacy_session)
@@ -35,8 +38,13 @@ def test_resume_replays_only_an_uncommitted_session(monkeypatch, tmp_path):
         ledger.write(b'{"session":2,"partial')
     interrupt = False
     played.clear()
-    summary = agent_cli.run_sessions(tmp_path, "test", "tight", config, resume=True)
+    summary = agent_cli.run_sessions(tmp_path, "test", "tight", config, resume=True, progress=True)
     assert played == [second, third]
+    checkpoint = capsys.readouterr()
+    assert not checkpoint.out
+    assert [line.split(" checkpoint ")[-1] for line in checkpoint.err.splitlines()] == [
+        "test 2/3 sessions committed", "test 3/3 sessions committed",
+    ]
     assert summary["sessions"] == 3 and summary["hands"] == 30
     assert summary["bb_per_100"] == pytest.approx(5.5)
     assert [row["bb_per_100"] for row in summary["by_session"]] == [5, 5.5, 6]

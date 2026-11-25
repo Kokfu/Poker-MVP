@@ -4,11 +4,13 @@ from __future__ import annotations
 import argparse
 from contextlib import contextmanager
 from dataclasses import asdict
+from datetime import datetime
 from io import BytesIO
 import json
 import os
 from pathlib import Path
 import re
+import sys
 from tempfile import NamedTemporaryFile
 
 from .bots import BOT_TYPES
@@ -41,6 +43,11 @@ def _append(handle, record):
     handle.write(json.dumps(record, sort_keys=True).encode("utf-8") + b"\n")
     handle.flush()
     os.fsync(handle.fileno())
+
+
+def _report_checkpoint(name: str, index: int, total: int) -> None:
+    print(f"{datetime.now().astimezone().isoformat()} checkpoint {name} {index}/{total} sessions committed",
+          file=sys.stderr, flush=True)
 
 
 def _decode_session(record):
@@ -148,7 +155,7 @@ def inspect_ledger(ledger: Path) -> dict:
     return report
 
 
-def _learning_run(profile_dir, output, name, opponent, config, *, resume):
+def _learning_run(profile_dir, output, name, opponent, config, *, resume, progress):
     from .agent_profiles import encode_profiles, opponent_hands, restore_profiles
 
     profile_dir.mkdir(parents=True, exist_ok=True)
@@ -208,6 +215,8 @@ def _learning_run(profile_dir, output, name, opponent, config, *, resume):
                     run["final_profile_hands"] = opponent_hands(data["profiles"])
                     data["active_run"] = None
                 _save_summary(ledger, data)
+                if progress:
+                    _report_checkpoint(name, index, len(seeds))
         report = _run_report(header, sessions, config, ledger, learning=True)
         report["profile_hands"] = {"initial": run["initial_profile_hands"], "final": run["final_profile_hands"]}
         _save_summary(summary, report)
@@ -215,14 +224,14 @@ def _learning_run(profile_dir, output, name, opponent, config, *, resume):
 
 
 def run_sessions(output: Path, name: str, opponent: str, config: DuplicateConfig, *, resume: bool,
-                 profile_dir: Path | None = None):
+                 profile_dir: Path | None = None, progress: bool = False):
     if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}", name):
         raise ValueError("run name must start with a letter or digit and contain up to 64 letters, digits, underscores or hyphens")
     output.mkdir(parents=True, exist_ok=True)
     if profile_dir is not None:
         if opponent not in BOT_TYPES:
             raise ValueError(f"unknown opponent: {opponent}")
-        return _learning_run(profile_dir, output, name, opponent, config, resume=resume)
+        return _learning_run(profile_dir, output, name, opponent, config, resume=resume, progress=progress)
     ledger = output / f"{name}.jsonl"
     summary = output / f"{name}.summary.json"
     header = {"format_version": 1, "agent": AGENT, "opponent": opponent, "configuration": config.as_dict()}
@@ -239,6 +248,8 @@ def run_sessions(output: Path, name: str, opponent: str, config: DuplicateConfig
                     raise ValueError(f"deal mismatch in session {index}")
                 _append(handle, {"session": index, **asdict(pair), **diagnostics})
                 sessions.append((pair, diagnostics["solver_fallback_actions"]))
+                if progress:
+                    _report_checkpoint(name, index, len(seeds))
         report = _run_report(header, sessions, config, ledger)
         _save_summary(summary, report)
     return report
@@ -256,6 +267,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output-dir", type=Path, default=OUTPUT)
     parser.add_argument("--profile-dir", type=Path, help="carry one opponent profile across sessions and runs")
     parser.add_argument("--resume", action="store_true", help="continue the same run with identical parameters")
+    parser.add_argument("--progress", action="store_true", help="log durable session checkpoints to stderr")
     args = parser.parse_args(argv)
     try:
         if args.inspect is not None:
@@ -265,7 +277,7 @@ def main(argv: list[str] | None = None) -> int:
         else:
             config = DuplicateConfig(pairs=args.sessions, session_hands=args.session_hands, seed_offset=args.seed_offset)
             report = run_sessions(args.output_dir, args.run, args.opponent, config, resume=args.resume,
-                                  profile_dir=args.profile_dir)
+                                  profile_dir=args.profile_dir, progress=args.progress)
     except (OSError, ValueError, TypeError, KeyError) as error:
         parser.error(str(error))
     print(json.dumps(report, sort_keys=True, indent=2))
