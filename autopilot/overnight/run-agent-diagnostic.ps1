@@ -48,16 +48,23 @@ function Get-DiagnosticStatus([string] $Opponent, [int] $Offset) {
         }
     }
 
-    $start = $null
     $attemptStart = $null
+    $attemptBaseline = $null
+    $interruptedBaseline = $null
     $end = $null
     $exitCode = $null
     if (Test-Path -LiteralPath $logPath) {
         $safeName = [regex]::Escape($name)
         foreach ($line in Get-Content -LiteralPath $logPath) {
-            if ($line -match "^(\S+) begin $safeName attempt \d+$") {
+            if ($line -match "^\S+ interrupted ${safeName}: .*; (\d+)/$sessions sessions committed$") {
+                $interruptedBaseline = [int]$Matches[1]
+            } elseif ($line -match "^(\S+) begin $safeName attempt \d+(?: from (\d+) sessions)?$") {
+                $attemptBaseline = if ($Matches.ContainsKey(2)) { [int]$Matches[2] }
+                    elseif ($null -ne $interruptedBaseline) { $interruptedBaseline }
+                    elseif ($null -eq $attemptStart) { 0 }
+                    else { $null }
+                $interruptedBaseline = $null
                 $attemptStart = [DateTimeOffset]::Parse($Matches[1])
-                if ($null -eq $start) { $start = $attemptStart }
                 $end = $null
             } elseif ($line -match "^(\S+) end $safeName exit (-?\d+)$") {
                 $end = [DateTimeOffset]::Parse($Matches[1])
@@ -99,8 +106,11 @@ function Get-DiagnosticStatus([string] $Opponent, [int] $Offset) {
     $stale = $attemptStart -and !$end -and $remaining -gt 0 -and
         ($now - $lastActivity).TotalMinutes -ge $StaleAfterMinutes
     $referenceTime = if ($end) { $end } else { $now }
-    $elapsed = if ($start) { ($referenceTime - $start).TotalSeconds } else { 0 }
-    $rate = if ($elapsed -gt 0 -and $hands -gt 0) { $hands / $elapsed } else { 0 }
+    $elapsed = if ($attemptStart) { ($referenceTime - $attemptStart).TotalSeconds } else { 0 }
+    $attemptSessions = if ($null -ne $attemptBaseline -and $attemptBaseline -le $records.Count) {
+        $records.Count - $attemptBaseline
+    } else { $null }
+    $rate = if ($elapsed -gt 0 -and $attemptSessions -gt 0) { 2 * $attemptSessions * $handsPerSeat / $elapsed } else { 0 }
     $eta = if ($rate -gt 0 -and !$end -and !$stale -and $remaining -gt 0) {
         $now.AddSeconds((2 * $remaining * $handsPerSeat) / $rate)
     } else { $null }
@@ -110,12 +120,13 @@ function Get-DiagnosticStatus([string] $Opponent, [int] $Offset) {
     elseif ($records.Count -eq $sessions) { 'Ledger complete' }
     elseif ($end) { 'Incomplete' }
     elseif ($stale) { 'Stale' }
-    elseif ($start) { 'Started' }
+    elseif ($attemptStart) { 'Started' }
     else { 'Pending' }
     [pscustomobject]@{
         Opponent = $Opponent
         State = $state
         Sessions = $records.Count
+        AttemptSessions = $attemptSessions
         MissingSessions = $remaining
         Hands = $hands
         SummaryStatus = $summaryStatus
@@ -160,10 +171,11 @@ try {
                      '--sessions', $sessions, '--session-hands', $handsPerSeat, '--seed-offset', $match.Value,
                      '--output-dir', $resultDirectory)
         for ($attempt = 1; $attempt -le 2; $attempt++) {
+            if ($attempt -gt 1) { $progress = Get-DiagnosticStatus $match.Key $match.Value }
             $resume = @()
             if (Test-Path -LiteralPath (Join-Path $resultDirectory "$name.jsonl")) { $resume = @('--resume') }
             Add-Content -LiteralPath $logPath -Value ('{0:o} supervisor pid {1} for {2}; resume={3}' -f (Get-Date), $PID, $name, ($resume.Count -gt 0))
-            Add-Content -LiteralPath $logPath -Value ('{0:o} begin {1} attempt {2}' -f (Get-Date), $name, $attempt)
+            Add-Content -LiteralPath $logPath -Value ('{0:o} begin {1} attempt {2} from {3} sessions' -f (Get-Date), $name, $attempt, $progress.Sessions)
             $exitCode = 1
             try {
                 & $python @options @resume *>> $logPath
