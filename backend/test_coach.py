@@ -39,6 +39,36 @@ def test_big_blind_waits_for_villain_then_board():
     assert flop["status"] == "hero_to_act" and flop["explanation"]["source"] == "postflop_solve"
 
 
+def test_quick_coach_advice_is_public_legal_and_postflop_only(monkeypatch):
+    client = TestClient(main.app)
+    endpoint = "/api/coach/advise/quick"
+    assert client.post(endpoint, json={"hero_cards": ["As", "Kd"]}).json() is None
+    body = {
+        "hero_cards": ["As", "Kd"],
+        "hero_position": "big_blind",
+        "hero_stack": 500,
+        "board": ["7h", "8d", "2c"],
+        "actions": [
+            {"actor": "villain", "action": "raise", "amount": 250},
+            {"actor": "hero", "action": "call"},
+        ],
+    }
+    quick = client.post(endpoint, json=body).json()
+    assert quick["status"] == "quick" and quick["advice"]["action"] == "check"
+    body["actions"] += [
+        {"actor": "hero", "action": "check"},
+        {"actor": "villain", "action": "bet", "amount": 900},
+    ]
+    monkeypatch.setattr("coach.service.calculate_equity", lambda *args, **kwargs: {"equity": 0.9})
+    facing = client.post(endpoint, json=body).json()
+    assert facing["advice"]["action"] == "all_in"
+    assert facing["advice"]["action"] in facing["state"]["legal_actions"]
+    assert client.post(endpoint, json={**body, "villain_cards": ["Qs", "Qd"]}).json() == facing
+    monkeypatch.setattr("coach.service.calculate_equity", lambda *args, **kwargs: {"equity": 0.1})
+    assert client.post(endpoint, json=body).json()["advice"]["action"] == "fold"
+    assert client.post(endpoint, json={**body, "board": ["As", "8d", "2c"]}).status_code == 422
+
+
 @pytest.mark.parametrize("actions,message", [
     ((("villain", "call"),), "hero's turn"),
     ((("hero", "raise", 120),), "between"),

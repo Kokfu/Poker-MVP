@@ -16,7 +16,7 @@ from threading import Lock
 from time import perf_counter
 from typing import Any, Literal
 
-from poker_analyzer import FULL_DECK
+from poker_analyzer import FULL_DECK, calculate_equity
 from simulation.actions import Action
 from simulation.engine import HandEngine
 from simulation.opponent_model import OpponentModel, confidence_for
@@ -241,6 +241,26 @@ def profile_for(store: HandStore, opponent: str, observer=None, *, through_id: i
             if len(_PROFILES) > _MAX_PROFILES:
                 _PROFILES.popitem(last=False)
     return model
+
+
+def quick_advice(spot: Spot) -> dict[str, Any] | None:
+    """Give a legal postflop preview from public cards and pot odds."""
+    status, payload, _ = _replay(spot)
+    if status != "hero_to_act" or payload["state"]["street"] == "preflop":
+        return None
+    state = payload["state"]
+    if "check" in state["legal_actions"]:
+        action = "check"
+        basis = "Checking is free."
+    else:
+        equity = calculate_equity(spot.hero_cards, state["board"], iterations=160, seed=0)["equity"]
+        call = min(state["to_call"], state["hero_stack"])
+        contested_pot = state["pot"] - (state["to_call"] - call)
+        required = call / (contested_pot + call)
+        call_action = "call" if "call" in state["legal_actions"] else "all_in"
+        action = call_action if equity >= required else "fold"
+        basis = "Pot odds against an unknown hand."
+    return {"status": "quick", "advice": {"action": action, "amount": None}, "reason": basis, "state": state}
 
 
 def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store: HandStore | None = None,

@@ -262,6 +262,12 @@ def coach_advise(request: CoachAdviseRequest):
     return _coach_call(advise, request.to_spot(), opponent=request.opponent or None, exploit=request.exploit)
 
 
+@app.post("/api/coach/advise/quick")
+def coach_advise_quick(request: CoachSpot):
+    from coach.service import quick_advice
+    return _coach_call(quick_advice, request.to_spot())
+
+
 @app.post("/api/coach/hands")
 def coach_log_hand(request: CoachLogRequest):
     from coach.service import log_hand

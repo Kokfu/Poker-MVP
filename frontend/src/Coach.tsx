@@ -72,6 +72,8 @@ type CoachResponse =
   | { status: "need_board"; street: string; cards_needed: number; pot?: number }
   | { status: "hand_complete"; summary: { showdown: boolean; board: string[]; hero_net?: number } };
 
+type QuickAdvice = { status: "quick"; advice: { action: ActionKind }; reason: string; state: SpotState };
+
 type RawSpot = {
   hero_cards: string[];
   board: string[];
@@ -227,6 +229,7 @@ export default function Coach() {
   const [typed, setTyped] = useState(false);
   const [villainCards, setVillainCards] = useState<string[]>([]);
   const [result, setResult] = useState<CoachResponse>();
+  const [quick, setQuick] = useState<QuickAdvice>();
   const [reviewMode, setReviewMode] = useState(false);
   const [view, setView] = useState<"play" | "review" | "data">("play");
   const [players, setPlayers] = useState(prefs.players ?? 1);
@@ -310,6 +313,7 @@ export default function Coach() {
     adviceRequest.current?.abort();
     const request = new AbortController();
     adviceRequest.current = request;
+    setQuick(undefined);
     setLoading(true);
     return request;
   }
@@ -318,12 +322,15 @@ export default function Coach() {
     if (!adviceRequest.current) return;
     adviceRequest.current.abort();
     adviceRequest.current = undefined;
+    setQuick(undefined);
     setLoading(false);
   }
 
   function finishAdviceRequest(request: AbortController) {
     if (adviceRequest.current !== request || request.signal.aborted) return;
     adviceRequest.current = undefined;
+    request.abort();
+    setQuick(undefined);
     setLoading(false);
   }
 
@@ -344,12 +351,19 @@ export default function Coach() {
   async function evaluate(nextActions = actions, nextBoard = board, options: { hero?: string[]; remember?: boolean } = {}) {
     setError(""); setNotice("");
     const request = beginAdviceRequest();
+    const input = {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...spot, hero_cards: options.hero ?? heroCards, actions: nextActions, board: nextBoard, opponent: opponent.trim() || null, exploit }),
+      signal: request.signal,
+    };
+    if (nextBoard.length >= 3) {
+      void fetch("/api/coach/advise/quick", input).then(async (response) => {
+        const preview: QuickAdvice | null = response.ok ? await response.json() : null;
+        if (adviceRequest.current === request && !request.signal.aborted && preview?.status === "quick") setQuick(preview);
+      }).catch(() => { /* The full request is authoritative. */ });
+    }
     try {
-      const response = await fetch("/api/coach/advise", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...spot, hero_cards: options.hero ?? heroCards, actions: nextActions, board: nextBoard, opponent: opponent.trim() || null, exploit }),
-        signal: request.signal,
-      });
+      const response = await fetch("/api/coach/advise", input);
       const body = await response.json();
       if (request.signal.aborted) return;
       if (!response.ok) throw new Error(describeError(body, "Coach request failed"));
@@ -557,6 +571,8 @@ export default function Coach() {
   }
 
   const state = result && "state" in result ? result.state : undefined;
+  const displayedState = quick?.state ?? state;
+  const displayedBoard = quick?.state.board ?? board;
   const usedForHero = new Set([...board, ...boardDraft, ...villainCards]);
   const usedForBoard = new Set([...heroCards, ...villainCards, ...board]);
   const usedForVillain = new Set([...heroCards, ...board]);
@@ -769,9 +785,9 @@ export default function Coach() {
         <div className="coach-layout">
           <div className="coach-main">
             <div className="coach-table">
-              <div><span className="field-label">Board</span><div className="board-cards">{board.length ? board.map((c) => <PlayingCard key={c} card={c} />) : <span className="muted">Preflop</span>}</div></div>
-              {state && <div><span className="field-label">Pot</span><strong>{state.pot}</strong>{state.to_call > 0 && <span className="muted"> · to call {state.to_call}</span>}</div>}
-              {result.status === "need_board" && result.pot !== undefined && <div><span className="field-label">Pot</span><strong>{result.pot}</strong></div>}
+              <div><span className="field-label">Board</span><div className="board-cards">{displayedBoard.length ? displayedBoard.map((c) => <PlayingCard key={c} card={c} />) : <span className="muted">Preflop</span>}</div></div>
+              {displayedState && <div><span className="field-label">Pot</span><strong>{displayedState.pot}</strong>{displayedState.to_call > 0 && <span className="muted"> · to call {displayedState.to_call}</span>}</div>}
+              {!quick && result.status === "need_board" && result.pot !== undefined && <div><span className="field-label">Pot</span><strong>{result.pot}</strong></div>}
             </div>
 
             {actions.length > 0 && (
@@ -783,9 +799,16 @@ export default function Coach() {
 
             {error && <p className="error" role="alert">{error}</p>}
 
-            {result.status === "villain_to_act" && (<div className="coach-step"><h3>{opponent.trim() || "Opponent"} to act</h3><p className="muted">What did they do?</p>{actionButtons("villain")}</div>)}
+            {quick && (
+              <div className="coach-advice" role="status">
+                <h3 className="coach-recommendation">Quick recommendation: {ACTION_TEXT[quick.advice.action]}</h3>
+                <p className="coach-reason">{quick.reason} Full advice is calculating…</p>
+              </div>
+            )}
 
-            {result.status === "need_board" && (() => {
+            {!quick && result.status === "villain_to_act" && (<div className="coach-step"><h3>{opponent.trim() || "Opponent"} to act</h3><p className="muted">What did they do?</p>{actionButtons("villain")}</div>)}
+
+            {!quick && result.status === "need_board" && (() => {
               const needed = result.cards_needed - board.length;
               const slotName = result.street[0].toUpperCase() + result.street.slice(1);
               return (
@@ -805,7 +828,7 @@ export default function Coach() {
               );
             })()}
 
-            {result.status === "hero_to_act" && (
+            {!quick && result.status === "hero_to_act" && (
               <div className="coach-advice">
                 <h3 className="coach-recommendation">Recommended: {ACTION_TEXT[result.advice.action]}{result.advice.amount ? ` ${result.advice.amount}` : ""}</h3>
                 {result.explain?.reason && <p className="coach-reason">{result.explain.reason}</p>}
@@ -831,7 +854,7 @@ export default function Coach() {
               </div>
             )}
 
-            {result.status === "hand_complete" && (
+            {!quick && result.status === "hand_complete" && (
               <div className="coach-advice">
                 <h3>Hand complete</h3>
                 <p>{result.summary.showdown ? "Showdown." : foldedText(actions)} {result.summary.hero_net !== undefined && <strong className={result.summary.hero_net >= 0 ? "positive" : "negative"}>{result.summary.hero_net >= 0 ? "+" : ""}{result.summary.hero_net}</strong>}</p>
