@@ -56,3 +56,14 @@ backend/.venv/Scripts/python.exe autopilot/overnight/time_coach.py --suit-varian
 ```
 
 The board microbenchmark alternated the control and candidate six times in the same process. Median matrix construction dropped from 429 to 327 ms on the sampled flop, 881 to 708 ms on the exact turn, and 93 to 68 ms on the river. Both matrices and compatibility masks matched bit for bit. A separate buffer-reuse experiment in the lock fitter was slower in all four measured shapes, so the fitter stays on its prior implementation.
+
+### Exact board-ranking experiment on the resumed run
+
+The experiment compared two fresh API processes on the same 48 distinct spots, with warmup and the solve cache enabled, one BLAS worker and the expert diagnostic running. The candidate precomputes evaluator card pairs and filters blocked combos by their card masks. Every normalized advice hash matched.
+
+| Version | Startup (ms) | Preflop median / p95 (ms) | Postflop median / p95 (ms) |
+| --- | ---: | ---: | ---: |
+| Archived control | 1,047 | 13 / 170 | 2,472 / 3,999 |
+| Exact board-ranking candidate | 825 | 13 / 52 | 2,380 / 3,496 |
+
+Six alternating matrix runs per shape matched bit for bit. Median exact turn time was 746 → 558 ms for 1,326 × 1,326 combos and 496 → 338 ms for 750 × 670 combos. The API timing reflects a single pair of sequential runs under shared load. Postflop still exceeds the target. The idle-machine warmup comparison is pending.
