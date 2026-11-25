@@ -1,9 +1,13 @@
+from collections import OrderedDict
+from concurrent.futures import Future, ThreadPoolExecutor
 from copy import deepcopy
 import sqlite3
+from threading import Event
 from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 import numpy as np
+import pytest
 
 from coach.advisor import _SOLVES, CoachAdvisor
 from coach.service import _PROFILES, advise, log_hand, spot_to_dict
@@ -145,6 +149,61 @@ def test_coach_warm_cache_cannot_round_distinct_opponent_locks_together(monkeypa
         assert solved == [.304, .3, .304]
     finally:
         _PREFLOP_CACHE.clear()
+
+
+@pytest.mark.parametrize("fail_first", [False, True])
+def test_coach_requests_share_pending_exact_preflop_policy(monkeypatch, fail_first):
+    monkeypatch.setattr("solver.bot._PREFLOP_CACHE", OrderedDict())
+    monkeypatch.setattr("solver.bot._PREFLOP_PENDING", {})
+    solve_started, caller_waiting, release_solve = Event(), Event(), Event()
+    solved = []
+
+    class ObservedFuture(Future):
+        def result(self, timeout=None):
+            caller_waiting.set()
+            return super().result(timeout=timeout)
+
+    class StubSolver:
+        def __init__(self, *args, locks, **kwargs):
+            self.weight = locks[1][0]
+
+        def solve(self, iterations):
+            solved.append(self.weight)
+            if self.weight == .3 and solved.count(.3) == 1:
+                solve_started.set()
+                assert release_solve.wait(10)
+                if fail_first:
+                    raise ValueError("induced solve failure")
+            return SimpleNamespace(average={1: np.full((1, 169), self.weight)})
+
+    monkeypatch.setattr("solver.bot.Future", ObservedFuture)
+    monkeypatch.setattr("solver.bot.RangeSolver", StubSolver)
+    groups = (((0,), .8), ((1,), .2))
+
+    def solve(weight):
+        advisor = CoachAdvisor(seed=0, exploit=True, cache_solves=True)
+        return advisor._preflop_policy(100, 1, {1: (weight, groups)})(1)
+
+    with ThreadPoolExecutor(max_workers=3) as workers:
+        first = workers.submit(solve, .3)
+        try:
+            assert solve_started.wait(10)
+            second = workers.submit(solve, .3)
+            assert caller_waiting.wait(10)
+            distinct = workers.submit(solve, .304)
+            assert distinct.result(timeout=10)[0, 0] == .304
+            assert solved == [.3, .304]
+        finally:
+            release_solve.set()
+        if fail_first:
+            for call in (first, second):
+                with pytest.raises(ValueError, match="induced solve failure"):
+                    call.result(timeout=10)
+            assert solve(.3)[0, 0] == .3
+            assert solved == [.3, .304, .3]
+        else:
+            np.testing.assert_array_equal(first.result(timeout=10), second.result(timeout=10))
+            assert solved == [.3, .304]
 
 
 def test_coach_store_closes_sqlite_connections_after_each_operation(monkeypatch, tmp_path):

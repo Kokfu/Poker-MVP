@@ -25,6 +25,7 @@ confident — a re-solve of the preflop chart game all respond to that play.
 from __future__ import annotations
 
 from collections import OrderedDict
+from concurrent.futures import Future
 from dataclasses import dataclass, field, replace
 from hashlib import sha256
 import math
@@ -59,6 +60,7 @@ _EQUITY_CACHE_LOCK = Lock()
 _EQUITY_CACHE_SIZE = 12
 _PREFLOP_CACHE: OrderedDict[tuple, dict[int, np.ndarray]] = OrderedDict()
 _PREFLOP_CACHE_LOCK = Lock()
+_PREFLOP_PENDING: dict[tuple, Future[dict[int, np.ndarray]]] = {}
 _PREFLOP_CACHE_SIZE = 128
 PREFLOP_LOCKED_ITERATIONS = 250
 _CLASS_REPRESENTATIVES = np.unique(COMBO_CLASS, return_index=True)[1]
@@ -518,21 +520,41 @@ class SolverBot(PokerBot):
         tree = self.charts.trees[depth]
         key = (tree, opponent, self.exact_preflop_cache, locks_key(locks, exact=self.exact_preflop_cache),
                PREFLOP_LOCKED_ITERATIONS)
+        leader = waiter = None
         with _PREFLOP_CACHE_LOCK:
             policy = _PREFLOP_CACHE.get(key)
             if policy is not None:
                 _PREFLOP_CACHE.move_to_end(key)
-        self._info["cache_hit"] = policy is not None
-        if policy is None:
-            class_d, class_w = load_class_equity()
-            counts = CLASS_COMBO_COUNT.astype(float)
-            solver = RangeSolver(tree, (counts, counts), class_d, class_w, locks=locks)
-            policy = solver.solve(PREFLOP_LOCKED_ITERATIONS).average
+            elif self.exact_preflop_cache:
+                # The Coach warmup and requests can share an exact solve.
+                # Simulator keys can group different lock weights together.
+                waiter = _PREFLOP_PENDING.get(key)
+                if waiter is None:
+                    leader = _PREFLOP_PENDING[key] = Future()
+        self._info["cache_hit"] = policy is not None or waiter is not None
+        if waiter is not None:
+            policy = waiter.result()
+        elif policy is None:
+            try:
+                class_d, class_w = load_class_equity()
+                counts = CLASS_COMBO_COUNT.astype(float)
+                solver = RangeSolver(tree, (counts, counts), class_d, class_w, locks=locks)
+                policy = solver.solve(PREFLOP_LOCKED_ITERATIONS).average
+            except BaseException as error:
+                if leader is not None:
+                    with _PREFLOP_CACHE_LOCK:
+                        del _PREFLOP_PENDING[key]
+                    leader.set_exception(error)
+                raise
             with _PREFLOP_CACHE_LOCK:
                 _PREFLOP_CACHE[key] = policy
                 _PREFLOP_CACHE.move_to_end(key)
                 if len(_PREFLOP_CACHE) > _PREFLOP_CACHE_SIZE:
                     _PREFLOP_CACHE.popitem(last=False)
+                if leader is not None:
+                    del _PREFLOP_PENDING[key]
+            if leader is not None:
+                leader.set_result(policy)
         return lambda node: policy[node][:, COMBO_CLASS]
 
     def _range_report(self, board, hero_combo: int, villain: np.ndarray) -> dict[str, Any]:
