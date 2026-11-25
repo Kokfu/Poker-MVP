@@ -82,6 +82,9 @@ Work in order. Start long jobs as early as possible and work on other items whil
 10. **Review all code from both nights for bugs.** Fix real problems, each with a test.
 11. **Docs.** README sections for the practice table, `agent_cli` and the timer, with exact commands.
 12. **If time is left,** add three new items to the end of this list, based on tonight's findings, and continue.
+13. **Exact solver performance.** Measure and reduce allocation overhead in the lock fitter and new-board path, require bit-for-bit numeric checks, and compare the 48 distinct Coach spots against the warmed control.
+14. **Concurrent practice settlement.** Exercise simultaneous clients, including a stale action at timer expiry, database persistence, and independent progress at the other table. Fix any reproducible consistency issue with a regression.
+15. **Diagnostic progress and recovery.** Turn the four-opponent commands into a reproducible PowerShell runner and report completed ledger coverage, integrity counters, throughput, and ETA without mutating an open run.
 
 ## At 06:30
 - Collect the background job results.
