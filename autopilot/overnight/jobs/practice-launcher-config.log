@@ -1,0 +1,4 @@
+2026-11-25T11:39:06.3745864+08:00
+PowerShell syntax parsed successfully.
+The Coach launch command binds to 127.0.0.1 and uses --no-proxy-headers.
+The installed Uvicorn CLI advertises --no-proxy-headers.
