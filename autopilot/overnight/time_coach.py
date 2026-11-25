@@ -131,18 +131,31 @@ def http_client(stack, scratch):
     raise RuntimeError(f"Local Uvicorn did not start: {server_log.read_text(encoding='utf-8', errors='replace')}")
 
 
+def populate_profiles(representative):
+    store = HandStore()
+    for spot in simulated_spots("tight", 150):
+        store.add("Synthetic", spot_to_dict(spot))
+    if representative:
+        for spot in simulated_spots("aggressive", 150, seed0=2_000):
+            store.add("Aggressive synthetic", spot_to_dict(spot))
+
+
+def advice_hash(result):
+    explanation = result["explanation"]
+    # Runtime metadata may change without any change to the advice.
+    explanation.pop("solve_seconds", None)
+    explanation.get("instrumentation", {}).pop("cache_hit", None)
+    encoded = json.dumps(result, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(encoded).hexdigest()
+
+
 def measure(repeats, suit_variants, wait_for_warmup, representative=False, http=False):
     measurements = []
     with TemporaryDirectory() as scratch, ExitStack() as stack:
         # SQLite connection cycles can retain Windows file handles until GC.
         stack.callback(gc.collect)
         os.environ["COACH_DB_PATH"] = str(Path(scratch) / "timing.sqlite")
-        store = HandStore()
-        for spot in simulated_spots("tight", 150):
-            store.add("Synthetic", spot_to_dict(spot))
-        if representative:
-            for spot in simulated_spots("aggressive", 150, seed0=2_000):
-                store.add("Aggressive synthetic", spot_to_dict(spot))
+        populate_profiles(representative)
         startup = perf_counter()
         client = http_client(stack, scratch) if http else stack.enter_context(TestClient(app))
         startup_ms = 1000 * (perf_counter() - startup)
@@ -160,15 +173,10 @@ def measure(repeats, suit_variants, wait_for_warmup, representative=False, http=
                 assert result["status"] == "hero_to_act", result
                 if representative:
                     assert result["state"]["street"] == label.split("-", 1)[0], (label, result)
-                explanation = result["explanation"]
-                # Runtime metadata may change without any change to the advice.
-                explanation.pop("solve_seconds", None)
-                explanation.get("instrumentation", {}).pop("cache_hit", None)
-                encoded = json.dumps(result, sort_keys=True, separators=(",", ":")).encode()
                 measurements.append({"spot": label, "repeat": repeat,
                                      "ms": round(ms, 2), "action": result["advice"],
-                                     "source": explanation["source"],
-                                     "advice_sha256": hashlib.sha256(encoded).hexdigest()})
+                                     "source": result["explanation"]["source"],
+                                     "advice_sha256": advice_hash(result)})
     summary = {}
     cohorts = ("preflop", "postflop", "flop", "turn", "river") if representative else ("preflop", "postflop")
     for cohort in cohorts:

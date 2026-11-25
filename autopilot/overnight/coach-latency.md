@@ -138,3 +138,14 @@ In the isolated arm, median solver time for earlier streets was 407 ms on turns 
 ### Numerical worker settings
 
 The representative comparison used NumPy 1.26.4. At each fixed worker count, the exact-cache update preserved all 48 hashes. Switching from one to two workers changed the same nine postflop hashes on both versions, with no changes in the chosen action or amount over these spots. Reproduce a comparison with the same NumPy version and the same values for OPENBLAS_NUM_THREADS, OMP_NUM_THREADS, and MKL_NUM_THREADS. The accepted timing and hash checks use one worker for each. [Fixed-worker comparison](jobs/coach-representative-workers.log)
+
+From the repository root, reproduce the later-street breakdown with one numerical worker.
+
+```powershell
+$env:OPENBLAS_NUM_THREADS = '1'
+$env:OMP_NUM_THREADS = '1'
+$env:MKL_NUM_THREADS = '1'
+backend/.venv/Scripts/python.exe autopilot/overnight/profile_coach_replay.py
+```
+
+The driver creates its own synthetic history and reports hashes for the final requests. [Reproduction log](jobs/coach-replay-driver.log)
