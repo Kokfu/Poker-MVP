@@ -32,3 +32,8 @@ backend/data/
 
 # Poker Coach launcher logs and process ids
 .run/
+
+# Overnight job output
+autopilot/*/jobs/**/*.log
+autopilot/*/jobs/**/*.lock
+autopilot/*/jobs/**/*.jsonl
