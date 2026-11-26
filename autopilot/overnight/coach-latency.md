@@ -248,3 +248,22 @@ Separate fresh processes primed and reopened one 24-spot cache per arm. Both arm
 | All postflop | 4,086 | 711 |
 
 The processes shared the host with two development replays. These timings describe repeated spots on a populated cache. Individual cold timings varied considerably. The disk sidecar retains up to 32 locked preflop policies in a separate table from its bounded postflop entries.
+
+### Two simultaneous clients
+
+Two loopback clients sent different confirmed requests at the same time.
+The competition arm started a third client on an unrelated speculative
+request 50 ms earlier. Each fresh process served 24 confirmed decisions
+across flop, turn, and river. All 48 confirmed answers matched. The
+development replays shared the host during this comparison.
+
+| Street | Two confirmed p95 (ms) | With competing speculation p95 (ms) |
+| --- | ---: | ---: |
+| Flop | 2,264 | 2,286 |
+| Turn | 3,412 | 4,010 |
+| River | 3,587 | 4,344 |
+| All postflop | 3,510 | 4,343 |
+
+A speculative request can compete with unrelated confirmations. The smaller
+street cohorts each have eight observations, with the maximum as their
+nearest-rank p95.
