@@ -12,6 +12,8 @@ import json
 import math
 import os
 from pathlib import Path
+from random import Random
+from shutil import copyfile
 from statistics import median
 import sys
 from tempfile import TemporaryDirectory
@@ -34,7 +36,7 @@ def fingerprint(body):
     }
 
 
-def run(fixture, *, progress=False, prefetch_ms=0):
+def run(fixture, *, progress=False, prefetch_ms=0, use_disk=True, cache_dir=None):
     from fastapi.testclient import TestClient
 
     from coach.store import HandStore
@@ -42,12 +44,18 @@ def run(fixture, *, progress=False, prefetch_ms=0):
 
     results = []
     with TemporaryDirectory(prefix="coach-reference-") as scratch:
+        database = Path(scratch) / "reference.sqlite"
+        scratch_cache = database.with_suffix(".exact-solves.sqlite")
+        saved_cache = cache_dir / "exact-solves.sqlite" if cache_dir else None
+        if saved_cache and saved_cache.is_file():
+            copyfile(saved_cache, scratch_cache)
         with patch.dict(os.environ, {
-            "COACH_DB_PATH": str(Path(scratch) / "reference.sqlite"),
+            "COACH_DB_PATH": str(database),
             "POKER_COACH_WARMUP": "0",
             "POKER_COACH_RIVER_SHADOW": "0",
             "POKER_COACH_PERSISTENT_RANGES": "0",
             "POKER_COACH_SOLVE_CACHE": "1",
+            "POKER_COACH_SOLVE_DISK_CACHE": "1" if use_disk else "0",
         }):
             store = HandStore()
             for opponent, hands in fixture["histories"].items():
@@ -78,6 +86,9 @@ def run(fixture, *, progress=False, prefetch_ms=0):
                     results.append((spot, street, advice, quick, elapsed))
                     if progress and index % 48 == 0:
                         print(f"Evaluated {index}/{len(fixture['spots'])} reference spots", file=sys.stderr, flush=True)
+        if saved_cache and scratch_cache.is_file():
+            saved_cache.parent.mkdir(parents=True, exist_ok=True)
+            copyfile(scratch_cache, saved_cache)
     return results
 
 
@@ -122,9 +133,15 @@ def main():
     parser.add_argument("--record", action="store_true", help="explicitly replace the checked-in expectations")
     parser.add_argument("--progress", action="store_true", help="log checkpoints to stderr")
     parser.add_argument("--prefetch-ms", type=int, default=0, help="lead time for a matching speculative API call")
+    parser.add_argument("--no-disk", action="store_true", help="time the in-memory cache alone")
+    parser.add_argument("--cache-dir", type=Path, help="preserve the synthetic solve cache across CLI processes")
+    parser.add_argument("--spots-per-street", type=int, choices=range(1, 49), metavar="1..48",
+                        help="time a fixed sample from each street")
     args = parser.parse_args()
-    if args.prefetch_ms < 0 or (args.record and args.prefetch_ms):
-        parser.error("use a non-negative prefetch lead for verification only")
+    if args.prefetch_ms < 0 or (args.record and (args.prefetch_ms or args.cache_dir or args.spots_per_street)):
+        parser.error("use a non-negative prefetch lead, cache directory or subset for verification only")
+    if args.no_disk and args.cache_dir:
+        parser.error("--cache-dir requires the disk cache")
     # Set before importing FastAPI's Coach modules, which can load NumPy.
     for variable in ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS"):
         os.environ[variable] = "1"
@@ -132,7 +149,14 @@ def main():
     ids = [spot["id"] for spot in fixture["spots"]]
     if len(ids) != 192 or len(set(ids)) != len(ids):
         parser.exit(1, "Expected 192 distinct reference spot IDs\n")
-    results = run(fixture, progress=args.progress, prefetch_ms=args.prefetch_ms)
+    if args.spots_per_street:
+        rng = Random(20261127)
+        chosen = set()
+        for street in ("preflop", "flop", "turn", "river"):
+            chosen.update(rng.sample([spot for spot in ids if spot.startswith(street + "-")], args.spots_per_street))
+        fixture["spots"] = [spot for spot in fixture["spots"] if spot["id"] in chosen]
+    results = run(fixture, progress=args.progress, prefetch_ms=args.prefetch_ms,
+                  use_disk=not args.no_disk, cache_dir=args.cache_dir)
     summary = summarize(results)
     if args.record:
         for spot, _, advice, _, _ in results:

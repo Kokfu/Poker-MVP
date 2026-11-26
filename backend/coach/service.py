@@ -22,7 +22,7 @@ from simulation.engine import HandEngine
 from simulation.opponent_model import OpponentModel, confidence_for
 
 from . import explain
-from .store import HandStore
+from .store import HandStore, default_path
 
 Actor = Literal["hero", "villain"]
 HERO, VILLAIN = "a", "b"
@@ -277,7 +277,12 @@ def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store:
     if cache_solves:
         from .advisor import CoachAdvisor
 
-        advisor = CoachAdvisor(seed=seed, exploit=use_exploit, cache_solves=True)
+        disk_path = None
+        if getenv("POKER_COACH_SOLVE_DISK_CACHE") != "0":
+            database = store.path if store is not None else default_path()
+            if database.name:
+                disk_path = database.with_suffix(".exact-solves.sqlite")
+        advisor = CoachAdvisor(seed=seed, exploit=use_exploit, cache_solves=True, disk_path=disk_path)
     else:
         advisor = AdaptiveSolverBot(seed=seed) if use_exploit else SolverBot(seed=seed)
     if opponent:
@@ -285,7 +290,7 @@ def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store:
         model = profile_for(store or HandStore(), opponent, advisor if advisor.exploit else None, **history_options)
         profile_snapshot = model.snapshot() if model.hands_observed else None
     if advisor.exploit and profile_snapshot is None:
-        advisor = (CoachAdvisor(seed=seed, exploit=False, cache_solves=True)
+        advisor = (CoachAdvisor(seed=seed, exploit=False, cache_solves=True, disk_path=disk_path)
                    if cache_solves else SolverBot(seed=seed))
     advisor.persistent_ranges = getenv("POKER_COACH_PERSISTENT_RANGES") == "1"
     advisor.explain_ev = True

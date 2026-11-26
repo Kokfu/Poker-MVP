@@ -182,3 +182,18 @@ Two fresh host processes replayed 192 fixed decisions with one BLAS worker while
 | All postflop | 144 | 2,145 | 1,438 |
 
 The quick preview matched the full action and size on 75/144 (52.08%) postflop spots. The overnight target is still open for turns and rivers. From `backend`, reproduce the paired runs with `./.venv/Scripts/python.exe -m coach.reference_spots --prefetch-ms 0` and `./.venv/Scripts/python.exe -m coach.reference_spots --prefetch-ms 600`.
+
+### Persistent exact solves across restarts
+
+The default Coach keeps up to 160 MiB of solve records in a SQLite sidecar alongside the configured hand store. The database stores exact policies and the inputs needed to reconstruct action EVs. It uses the full in-memory key, namespaced by the solver source and numerical environment. The Coach can compute a fresh answer when the sidecar is unavailable. Set `POKER_COACH_SOLVE_DISK_CACHE=0` to measure the in-memory cache alone.
+
+Each pass used a fresh Python process with one BLAS worker. Six fixed spots per street were drawn from the reference set, so p95 within each street is its maximum. The restart kept only the exact-solve database. The separate hand-history database was rebuilt with the same synthetic rows and preflop policies started cold. The learning diagnostic was running during this comparison.
+
+| Street | Disk disabled p95 (ms) | Empty disk p95 (ms) | Populated disk after restart p95 (ms) |
+| --- | ---: | ---: | ---: |
+| Flop | 1,984 | 1,733 | 1,010 |
+| Turn | 2,664 | 2,688 | 972 |
+| River | 2,504 | 2,809 | 747 |
+| All postflop | 2,664 | 2,809 | 1,010 |
+
+Every sample matched its full reference fingerprint. A separate cold pass with the disk cache enabled matched all 192. The populated disk helped repeats across restarts, with flop and pooled p95 still just over 1 s in the sample. An unreadable sidecar also produced the same full answer in a focused test.

@@ -64,6 +64,37 @@ def test_cached_advice_matches_uncached_across_requests_and_profile_mutations(mo
     assert comparable(advise(turn, opponent=opponent, store=store)) == comparable(after_delete)
 
 
+def test_disk_advice_survives_memory_eviction_and_disposable_cache_damage(monkeypatch, tmp_path):
+    store = HandStore(tmp_path / "reference.sqlite")
+    cache = tmp_path / "reference.exact-solves.sqlite"
+    flop = spot(("villain", "raise", 250), ("hero", "call"), board=("7h", "8d", "2c"), position="big_blind")
+    calls = []
+    solve = SolverBot._solve
+
+    def counted(self, state, *args, **kwargs):
+        calls.append(state.street)
+        return solve(self, state, *args, **kwargs)
+
+    monkeypatch.setattr(SolverBot, "_solve", counted)
+    monkeypatch.setenv("POKER_COACH_SOLVE_CACHE", "1")
+    monkeypatch.setenv("POKER_COACH_SOLVE_DISK_CACHE", "1")
+    _SOLVES.clear()
+    try:
+        expected = comparable(advise(flop, store=store))
+        assert calls == ["flop"]
+        assert cache.is_file()
+        _SOLVES.clear()
+        assert comparable(advise(flop, store=store)) == expected
+        assert calls == ["flop"]
+
+        cache.write_bytes(b"unreadable SQLite cache")
+        _SOLVES.clear()
+        assert comparable(advise(flop, store=store)) == expected
+        assert calls == ["flop", "flop"]
+    finally:
+        _SOLVES.clear()
+
+
 def test_startup_warms_both_positions_for_an_existing_coach_profile(monkeypatch, tmp_path):
     monkeypatch.setenv("COACH_DB_PATH", str(tmp_path / "warm.sqlite"))
     monkeypatch.setenv("POKER_COACH_WARMUP", "1")
