@@ -218,6 +218,31 @@ The opt-in API used the installed Eval7 evaluator, 20,000 draws per request, and
 
 Run `backend/.venv/Scripts/python.exe autopilot/overnight/time_coach_multiway.py` from the repository root.
 
+### Maximum-length multiway action histories
+
+A scratch API run sent 32 river requests with the permitted 32 action
+entries. All succeeded, and a 33-entry request returned 422. Before the
+speed change, two-opponent p95 was 1,602 ms and three-opponent p95 was
+3,339 ms in the presence of development replays. The synthetic pressure
+histories include repeated raises to concentrate the candidate ranges.
+
+The sampler skips draws of zero remaining cards and indexes cumulative
+weights directly using the same random number and bounds. Fixed river
+scores are reused within one request. The same seeded comparison matched
+all 64 complete answers and all 300 sample deals. Each sample below has
+16 seeded responses. Both processes shared the host with development jobs.
+
+| Histories | Opponents | Before p95 (ms) | After p95 (ms) |
+| --- | ---: | ---: | ---: |
+| Typical | 2 | 754 | 613 |
+| Typical | 3 | 1,499 | 819 |
+| 32 actions | 2 | 1,377 | 969 |
+| 32 actions | 3 | 1,997 | 1,260 |
+
+The focused suite passed 13 tests, and the separate heads-up HTTP check
+matched all 192 advice hashes. The multiway flag remains opt-in. Run the
+maximum-history API check by adding `--max-history` to the command above.
+
 ### Quiet first-use reference measurements
 
 Two fresh processes with the normal disk cache and separate synthetic databases each matched 192/192 answers. No other overnight benchmark or regression ran alongside either process. The speculative column measures the confirmed full request after a matching request started 600 ms earlier.

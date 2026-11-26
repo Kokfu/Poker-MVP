@@ -6,8 +6,11 @@ into the identical Treys rank (1 = royal flush, 7462 = worst high card), so all
 comparisons, categories, and seeded results are unchanged.
 """
 from __future__ import annotations
+from bisect import bisect
 from collections import Counter
+from functools import lru_cache
 from itertools import accumulate, combinations, combinations_with_replacement
+from math import isfinite
 import os
 import random
 import time
@@ -162,19 +165,31 @@ def _weighted_multiway_deals(rng, unseen, missing, opponents, opponent_ranges, i
     # tuple being collision-free. Rejecting individual later seats alone
     # would instead bias the estimate toward cards in earlier seat ranges.
     remaining_count = missing + 2 * (opponents - len(opponent_ranges))
-    distributions = [(cards, list(accumulate(weights))) for cards, weights in opponent_ranges]
+    distributions = []
+    for cards, weights in opponent_ranges:
+        cumulative = list(accumulate(weights))
+        if len(cumulative) != len(cards) or not cumulative:
+            raise ValueError("each range requires one weight per candidate")
+        total = cumulative[-1] + 0.0
+        if total <= 0 or not isfinite(total):
+            raise ValueError("range weights must have a positive finite total")
+        distributions.append((cards, cumulative, total, len(cumulative) - 1))
     accepted = 0
     for _ in range(iterations * 100):
         chosen = []
         used = set()
-        for cards, cumulative in distributions:
-            first, second = rng.choices(cards, cum_weights=cumulative, k=1)[0]
+        for cards, cumulative, total, high in distributions:
+            # Same draw and upper bound as Random.choices(k=1), without
+            # allocating a one-element result list per attempted seat.
+            first, second = cards[bisect(cumulative, rng.random() * total, 0, high)]
             if first in used or second in used:
                 break
             used.update((first, second))
             chosen.extend((first, second))
         else:
-            yield rng.sample([card for card in unseen if card not in used], remaining_count) + chosen
+            if remaining_count:
+                chosen = rng.sample([card for card in unseen if card not in used], remaining_count) + chosen
+            yield chosen
             accepted += 1
             if accepted == iterations:
                 return
@@ -194,12 +209,23 @@ def multiway_equity(hero: list[str], board: list[str], opponents: int, iteration
         raise ValueError("more ranges than opponents")
     deals = (_weighted_multiway_deals(rng, unseen, missing, opponents, opponent_ranges, iterations) if opponent_ranges
              else (rng.sample(unseen, draw) for _ in range(iterations)))
+    if missing == 0:
+        river_hero = EVALUATOR.score(hero, board)
+
+        @lru_cache(maxsize=None)
+        def river_score(first, second):
+            return EVALUATOR.score([first, second], board)
+
     wins = ties = 0
     share = 0.0
     for deal in deals:
-        final_board = board + deal[:missing]
-        hero_score = EVALUATOR.score(hero, final_board)
-        others = [EVALUATOR.score(deal[missing + 2 * i: missing + 2 * i + 2], final_board) for i in range(opponents)]
+        if missing == 0:
+            hero_score = river_hero
+            others = [river_score(deal[i], deal[i + 1]) for i in range(0, 2 * opponents, 2)]
+        else:
+            final_board = board + deal[:missing]
+            hero_score = EVALUATOR.score(hero, final_board)
+            others = [EVALUATOR.score(deal[missing + 2 * i: missing + 2 * i + 2], final_board) for i in range(opponents)]
         best_other = min(others)  # lower score = stronger hand
         if hero_score < best_other:
             wins += 1
