@@ -37,3 +37,6 @@ backend/data/
 autopilot/*/jobs/**/*.log
 autopilot/*/jobs/**/*.lock
 autopilot/*/jobs/**/*.jsonl
+autopilot/*/jobs/*.learning
+autopilot/*/jobs/*.summary.json
+autopilot/*/jobs/profiles/

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { PlayingCard } from "./CardInput";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { isTypingTarget, PlayingCard } from "./CardInput";
 
 type Action = "fold" | "check" | "call" | "bet" | "raise" | "all_in";
 type Table = {
@@ -39,6 +39,26 @@ const MAX_LOCAL_TABLES = 2;
 const LABEL: Record<Action, string> = {
   fold: "Fold", check: "Check", call: "Call", bet: "Bet", raise: "Raise to", all_in: "All-in",
 };
+
+const ACTION_KEY: Record<Action, string> = {
+  fold: "F", check: "C", call: "C", bet: "B", raise: "B", all_in: "A",
+};
+
+function isSizedAction(action: Action): boolean {
+  return action === "bet" || action === "raise";
+}
+
+type PracticeShortcut = { action: Action | "next" } | { digit: string };
+
+export function practiceShortcut(key: string, onButton: boolean, complete: boolean,
+  legal: readonly Action[], hasTypedTotal: boolean): PracticeShortcut | undefined {
+  if (complete) return key.toUpperCase() === "N" ? { action: "next" } : undefined;
+  const sizedAction = legal.find(isSizedAction);
+  if (/^[0-9]$/.test(key)) return sizedAction ? { digit: key } : undefined;
+  if (key === "Enter") return !onButton && hasTypedTotal && sizedAction ? { action: sizedAction } : undefined;
+  const action = legal.find(candidate => ACTION_KEY[candidate] === key.toUpperCase());
+  return action ? { action } : undefined;
+}
 
 function playLabel(play: Play) {
   return play.amount === null ? LABEL[play.action] : `${LABEL[play.action]} ${play.amount}`;
@@ -111,6 +131,7 @@ function PracticeSeat({ seatKey: key, onOpen, onClose }: {
   const [table, setTable] = useState<Table>();
   const [pending, setPending] = useState(false);
   const [amount, setAmount] = useState("");
+  const [typed, setTyped] = useState(false);
   const [error, setError] = useState("");
   const [turnSeconds, setTurnSeconds] = useState("20");
   const [opponent, setOpponent] = useState("Solver bot");
@@ -131,6 +152,7 @@ function PracticeSeat({ seatKey: key, onOpen, onClose }: {
   const update = useCallback((state: Table) => {
     setTable(state);
     setAmount(state.minimum_target === null ? "" : String(state.minimum_target));
+    setTyped(false);
     setRemaining(Math.ceil((state.remaining_ms ?? 0) / 1000));
     setDeadline(state.remaining_ms === null ? undefined : performance.now() + state.remaining_ms);
   }, []);
@@ -233,6 +255,38 @@ function PracticeSeat({ seatKey: key, onOpen, onClose }: {
     return () => abort.abort();
   }, [completedHands, key, showSession]);
 
+  const validTotal = table !== undefined && Number.isInteger(+amount)
+    && +amount >= (table.minimum_target ?? 1) && +amount <= table.maximum_target;
+  const nextHand = () => {
+    if (table?.status === "complete") void request("/next", { revision: table.revision });
+  };
+  const play = (action: Action) => {
+    if (table?.status !== "your_turn" || remaining === 0 || (isSizedAction(action) && !validTotal)) return;
+    void request("/action", { revision: table.revision, action, ...(isSizedAction(action) ? { amount: +amount } : {}) });
+  };
+  useLayoutEffect(() => {
+    if (!table) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey ||
+        event.isComposing || isTypingTarget(event.target) || pendingRef.current) return;
+      if (table.status === "your_turn" && remaining === 0) return;
+      const onButton = (event.target as HTMLElement | null)?.tagName === "BUTTON";
+      const shortcut = practiceShortcut(event.key, onButton, table.status === "complete", table.legal_actions, typed);
+      if (!shortcut) return;
+      event.preventDefault();
+      if ("digit" in shortcut) {
+        setAmount(typed ? amount + shortcut.digit : shortcut.digit);
+        setTyped(true);
+      } else if (shortcut.action === "next") {
+        if (!event.repeat) nextHand();
+      } else if (!event.repeat) {
+        play(shortcut.action);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
   const validTimer = Number.isInteger(+turnSeconds) && +turnSeconds >= 1 && +turnSeconds <= 120;
 
   return (
@@ -273,24 +327,29 @@ function PracticeSeat({ seatKey: key, onOpen, onClose }: {
                   <strong>{decision.street}</strong> · You played {playLabel(decision.action)}{decision.timed_out && " (timer)"} · Coach suggests {playLabel(decision.advice)}{decision.mistake === false && " · your play is also fine (the Coach mixes)"}
                   {decision.explain && <p>{decision.explain.reason}</p>}
                 </li>)}</ol>}
-              <button className="primary" disabled={pending} onClick={() => request("/next", { revision: table.revision })}>Next practice hand</button>
+              <button className="primary" disabled={pending} aria-keyshortcuts="N" onClick={nextHand}>
+                Next practice hand <kbd aria-hidden="true">N</kbd>
+              </button>
             </>
           ) : (
             <>
               <h3>Your turn</h3>
               <p role="timer" aria-label="Time left">{remaining} s left</p>
               {remaining === 0 && error && <button disabled={pending} onClick={() => request("", undefined, "GET")}>Refresh turn</button>}
-              {(table.legal_actions.includes("bet") || table.legal_actions.includes("raise")) && (
-                <label>Street total <input type="number" inputMode="numeric" min={table.minimum_target ?? 0} max={table.maximum_target} value={amount} onChange={(event) => setAmount(event.target.value)} /></label>
+              {table.legal_actions.some(isSizedAction) && (
+                <>
+                  <label>Street total <input type="number" inputMode="numeric" min={table.minimum_target ?? 0} max={table.maximum_target} value={amount} onChange={(event) => { setAmount(event.target.value); setTyped(true); }} /></label>
+                  <p className="kbd-help">Click outside the controls, type a total, then press <kbd>Enter</kbd>.</p>
+                </>
               )}
               <div className="coach-action-row">
-                {table.legal_actions.map(action => {
-                  const sized = action === "bet" || action === "raise";
-                  return <button key={action} className="secondary" disabled={pending || remaining === 0 || (sized && (!Number.isInteger(+amount) || +amount < (table.minimum_target ?? 1) || +amount > table.maximum_target))}
-                    onClick={() => request("/action", { revision: table.revision, action, ...(sized ? { amount: +amount } : {}) })}>
+                {table.legal_actions.map(action => (
+                  <button key={action} className="secondary" disabled={pending || remaining === 0 || (isSizedAction(action) && !validTotal)}
+                    aria-keyshortcuts={ACTION_KEY[action]} onClick={() => play(action)}>
                     {LABEL[action]}{action === "call" && ` ${table.to_call}`}
-                  </button>;
-                })}
+                    <span className="key-hint" aria-hidden="true">{ACTION_KEY[action]}</span>
+                  </button>
+                ))}
               </div>
             </>
           )}
