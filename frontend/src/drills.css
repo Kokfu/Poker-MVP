@@ -10,6 +10,7 @@
 .drill-toolbar { align-items: end; }
 .drill-toolbar input, .drill-size input { width: 8rem; max-width: 100%; margin: 0; }
 .drill-status { color: var(--text-2); font-size: 0.9rem; }
+.drill-restore { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .drill-spot { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; border-top: 1px solid var(--line); padding-top: 14px; }
 .drill-spot-heading { justify-content: space-between; }
 .drill-clock { color: var(--accent-strong); font-variant-numeric: tabular-nums; }

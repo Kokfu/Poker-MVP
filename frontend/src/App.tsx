@@ -14,8 +14,14 @@ import type { Analysis } from "./types";
 type Tab = "analyzer" | "coach" | "drills" | "practice" | "simulator" | "match" | "replay";
 const TABS: [Tab, string][] = [["coach", "Coach"], ["drills", "Drills"], ["practice", "Practice table"], ["analyzer", "Equity calculator"], ["simulator", "Bot simulator"], ["match", "Bot match"], ["replay", "Replay"]];
 
+function linkedTab(): "practice" | "drills" | undefined {
+  const hash = window.location.hash;
+  if (hash === "#practice") return "practice";
+  if (hash === "#drills") return "drills";
+}
+
 export default function App() {
-  const [tab, setTab] = useState<Tab>(() => window.location.hash === "#practice" ? "practice" : "coach");
+  const [tab, setTab] = useState<Tab>(() => linkedTab() ?? "coach");
   const [cards, setCards] = useState<(string | null)[]>(Array(7).fill(null));
   const [form, setForm] = useState({
     pot: "100",
@@ -30,9 +36,10 @@ export default function App() {
   const [error, setError] = useState("");
 
   function chooseTab(item: Tab) {
-    if (item === "practice" || window.location.hash === "#practice") {
+    const linked = item === "practice" || item === "drills";
+    if (linked || linkedTab()) {
       const url = new URL(window.location.href);
-      url.hash = item === "practice" ? "practice" : "";
+      url.hash = linked ? item : "";
       window.history.replaceState(null, "", url);
     }
     setTab(item);

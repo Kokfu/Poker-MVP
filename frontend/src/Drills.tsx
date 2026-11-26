@@ -41,6 +41,7 @@ type Stats = {
 };
 
 const SECONDS_KEY = "drills.seconds";
+const TURN_KEY = "drills.turn";
 const ACTION_KEYS = { fold: "F", check: "C", call: "C", bet: "B", raise: "B", all_in: "A" };
 
 function savedSeconds() {
@@ -48,8 +49,21 @@ function savedSeconds() {
   return Number.isInteger(seconds) && seconds >= 3 && seconds <= 120 ? seconds : 15;
 }
 
+function savedTurn(): { id: string; filter: Category | "" } | null {
+  const saved = sessionStorage.getItem(TURN_KEY);
+  if (!saved) return null;
+  try {
+    const { id, filter } = JSON.parse(saved);
+    return typeof id === "string" && (filter === "" || Object.hasOwn(CATEGORIES, filter)) ? { id, filter } : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function Drills() {
   const [view, setView] = useState<"drills" | "leaks">("drills");
+  const [restoring, setRestoring] = useState(() => Boolean(savedTurn()));
+  const [restoreAttempt, setRestoreAttempt] = useState(0);
   const [category, setCategory] = useState<Category | "">("");
   const [seconds, setSeconds] = useState(() => String(savedSeconds()));
   const [spot, setSpot] = useState<Spot | null>(null);
@@ -72,7 +86,29 @@ export default function Drills() {
   }, []);
 
   useEffect(() => {
-    if (active || view === "leaks") return;
+    const saved = savedTurn();
+    if (!saved) return;
+    let mounted = true;
+    void drillRequest<{ spot: Spot; feedback: Feedback | null } | null>(`turns/${encodeURIComponent(saved.id)}`).then((round) => {
+      if (!mounted) return;
+      if (round) {
+        deadline.current = performance.now() + round.spot.remaining_ms;
+        setCategory(saved.filter);
+        setRemaining(round.spot.remaining_ms);
+        setSpot(round.spot);
+        setFeedback(round.feedback);
+      } else {
+        sessionStorage.removeItem(TURN_KEY);
+      }
+      setRestoring(false);
+    }).catch(() => {
+      if (mounted) setError("Could not restore this drill. Reconnect and try again.");
+    });
+    return () => { mounted = false; };
+  }, [restoreAttempt]);
+
+  useEffect(() => {
+    if (active || restoring || view === "leaks") return;
     let mounted = true;
     const refresh = () => refreshStats().catch(() => {
       if (mounted) setStats(undefined);
@@ -80,7 +116,7 @@ export default function Drills() {
     void refresh();
     const id = window.setInterval(refresh, 3500);
     return () => { mounted = false; window.clearInterval(id); };
-  }, [active, refreshStats, view]);
+  }, [active, refreshStats, restoring, view]);
 
   function updateAmount(value: string) {
     amountValue.current = value.replace(/[^0-9]/g, "").slice(0, 10);
@@ -105,6 +141,7 @@ export default function Drills() {
         return;
       }
       localStorage.setItem(SECONDS_KEY, String(limit));
+      sessionStorage.setItem(TURN_KEY, JSON.stringify({ id: next.id, filter }));
       deadline.current = performance.now() + next.remaining_ms;
       expired.current = false;
       setRemaining(next.remaining_ms);
@@ -190,9 +227,12 @@ export default function Drills() {
       <h2 id="drills-heading">{view === "leaks" ? "My leaks" : "Timed drills"}</h2>
       <nav className="drill-views" aria-label="Study views">
         <button type="button" aria-pressed={view === "drills"} onClick={() => setView("drills")}>Trainer</button>
-        <button type="button" aria-pressed={view === "leaks"} disabled={active || busy} onClick={() => setView("leaks")}>My leaks</button>
+        <button type="button" aria-pressed={view === "leaks"} disabled={active || busy || restoring} onClick={() => setView("leaks")}>My leaks</button>
       </nav>
-      {view === "leaks" ? <MyLeaks startDrill={(filter) => {
+      {restoring ? <div className="drill-restore">
+        <p role="status">{error || "Restoring your drill…"}</p>
+        {error && <button type="button" onClick={() => { setError(""); setRestoreAttempt((attempt) => attempt + 1); }}>Retry restore</button>}
+      </div> : view === "leaks" ? <MyLeaks startDrill={(filter) => {
         setView("drills");
         setCategory(filter);
         void start(filter);

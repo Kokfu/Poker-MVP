@@ -91,6 +91,21 @@ class DrillStore:
         return {**json.loads(spot), "id": spot_id,
                 "remaining_ms": max(0, round((issued + settings.seconds - time()) * 1000))}
 
+    def resume(self, spot_id: str) -> dict | None:
+        with self.connect() as db:
+            db.execute("BEGIN")
+            attempt = db.execute("SELECT spot, outcome FROM drill_attempts WHERE id = ?", (spot_id,)).fetchone()
+            if attempt is not None:
+                spot, outcome = attempt
+                return {"spot": {**json.loads(spot), "id": spot_id, "remaining_ms": 0}, "feedback": json.loads(outcome)}
+            running = db.execute("SELECT spot, started, seconds FROM drill_spots WHERE id = ? AND started IS NOT NULL",
+                                 (spot_id,)).fetchone()
+            if running is None:
+                return None
+            spot, started, seconds = running
+        remaining = max(0, round((started + seconds - time()) * 1000))
+        return {"spot": {**json.loads(spot), "id": spot_id, "remaining_ms": remaining}, "feedback": None}
+
     def answer(self, spot_id: str, answer: Answer) -> dict:
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
@@ -204,6 +219,12 @@ def start(settings: Start, request: Request, response: Response):
     if buffer is not None:
         buffer.wake.set()
     return spot
+
+
+@router.get("/turns/{spot_id}")
+def resume(spot_id: str, request: Request, response: Response):
+    response.headers["Cache-Control"] = "no-store"
+    return get_store(request).resume(spot_id)
 
 
 @router.post("/{spot_id}/answer")
