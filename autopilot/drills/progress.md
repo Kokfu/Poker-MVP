@@ -1,14 +1,18 @@
 # Status · drills/2026-11-26
-Current task: final full regression for recent attempts.
-Completed: timed drills, My leaks, push workflow, phone shell, drill recovery, and expanded action lines.
-Validation: 1,173 backend tests at the action-line checkpoint. The final focused run passed 40 backend tests and 8 Node tests, and phone browser QA passed.
-Next: record the final backend count and commit the attempt review.
+Current task: complete.
+Completed: timed drills, My leaks, GitHub push checks, phone install, and all three follow-ups.
+Validation: 1,174 backend tests, 8 Node tests, TypeScript and production build passed. Desktop and phone browser QA passed.
+Open checks: GitHub-hosted run, physical phone installation, and choice of private HTTPS address.
 
 ## Morning summary
 
 Branch `drills/2026-11-26`, forked from `overnight/2026-11-26` at `fbd5468`. Work resumed after the 07:00 MYT target when the user asked to continue.
 
-Four requested features are committed. The trainer staged 24 spots across 8 categories. My leaks combined all three sources and showed 3 ranked examples. Chromium parsed the standalone manifest, activated the service worker, and opened the app shell with the web server stopped. The GitHub workflow remains unverified on GitHub.
+All four features and three follow-ups are committed. Drills staged 24 spots across 8 categories and now generates them from 22 legal simulator action lines. My leaks combines drills, saved Coach hands, and Practice Table hands, with up to 3 ranked examples. The follow-ups add round recovery, both sides of a preflop 3-bet, and review of the 12 most recent attempts per filter.
+
+The final backend run passed 1,174 tests with 8 dependency warnings. All 8 Node tests, TypeScript, and the production build passed. Chromium opened the cached shell at phone width with the web server stopped. The test servers on 8013 and 5177 were stopped after browser QA.
+
+GitHub execution and a physical phone install remain unverified. The first sandboxed npm install and one reinstall under a running Vite process failed. Both were resolved locally. The unchanged lockfile reported four advisories.
 
 ### Decisions for you
 
@@ -74,3 +78,9 @@ npx.cmd vite preview --host 127.0.0.1 --port 5177 --strictPort
 
 - Commit `f25d42e`. The pool now uses 22 legal simulator action lines across 8 categories. The 3-bet category includes making a chart-supported 3-bet and responding to one. Later-street spots now vary position, prior actions, and wager size.
 - Focused backend **39 passed** in 11.94 seconds. Full backend at this checkpoint **1,173 passed** with 8 dependency warnings in 945.97 seconds, excluding the next follow-up's draft test. TypeScript, **7 Node tests**, and build passed. Completed a 3-bet round at phone width.
+
+## Follow-up 3 · Review recent attempts
+
+- Commit `7eede34`. Expand Recent attempts in the Trainer to review the latest completed spots with the selected category filter. Each review shows the graded choice, time, cost, cards, action history, best action, and solver mix.
+- Focused backend **40 passed** in 10.48 seconds. Final full backend **1,174 passed** with 8 dependency warnings in 1,004.07 seconds. TypeScript, **8 Node tests**, and the production build passed.
+- At 390 px, a completed 3-bet round appeared in the category's recent attempts with the saved mix and prior actions. Switching to an unused category showed the empty state. The document fit the 375 px content viewport with no console errors.
