@@ -4,7 +4,7 @@ $CoachRoot = Split-Path -Parent $PSScriptRoot
 $CoachBackend = Join-Path $CoachRoot 'backend'
 $CoachFrontend = Join-Path $CoachRoot 'frontend'
 $CoachPython = Join-Path $CoachBackend '.venv\Scripts\python.exe'
-$CoachRunDir = Join-Path $CoachRoot '.run'
+$CoachRunDir = if ($env:POKER_COACH_RUN_DIR) { $env:POKER_COACH_RUN_DIR } else { Join-Path $CoachRoot '.run' }
 $CoachPidFile = Join-Path $CoachRunDir 'pids.json'
 
 function Stop-CoachProcesses([switch]$Quiet) {

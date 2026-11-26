@@ -5,9 +5,9 @@
 .DESCRIPTION
   Double-click "Start Poker Coach.cmd" in the project folder; it runs this script.
   - First run: creates the Python environment and installs the web packages.
-  - Starts the backend on this computer only (127.0.0.1) and the web page on
-    your local network, then opens the page and prints the address for friends.
-  - Press Enter in the window to stop both. If the window was closed instead,
+  - Builds the frontend when its inputs change, serves it with the API, and
+    prints the address for friends when Windows has a Private network.
+  - Press Enter in the window to stop Coach. If the window was closed instead,
     run "Stop Poker Coach.cmd" (the next start also cleans up).
 
 .PARAMETER NoBrowser
@@ -20,7 +20,7 @@
   Ports can be changed with the environment variables POKER_API_PORT (default
   8000) and POKER_WEB_PORT (default 5173).
 #>
-param([switch]$NoBrowser, [switch]$NoWait)
+param([switch]$NoBrowser, [switch]$NoWait, [switch]$LoopbackOnly)
 
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'coach-common.ps1')
@@ -36,12 +36,18 @@ function Stop-WithMessage($text) {
     exit 1
 }
 
-function Get-PortOwner([int]$port) {
-    $listener = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
-    if (-not $listener) { return $null }
-    $process = Get-Process -Id $listener.OwningProcess -ErrorAction SilentlyContinue
-    if ($process) { return "$($process.ProcessName) (process $($process.Id))" }
-    return "process $($listener.OwningProcess)"
+function Get-PortListener([int]$port) {
+    $listeners = [Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties().GetActiveTcpListeners()
+    return $listeners | Where-Object { $_.Port -eq $port } | Select-Object -First 1
+}
+
+function Get-PathDigest([string]$path) {
+    $sha = [Security.Cryptography.SHA256]::Create()
+    try {
+        $reader = [IO.File]::OpenRead($path)
+        try { return [BitConverter]::ToString($sha.ComputeHash($reader)) }
+        finally { $reader.Dispose() }
+    } finally { $sha.Dispose() }
 }
 
 function Wait-ForUrl([string]$url, [int]$seconds) {
@@ -56,10 +62,15 @@ function Wait-ForUrl([string]$url, [int]$seconds) {
 }
 
 function Get-LanAddress {
-    $config = Get-NetIPConfiguration -ErrorAction SilentlyContinue |
-        Where-Object { $_.IPv4DefaultGateway -and $_.NetAdapter.Status -eq 'Up' } |
-        Select-Object -First 1
-    if ($config) { return @($config.IPv4Address)[0].IPAddress }
+    param($profiles)
+    if ($LoopbackOnly -or -not (Get-Command Get-NetIPConfiguration -ErrorAction SilentlyContinue)) { return $null }
+    foreach ($profile in $profiles) {
+        if ($profile.NetworkCategory -ne 'Private') { continue }
+        $config = Get-NetIPConfiguration -InterfaceIndex $profile.InterfaceIndex -ErrorAction SilentlyContinue
+        if ($config -and $config.IPv4DefaultGateway -and $config.NetAdapter.Status -eq 'Up') {
+            return @($config.IPv4Address)[0].IPAddress
+        }
+    }
     return $null
 }
 
@@ -87,59 +98,79 @@ if ($LASTEXITCODE -ne 0) {
 
 $npm = Get-Command npm.cmd -ErrorAction SilentlyContinue
 if (-not $npm) { Stop-WithMessage "Node.js is not installed. Install the LTS version from https://nodejs.org/, then run this again." }
-if (-not (Test-Path (Join-Path $CoachFrontend 'node_modules'))) {
-    Write-Step "Installing web packages (one-time)"
+New-Item -ItemType Directory -Force -Path $CoachRunDir | Out-Null
+$installStamp = Join-Path $CoachRunDir 'frontend-install.sha256'
+$buildStamp = Join-Path $CoachRunDir 'frontend-build.sha256'
+$lockHash = Get-PathDigest (Join-Path $CoachFrontend 'package-lock.json')
+$installed = Get-Content -LiteralPath $installStamp -ErrorAction SilentlyContinue
+if (-not (Test-Path (Join-Path $CoachFrontend 'node_modules/.bin/vite.cmd')) -or $installed -ne $lockHash) {
+    Write-Step "Installing locked web packages"
     Push-Location $CoachFrontend
-    try { & npm.cmd install --no-audit --no-fund } finally { Pop-Location }
+    try { & npm.cmd ci --prefer-offline --no-audit --no-fund } finally { Pop-Location }
     if ($LASTEXITCODE -ne 0) { Stop-WithMessage "Installing the web packages failed. Check your internet connection and try again." }
+    Set-Content -LiteralPath $installStamp -Value $lockHash
+}
+$buildInputs = @(
+    Get-ChildItem -LiteralPath (Join-Path $CoachFrontend 'src'), (Join-Path $CoachFrontend 'public') -File -Recurse
+    Get-ChildItem -LiteralPath $CoachFrontend -Filter 'tsconfig*.json' -File
+    Get-Item -LiteralPath @('index.html', 'package.json', 'package-lock.json', 'vite.config.ts', 'pwa-build.mjs').ForEach({
+        Join-Path $CoachFrontend $_
+    })
+)
+$stamp = ($buildInputs | Sort-Object FullName | ForEach-Object { Get-PathDigest $_.FullName }) -join ':'
+$built = Get-Content -LiteralPath $buildStamp -ErrorAction SilentlyContinue
+if ($built -ne $stamp -or -not (Test-Path (Join-Path $CoachFrontend 'dist/index.html')) -or
+    -not (Test-Path (Join-Path $CoachFrontend 'dist/service-worker.js'))) {
+    Write-Step "Building Poker Coach"
+    Push-Location $CoachFrontend
+    try { & npm.cmd run build } finally { Pop-Location }
+    if ($LASTEXITCODE -ne 0) { Stop-WithMessage "The Poker Coach web build failed." }
+    Set-Content -LiteralPath $buildStamp -Value $stamp
 }
 
 # ---- Ports -----------------------------------------------------------------
 foreach ($port in @($ApiPort, $WebPort)) {
-    $owner = Get-PortOwner $port
-    if ($owner) {
-        Stop-WithMessage ("Port $port is already in use by $owner.`n" +
+    $listener = Get-PortListener $port
+    if ($listener) {
+        Stop-WithMessage ("Port $port is already in use at $listener.`n" +
             "Poker Coach may already be running: try http://localhost:$WebPort`n" +
             "Otherwise close that program, or pick other ports (set POKER_API_PORT / POKER_WEB_PORT).")
     }
 }
 
 # ---- Start -----------------------------------------------------------------
-New-Item -ItemType Directory -Force -Path $CoachRunDir | Out-Null
 $log = @{
     apiOut = Join-Path $CoachRunDir 'backend.log'; apiErr = Join-Path $CoachRunDir 'backend-errors.log'
-    webOut = Join-Path $CoachRunDir 'web.log';     webErr = Join-Path $CoachRunDir 'web-errors.log'
 }
 
-Write-Step "Starting the Coach engine (port $ApiPort, this computer only)"
-# Vite is the public LAN entry point. The API uses its socket peer for
-# practice creation limits instead of an address carried in HTTP headers.
+$profiles = if (-not $LoopbackOnly) {
+    # The .cmd can inherit a PowerShell 7 module path from its caller.
+    foreach ($module in @('NetConnection', 'NetTCPIP')) {
+        $manifest = Join-Path $PSHOME "Modules/$module/$module.psd1"
+        if (Test-Path -LiteralPath $manifest) { Import-Module -Name $manifest -ErrorAction SilentlyContinue }
+    }
+    if (Get-Command Get-NetConnectionProfile -ErrorAction SilentlyContinue) {
+        @(Get-NetConnectionProfile -ErrorAction SilentlyContinue)
+    }
+}
+$lan = Get-LanAddress $profiles
+$share = [bool]$lan
+$publicNetwork = $profiles |
+    Where-Object { $_.NetworkCategory -eq 'Public' -and $_.IPv4Connectivity -ne 'NoTraffic' } |
+    Select-Object -First 1
+
+$coachArguments = @('-m', 'coach.launcher', '--api-port', "$ApiPort", '--web-port', "$WebPort")
+if ($share) { $coachArguments += @('--lan', $lan) }
+Write-Step "Serving the built Coach page and API (web port $WebPort)"
 $api = Start-Process -FilePath $CoachPython -WorkingDirectory $CoachBackend -WindowStyle Hidden -PassThru `
-    -ArgumentList @('-m', 'uvicorn', 'main:app', '--host', '127.0.0.1', '--port', "$ApiPort", '--no-proxy-headers') `
-    -RedirectStandardOutput $log.apiOut -RedirectStandardError $log.apiErr
+    -ArgumentList $coachArguments -RedirectStandardOutput $log.apiOut -RedirectStandardError $log.apiErr
 
-# Share the page on the network only when Windows marks this network Private (home/work).
-# On a Public network (cafe, hotspot) the page stays on this computer.
-$lan = Get-LanAddress
-$netProfile = Get-NetConnectionProfile -ErrorAction SilentlyContinue | Where-Object { $_.IPv4Connectivity -ne 'NoTraffic' } | Select-Object -First 1
-$publicNetwork = $netProfile -and $netProfile.NetworkCategory -eq 'Public'
-$share = $lan -and -not $publicNetwork
-$webHost = if ($share) { '0.0.0.0' } else { '127.0.0.1' }
-
-# The web page proxies /api to the engine, so friends never talk to the engine directly.
-$env:API_PROXY = "http://127.0.0.1:$ApiPort"
-Write-Step ("Starting the web page (port $WebPort, " + $(if ($share) { 'visible on your network)' } else { 'this computer only)' }))
-$vite = Join-Path $CoachFrontend 'node_modules\.bin\vite.cmd'
-$web = Start-Process -FilePath 'cmd.exe' -WorkingDirectory $CoachFrontend -WindowStyle Hidden -PassThru `
-    -ArgumentList @('/c', "`"$vite`"", '--host', $webHost, '--port', "$WebPort", '--strictPort') `
-    -RedirectStandardOutput $log.webOut -RedirectStandardError $log.webErr
-
-@{ api = $api.Id; web = $web.Id; apiPort = $ApiPort; webPort = $WebPort; started = (Get-Date).ToString('s') } |
+@{ api = $api.Id; apiPort = $ApiPort; webPort = $WebPort; started = (Get-Date).ToString('s') } |
     ConvertTo-Json | Set-Content -Path $CoachPidFile -Encoding UTF8
 
 $ok = (Wait-ForUrl "http://127.0.0.1:$ApiPort/api/health" 90) -and (Wait-ForUrl "http://127.0.0.1:$WebPort/" 60) -and
       (Wait-ForUrl "http://127.0.0.1:$WebPort/api/health" 15)
-if (-not $ok) {
+if (-not $ok -or $api.HasExited) {
     Write-Host ""
     Write-Host "Poker Coach did not start. Last log lines:" -ForegroundColor Red
     foreach ($file in $log.Values) {
@@ -160,16 +191,18 @@ Write-Host "  On this computer:          http://localhost:$WebPort"
 if ($share) {
     Write-Host "  Friends on the same Wi-Fi: " -NoNewline
     Write-Host "http://${lan}:$WebPort" -ForegroundColor Cyan
+} elseif ($LoopbackOnly) {
+    Write-Host "  Loopback-only mode is enabled."
 } elseif ($publicNetwork) {
-    Write-Host "  Not shared: Windows marks the network '$($netProfile.Name)' as Public, so only this computer can use it." -ForegroundColor Yellow
+    Write-Host "  Not shared: Windows marks the network '$($publicNetwork.Name)' as Public, so only this computer can use it." -ForegroundColor Yellow
     Write-Host "  On your own home Wi-Fi, switch it to Private and start again:" -ForegroundColor Yellow
-    Write-Host "  Settings > Network & internet > Wi-Fi > $($netProfile.Name) > Network profile type > Private." -ForegroundColor Yellow
+    Write-Host "  Settings > Network & internet > Wi-Fi > $($publicNetwork.Name) > Network profile type > Private." -ForegroundColor Yellow
 } else {
     Write-Host "  No network connection found, so only this computer can use it." -ForegroundColor Yellow
 }
 Write-Host ""
 Write-Host "  Notes:" -ForegroundColor DarkGray
-Write-Host "  - The first time, Windows may ask whether Node.js can use the network: allow Private networks." -ForegroundColor DarkGray
+Write-Host "  - If Windows Firewall asks, allow Python on Private networks only." -ForegroundColor DarkGray
 Write-Host "  - Everyone shares one saved-hands file, and anyone who can open the page can delete saved hands." -ForegroundColor DarkGray
 Write-Host "    Only share the address on a network you trust (home Wi-Fi, not public hotspots)." -ForegroundColor DarkGray
 Write-Host "  - Logs: $CoachRunDir" -ForegroundColor DarkGray
