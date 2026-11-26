@@ -54,6 +54,7 @@ class DrillStore:
                     spot TEXT NOT NULL, outcome TEXT NOT NULL, elapsed_ms INTEGER NOT NULL,
                     correct INTEGER NOT NULL, cost_bb REAL
                 );
+                CREATE INDEX IF NOT EXISTS drill_attempts_recent ON drill_attempts(created_at);
             """)
 
     @contextmanager

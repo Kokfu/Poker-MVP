@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { isTypingTarget } from "./CardInput";
+import DrillAttempts from "./DrillAttempts";
 import { ACTION_NAMES, actionName, CATEGORIES, DrillCards, DrillHistory, drillRequest, type Action, type Category, type Choice, type HistoryEntry } from "./DrillDisplay";
 import MyLeaks from "./MyLeaks";
 import "./drills.css";
@@ -304,6 +305,7 @@ export default function Drills() {
           </tr>)}</tbody>
         </table> : <p>Finish a drill to see your score.</p>}
       </div>
+      {!active && <DrillAttempts filter={category} />}
       </>}
     </section>
   );
