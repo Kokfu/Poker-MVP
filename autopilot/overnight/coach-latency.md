@@ -197,3 +197,9 @@ Each pass used a fresh Python process with one BLAS worker. Six fixed spots per 
 | All postflop | 2,664 | 2,809 | 1,010 |
 
 Every sample matched its full reference fingerprint. A separate cold pass with the disk cache enabled matched all 192. The populated disk helped repeats across restarts, with flop and pooled p95 still just over 1 s in the sample. An unreadable sidecar also produced the same full answer in a focused test.
+
+### Exact equity and CFR profiling
+
+Across 24 postflop inputs, cProfile attributed 8.38 s of internal time to computing CFR terminal values, 4.80 s to frequency fitting, 4.05 s to constructing equity matrices, and 2.50 s to the remainder of the CFR iteration loop. Both CFR experiments preserved the policy arrays byte for byte. Reusing buffers for regrets and terminal values raised the median unlocked solve from 661 to 695 ms, and normalizing the current strategy in place raised it from 518 to 534 ms. Both variants were dropped.
+
+The retained equity change counts legal completions directly when all runouts are enumerated. Six alternating runs matched every control matrix and compatibility mask byte for byte. Median matrix times were 87 vs. 88 ms for a sampled flop, 161 vs. 132 ms for an exact turn, and 21 vs. 19 ms for a river. Two focused solver runs each passed 35 tests. The equity-only API pass matched all 192 reference hashes, with first-use p95 of 1,037 ms flop, 1,714 ms turn, 2,367 ms river, and 1,805 ms pooled. The learning job was still running. The sub-second target remains open and the quiet-machine run is pending.

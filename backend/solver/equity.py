@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from hashlib import sha256
 from itertools import combinations
+from math import comb
 import random
 
 import eval7
@@ -98,15 +99,23 @@ def equity_matrix(board: list[str], rows: np.ndarray, cols: np.ndarray, samples:
         for start in range(block_size, len(rows), block_size):
             end = min(start + block_size, len(rows))
             total[start:end, :start] = -total[:start, start:end].T
-    row_valid, col_valid = valid[:, row_pos], valid[:, col_pos]
     # Per runout, row_valid * (1 - col_valid) - (1 - row_valid) * col_valid
     # is row_valid - col_valid. The correction needs two counts, not two
     # matrix products. These sums count runouts exactly.
+    row_valid, col_valid = valid[:, row_pos], valid[:, col_pos]
     row_count = row_valid.sum(axis=0)
     col_count = row_count if symmetric else col_valid.sum(axis=0)
     corrected = total - row_count[:, None] + col_count
-    count = row_valid.T @ col_valid
-    compat = compatible(rows, cols) & (count > 0)
+    missing = 5 - len(board)
+    remaining = len(CARDS) - len(board)
+    if 0 <= missing <= 2 and len(boards) == comb(remaining, missing) and len(set(board)) == len(board):
+        # A compatible pair blocks exactly four additional cards. Only fully
+        # enumerated boards have the same denominator for all compatible pairs.
+        count = np.float32(comb(remaining - 4, missing))
+        compat = compatible(rows, cols) & (row_count[:, None] > 0) & (col_count > 0)
+    else:
+        count = row_valid.T @ col_valid
+        compat = compatible(rows, cols) & (count > 0)
     d = np.zeros(shape, dtype=np.float64)
     np.divide(corrected, count, out=d, where=compat)
     return d, compat
