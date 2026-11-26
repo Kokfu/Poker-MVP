@@ -203,3 +203,9 @@ Every sample matched its full reference fingerprint. A separate cold pass with t
 Across 24 postflop inputs, cProfile attributed 8.38 s of internal time to computing CFR terminal values, 4.80 s to frequency fitting, 4.05 s to constructing equity matrices, and 2.50 s to the remainder of the CFR iteration loop. Both CFR experiments preserved the policy arrays byte for byte. Reusing buffers for regrets and terminal values raised the median unlocked solve from 661 to 695 ms, and normalizing the current strategy in place raised it from 518 to 534 ms. Both variants were dropped.
 
 The retained equity change counts legal completions directly when all runouts are enumerated. Six alternating runs matched every control matrix and compatibility mask byte for byte. Median matrix times were 87 vs. 88 ms for a sampled flop, 161 vs. 132 ms for an exact turn, and 21 vs. 19 ms for a river. Two focused solver runs each passed 35 tests. The equity-only API pass matched all 192 reference hashes, with first-use p95 of 1,037 ms flop, 1,714 ms turn, 2,367 ms river, and 1,805 ms pooled. The learning job was still running. The sub-second target remains open and the quiet-machine run is pending.
+
+### Multiway public-action ranges
+
+The opt-in API used the installed Eval7 evaluator, 20,000 draws per request, and a clean scratch database. The 64 requests covered preflop, flop, turn, and river with eight fixtures per street and per opponent count. Each active opponent had public actions. Pooled p95 was 565 ms for two opponents and 804 ms for three. The slowest observed three-opponent sample was a turn at 927 ms. Both cohorts met the 1.5 s target and the feature remains opt-in pending the owner decision.
+
+Run `backend/.venv/Scripts/python.exe autopilot/overnight/time_coach_multiway.py` from the repository root.
