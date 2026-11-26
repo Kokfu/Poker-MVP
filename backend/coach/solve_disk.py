@@ -1,4 +1,4 @@
-"""Bounded local storage of the Coach's exact postflop policies and EV inputs."""
+"""Bounded local storage of the Coach's exact policies and EV inputs."""
 
 from contextlib import closing
 from dataclasses import asdict
@@ -20,6 +20,7 @@ from solver.tree import StreetTree
 
 
 _LIMIT = 160 * 1024 * 1024
+_PREFLOP_LIMIT = 32
 _THREAD_ENV = ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS")
 
 
@@ -119,3 +120,39 @@ def load_or_compute(path, exact_key, root_state, menu, ranges, compute):
     solve = compute()
     _write(path, key, solve)
     return solve
+
+
+def load_preflop_policy(path, exact_key, tree, classes, compute):
+    try:
+        key = _key_digest(("locked_preflop", exact_key))
+    except OSError:
+        return compute()
+    try:
+        if path.is_file():
+            with closing(sqlite3.connect(path, timeout=0.05)) as connection:
+                row = connection.execute("SELECT payload FROM preflop_policies WHERE cache_key = ?", (key,)).fetchone()
+            if row:
+                with np.load(BytesIO(row[0]), allow_pickle=False) as data:
+                    policy = {node.index: data[f"policy_{node.index}"] for node in tree.nodes if node.kind == "decision"}
+                if all(policy[node.index].shape == (len(node.actions), classes)
+                       for node in tree.nodes if node.kind == "decision"):
+                    return policy
+    except (OSError, sqlite3.Error, BadZipFile, ValueError, TypeError, KeyError):
+        pass
+
+    policy = compute()
+    data = BytesIO()
+    np.savez(data, **{f"policy_{node}": values for node, values in policy.items()})
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with closing(sqlite3.connect(path, timeout=0.05)) as connection, connection:
+            connection.execute("CREATE TABLE IF NOT EXISTS preflop_policies "
+                               "(ordinal INTEGER PRIMARY KEY, cache_key TEXT UNIQUE, payload BLOB NOT NULL)")
+            connection.execute("INSERT OR REPLACE INTO preflop_policies (cache_key, payload) VALUES (?, ?)",
+                               (key, data.getvalue()))
+            connection.execute("DELETE FROM preflop_policies WHERE ordinal IN "
+                               "(SELECT ordinal FROM preflop_policies ORDER BY ordinal DESC LIMIT -1 OFFSET ?)",
+                               (_PREFLOP_LIMIT,))
+    except (OSError, sqlite3.Error):
+        pass
+    return policy

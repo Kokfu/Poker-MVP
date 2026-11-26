@@ -1,6 +1,7 @@
 """Reuse exact postflop solves across Coach requests for the same hand."""
 from solver.bot import AdaptiveSolverBot, StreetSolve
 from solver.exact_cache import ExactCache
+from solver.exploit import locks_key
 
 
 _SOLVES = ExactCache[StreetSolve](4)  # one hand's streets plus an off-tree re-solve
@@ -15,6 +16,24 @@ class CoachAdvisor(AdaptiveSolverBot):
         self.pool_streets = exploit
         self.cache_solves = cache_solves
         self.disk_path = disk_path
+
+    def _locked_preflop_policy(self, tree, opponent, locks, class_d, class_w, iterations):
+        solve = super()._locked_preflop_policy
+
+        def compute():
+            return solve(tree, opponent, locks, class_d, class_w, iterations)
+
+        if self.disk_path is None or self.capture_river_shadow or self.gated_locks or self.sized_reads:
+            return compute()
+
+        from .solve_disk import load_preflop_policy
+
+        nodes = tuple((node.index, node.kind, node.player, tuple(node.actions), tuple(node.children), node.contribution)
+                      for node in tree.nodes)
+        key = (tree.root, nodes, opponent, iterations,
+               locks_key(locks, exact=True),
+               tuple((matrix.shape, matrix.dtype.str, matrix.tobytes()) for matrix in (class_d, class_w)))
+        return load_preflop_policy(self.disk_path, key, tree, class_d.shape[0], compute)
 
     def _solve(self, root_state, board, ranges, hero_combo, hero, profile=None, *, working_ids=None):
         # Persistent-range research supplies its own projection of working IDs.

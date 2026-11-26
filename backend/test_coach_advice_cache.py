@@ -95,6 +95,35 @@ def test_disk_advice_survives_memory_eviction_and_disposable_cache_damage(monkey
         _SOLVES.clear()
 
 
+def test_locked_preflop_disk_policy_matches_after_memory_eviction(monkeypatch, tmp_path):
+    advisor = CoachAdvisor(seed=0, exploit=True, cache_solves=True, disk_path=tmp_path / "solves.sqlite")
+    tree = advisor.charts.trees[100]
+    root = tree.root
+    groups = (((0,), 0.2), (tuple(range(1, len(tree.nodes[root].actions))), 0.8))
+    solve = SolverBot._locked_preflop_policy
+    calls = []
+
+    def counted(self, *args):
+        calls.append(args[2])
+        return solve(self, *args)
+
+    monkeypatch.setattr("solver.bot.PREFLOP_LOCKED_ITERATIONS", 3)
+    monkeypatch.setattr(SolverBot, "_locked_preflop_policy", counted)
+    initial = {root: (0.3, groups)}
+    changed = {root: (0.3001, groups)}
+    _PREFLOP_CACHE.clear()
+    try:
+        expected = advisor._preflop_policy(100, 0, initial)(root)
+        assert advisor.disk_path.is_file()
+        _PREFLOP_CACHE.clear()
+        np.testing.assert_array_equal(advisor._preflop_policy(100, 0, initial)(root), expected)
+        assert calls == [initial]
+        advisor._preflop_policy(100, 0, changed)(root)
+        assert calls == [initial, changed]
+    finally:
+        _PREFLOP_CACHE.clear()
+
+
 def test_startup_warms_both_positions_for_an_existing_coach_profile(monkeypatch, tmp_path):
     monkeypatch.setenv("COACH_DB_PATH", str(tmp_path / "warm.sqlite"))
     monkeypatch.setenv("POKER_COACH_WARMUP", "1")
