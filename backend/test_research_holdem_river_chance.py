@@ -134,6 +134,7 @@ def test_reduced_exact_tree_is_exhaustively_traversable_and_order_invariant():
     assert forward["player_decision_nodes"] and forward["terminal_nodes"]
     assert forward["validation_errors"]==[]
 
+@pytest.mark.slow
 def test_reachable_universe_is_independent_of_sampling_and_drives_zero_visits():
     universe=dict(reachable_infoset_universe())
     assert set(universe.values())=={"flop","turn","river"}
@@ -145,6 +146,7 @@ def test_reachable_universe_is_independent_of_sampling_and_drives_zero_visits():
     assert known not in trainer.diagnostics(universe)["zero_visit_information_sets"]
     assert "unreachable-key" not in universe
 
+@pytest.mark.slow
 def test_phase_4f_vs_4g_scaling_report_uses_identical_accounting():
     report=phase_4f_vs_4g_scaling_report(iterations=5,seed=9)
     assert report["accounting"].startswith("one logical iteration")

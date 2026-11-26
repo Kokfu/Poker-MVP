@@ -77,6 +77,7 @@ def test_river_betting_oracle_converges_and_has_nonnegative_gap():
     assert late / solver.pot < 0.05  # within a few percent of the pot after 40 iterations on a small range
 
 
+@pytest.mark.slow
 def test_analyse_spot_reports_gaps_and_a_zero_sum_head_to_head():
     result = analyse_spot(spot(seed=5), oracle_iterations=30, production_iterations=30, river_iterations=30)
     assert result["river_subgames"] > 0 and result["production_gap"] >= -1e-6 and result["oracle_gap"] >= -1e-6
