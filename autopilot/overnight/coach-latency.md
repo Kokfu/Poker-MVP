@@ -237,3 +237,14 @@ Two fresh processes replayed the same 48 reference targets in separate synthetic
 Each street contains 16 observations, so the stated nearest-rank p95 is its maximum. The ordered cohort's pooled median was 777 ms. The 1 s target remains open for the pooled p95 in this run.
 
 From the repository root run `backend/.venv/Scripts/python.exe autopilot/overnight/time_coach_sequence.py first-use` and repeat with `sequence`.
+
+### Cached preflop locks across restarts
+
+Separate fresh processes primed and reopened one 24-spot cache per arm. Both arms used the postflop disk cache. The control bypassed only the preflop disk policy lookup. Every pass matched all 24 hashes, including both warm restarts.
+
+| Restart p95 | Preflop disk bypassed (ms) | Preflop disk enabled (ms) |
+| --- | ---: | ---: |
+| Preflop | 3,621 | 599 |
+| All postflop | 4,086 | 711 |
+
+The processes shared the host with two development replays. These timings describe repeated spots on a populated cache. Individual cold timings varied considerably. The disk sidecar retains up to 32 locked preflop policies in a separate table from its bounded postflop entries.
