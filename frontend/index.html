@@ -3,7 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0a1014" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/poker-coach-180.png" />
+    <link rel="icon" type="image/png" href="/icons/poker-coach-192.png" />
     <title>Poker Analyzer MVP</title>
   </head>
-  <body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body>
+  <body>
+    <div id="offline-shell" hidden class="offline-shell" role="status">
+      <p><strong>Offline.</strong> Reconnect to use the solver, drills, and saved data. <a href="/">Try again</a></p>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="/src/pwa-register.ts"></script>
+  </body>
 </html>
