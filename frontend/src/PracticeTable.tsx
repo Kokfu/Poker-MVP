@@ -29,7 +29,7 @@ type Table = {
 };
 
 type Play = { action: Action; amount: number | null };
-type Review = { street: string; action: Play; advice: Play; timed_out: boolean; explain: { reason: string } | null; estimated_cost: number | null };
+type Review = { street: string; action: Play; advice: Play; timed_out: boolean; explain: { reason: string } | null; estimated_cost: number | null; mistake?: boolean };
 type SessionReview = { completed_hands: number; hands: { hand: number; decisions: Review[]; estimated_cost: number | null }[] };
 type Seat = { key: string; opponent: string };
 type SavedSeats = { seats: Seat[]; active: string };
@@ -264,7 +264,7 @@ function PracticeSeat({ seatKey: key, onOpen, onClose }: {
               <h3>Coach review</h3>
               {reviewError ? <p role="alert">{reviewError}</p> : !review ? <p role="status">Loading advice…</p> :
                 <ol>{review.map((decision, index) => <li key={index}>
-                  <strong>{decision.street}</strong> · You played {playLabel(decision.action)}{decision.timed_out && " (timer)"} · Coach suggests {playLabel(decision.advice)}
+                  <strong>{decision.street}</strong> · You played {playLabel(decision.action)}{decision.timed_out && " (timer)"} · Coach suggests {playLabel(decision.advice)}{decision.mistake === false && " · your play is also fine (the Coach mixes)"}
                   {decision.explain && <p>{decision.explain.reason}</p>}
                 </li>)}</ol>}
               <button className="primary" disabled={pending} onClick={() => request("/next", { revision: table.revision })}>Next practice hand</button>
@@ -293,7 +293,7 @@ function PracticeSeat({ seatKey: key, onOpen, onClose }: {
           {showSession && <section aria-label="Session review">
             <h3>Session review</h3>
             {sessionError ? <p role="alert">{sessionError}</p> : !session ? <p role="status">Loading session review…</p> :
-              session.hands.length === 0 ? <p>Your plays matched the Coach advice in the completed hands.</p> :
+              session.hands.length === 0 ? <p>No mistakes: every play in the completed hands is one the Coach also makes.</p> :
               <>
                 <p className="muted">Estimated cost compares the two plays in the Coach model. Custom sizes may have no estimate.</p>
                 <ul>{session.hands.map(hand => <li key={hand.hand}>

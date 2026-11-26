@@ -118,7 +118,7 @@ def test_timer_folds_without_a_check_and_hides_review_until_settlement(monkeypat
     review = client.get(path, headers=headers).json()
     assert review == [{"street": "preflop", "action": {"action": "fold", "amount": None},
                        "timed_out": True, "advice": {"action": "call", "amount": None}, "explain": None,
-                       "estimated_cost": None}]
+                       "estimated_cost": None, "mistake": True}]
     assert client.get(path, headers=headers).json() == review
     assert len(seen) == 1 and seen[0].board == [] and seen[0].villain_cards is None
 
@@ -313,3 +313,36 @@ def test_slow_creation_reserves_capacity_without_blocking_existing_table(monkeyp
         finally:
             release.set()
         assert create.result(timeout=5).status_code == 201
+
+
+def test_review_accepts_mixed_strategy_plays_and_costs_against_best_ev():
+    from practice_table import _grade_play
+    result = {"advice": {"action": "bet", "amount": 200}, "explain": {"chosen": "bet_200", "options": [
+        {"label": "check", "frequency": 0.40, "ev": 141.0},
+        {"label": "bet_200", "frequency": 0.59, "ev": 141.2},
+        {"label": "bet_600", "frequency": 0.01, "ev": 120.0}]}}
+    assert _grade_play(Action("check"), result) == (0.2, False)
+    assert _grade_play(Action("bet", 200), result) == (0.0, False)
+    assert _grade_play(Action("bet", 600), result) == (21.2, True)
+    # A free size is graded by the nearest solver size.
+    assert _grade_play(Action("bet", 250), result) == (0.0, False)
+    # Without solver options the play is compared with the advice.
+    assert _grade_play(Action("fold"), {"advice": {"action": "call", "amount": None}, "explain": None}) == (None, True)
+
+
+def test_a_second_review_is_refused_instead_of_queued():
+    table = practice_table.PracticeTable()
+    try:
+        assert table.review_lock.acquire(blocking=False)
+        with pytest.raises(practice_table.HTTPException) as refused:
+            table.session_review()
+        assert refused.value.status_code == 429
+        with pytest.raises(practice_table.HTTPException) as refused:
+            table.review(1)
+        assert refused.value.status_code == 429
+        table.review_lock.release()
+        assert table.session_review() == {"completed_hands": 0, "hands": []}
+    finally:
+        table.closed = True
+        if table.timer is not None:
+            table.timer.cancel()

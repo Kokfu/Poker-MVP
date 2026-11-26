@@ -92,20 +92,48 @@ class ReviewHand:
     decisions: tuple[tuple[str, Spot, Action, bool], ...]
 
 
-def _estimated_loss(action, result):
-    options = (result["explain"] or {}).get("options", [])
-    values = {option["label"]: option["ev"] for option in options if "ev" in option}
-    label = action.type if action.amount is None else f"{action.type}_{action.amount}"
-    advice_label = (result["explain"] or {}).get("chosen")
-    if label in values and advice_label in values:
-        return round(max(0.0, values[advice_label] - values[label]), 1)
-    return None
+# An action the solver plays at least this often is a correct choice, as in Drills.
+_MIXED_MINIMUM = 0.05
+
+
+def _split_label(label: str):
+    action, _, raw = label.partition("_")
+    return (action, int(raw)) if raw.isdigit() else (label, None)
+
+
+def _grade_play(action, result):
+    """Return (estimated cost in chips, whether the play is a mistake).
+
+    The solver mixes, so any option it plays at least 5% of the time (or the
+    best-EV option) is correct; cost is measured against the best-EV option.
+    """
+    options = []
+    for option in (result.get("explain") or {}).get("options") or []:
+        kind, amount = _split_label(option["label"])
+        options.append({"action": kind, "amount": amount, "frequency": option.get("frequency") or 0.0,
+                        "ev": option.get("ev")})
+    choices = [o for o in options if o["action"] == action.type]
+    matched = next((o for o in choices if o["amount"] == action.amount), None)
+    if matched is None and choices and action.amount is not None:
+        sized = [o for o in choices if o["amount"] is not None]
+        if sized:
+            matched = min(sized, key=lambda o: abs(o["amount"] - action.amount))
+    if matched is None:
+        advice = result.get("advice") or {}
+        return None, (advice.get("action"), advice.get("amount")) != (action.type, action.amount)
+    valued = [o for o in options if o["ev"] is not None]
+    best = max(valued, key=lambda o: o["ev"]) if valued else None
+    cost = None
+    if best is not None and matched["ev"] is not None:
+        cost = round(max(0.0, best["ev"] - matched["ev"]), 1)
+    return cost, not (matched is best or matched["frequency"] >= _MIXED_MINIMUM)
 
 
 class PracticeTable:
     def __init__(self, turn_seconds: int = _DEFAULT_TURN_SECONDS, opponent: str = _DEFAULT_OPPONENT):
         self.lock = Lock()
         self.review_lock = Lock()
+        self.rate_lock = Lock()
         self.requests = {"read": deque(), "write": deque(), "review": deque()}
         self.closed = False
         self.last_used = monotonic()
@@ -165,9 +193,12 @@ class PracticeTable:
                 "opponent": self.opponent, "completed_hands": len(self.completed)}
 
     def check_rate(self, operation, limit):
+        # Checked before the table lock, so excess requests are refused at once
+        # instead of queueing behind a slow bot or Coach solve.
         if self.closed:
             raise HTTPException(404, "table unavailable")
-        _rate_limit(self.requests[operation], limit, monotonic())
+        with self.rate_lock:
+            _rate_limit(self.requests[operation], limit, monotonic())
 
     def advance(self, action: Action | None = None, *, timed_out: bool = False):
         trace = list(self.trace)
@@ -291,15 +322,22 @@ class PracticeTable:
         self._arm_timer()
         return self.snapshot()
 
+    def _begin_review(self):
+        self.check_rate("review", _REVIEW_LIMIT)
+        if not self.review_lock.acquire(blocking=False):
+            raise HTTPException(429, "A review is already running. Try again shortly.", headers={"Retry-After": "1"})
+
     def review(self, revision):
-        with self.review_lock:
+        self._begin_review()
+        try:
             with self.lock:
-                self.check_rate("review", _REVIEW_LIMIT)
                 _check_revision(self, revision)
                 if self.state["status"] != "complete":
                     raise HTTPException(409, "finish the current hand first")
                 hand = self.completed[revision]
             return self._review_hand(revision, hand)
+        finally:
+            self.review_lock.release()
 
     def _review_hand(self, revision: int, hand: ReviewHand):
         # The review lock serializes lazy computation. The table lock is free
@@ -310,25 +348,28 @@ class PracticeTable:
                 result = advise(spot, self.opponent, store=self.store, through_id=hand.through_id,
                                 include_preflop_ev=True)
                 play = {"action": action.type, "amount": action.amount}
+                cost, mistake = _grade_play(action, result)
                 rows.append({"street": street, "action": play, "timed_out": timed_out,
                              "advice": result["advice"], "explain": result["explain"],
-                             "estimated_cost": _estimated_loss(action, result)})
+                             "estimated_cost": cost, "mistake": mistake})
             self.reviewed[revision] = rows
         return self.reviewed[revision]
 
     def session_review(self):
-        with self.review_lock:
+        self._begin_review()
+        try:
             with self.lock:
-                self.check_rate("review", _REVIEW_LIMIT)
                 completed = tuple(self.completed.items())
             hands = []
             for revision, hand in completed:
-                differences = [row for row in self._review_hand(revision, hand) if row["action"] != row["advice"]]
+                differences = [row for row in self._review_hand(revision, hand) if row["mistake"]]
                 if differences:
                     costs = [row["estimated_cost"] for row in differences]
                     cost = None if None in costs else round(sum(costs), 1)
                     hands.append({"hand": hand.hand, "decisions": differences, "estimated_cost": cost})
             return {"completed_hands": len(completed), "hands": hands}
+        finally:
+            self.review_lock.release()
 
 
 class TableSettings(BaseModel):
@@ -415,8 +456,8 @@ TableKey = Annotated[str | None, Header()]
 @router.get("/table")
 def get_table(authorization: TableKey = None):
     table = _lookup(authorization)
+    table.check_rate("read", _READ_LIMIT)
     with table.lock:
-        table.check_rate("read", _READ_LIMIT)
         table.expire_turn()
         return table.snapshot()
 
@@ -424,8 +465,8 @@ def get_table(authorization: TableKey = None):
 @router.post("/table/action")
 def submit_action(request: TableAction, authorization: TableKey = None):
     table = _lookup(authorization)
+    table.check_rate("write", _WRITE_LIMIT)
     with table.lock:
-        table.check_rate("write", _WRITE_LIMIT)
         table.expire_turn()
         _check_revision(table, request.revision)
         return table.apply(Action(request.action, request.amount))
@@ -434,8 +475,8 @@ def submit_action(request: TableAction, authorization: TableKey = None):
 @router.post("/table/next")
 def next_hand(request: Revision, authorization: TableKey = None):
     table = _lookup(authorization)
+    table.check_rate("write", _WRITE_LIMIT)
     with table.lock:
-        table.check_rate("write", _WRITE_LIMIT)
         table.expire_turn()
         _check_revision(table, request.revision)
         return table.next_hand()
