@@ -73,8 +73,9 @@ function savedTurn(): { id: string; filter: Category | "" } | null {
   }
 }
 
-export default function Drills() {
-  const [view, setView] = useState<"drills" | "leaks">("drills");
+type View = "drills" | "leaks";
+
+export default function Drills({ view, onViewChange }: { view: View; onViewChange: (view: View) => void }) {
   const [restoring, setRestoring] = useState(() => Boolean(savedTurn()));
   const [restoreAttempt, setRestoreAttempt] = useState(0);
   const [category, setCategory] = useState<Category | "">("");
@@ -212,7 +213,7 @@ export default function Drills() {
   }, [active, spot, submit]);
 
   useLayoutEffect(() => {
-    if (!active || !spot || busy || remaining === 0) return;
+    if (view !== "drills" || !active || !spot || busy || remaining === 0) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || isTypingTarget(event.target)) return;
       const key = event.key.toUpperCase();
@@ -235,20 +236,20 @@ export default function Drills() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [active, spot, busy, remaining, sizedAction, submit]);
+  }, [active, spot, busy, remaining, sizedAction, submit, view]);
 
   return (
     <section className="drills-panel" aria-labelledby="drills-heading">
       <h2 id="drills-heading">{view === "leaks" ? "My leaks" : "Timed drills"}</h2>
       <nav className="drill-views" aria-label="Study views">
-        <button type="button" aria-pressed={view === "drills"} onClick={() => setView("drills")}>Trainer</button>
-        <button type="button" aria-pressed={view === "leaks"} disabled={active || busy || restoring} onClick={() => setView("leaks")}>My leaks</button>
+        <button type="button" aria-pressed={view === "drills"} onClick={() => onViewChange("drills")}>Trainer</button>
+        <button type="button" aria-pressed={view === "leaks"} disabled={active || busy || restoring} onClick={() => onViewChange("leaks")}>My leaks</button>
       </nav>
       {restoring ? <div className="drill-restore">
         <p role="status">{error || "Restoring your drill…"}</p>
         {error && <button type="button" onClick={() => { setError(""); setRestoreAttempt((attempt) => attempt + 1); }}>Retry restore</button>}
       </div> : view === "leaks" ? <MyLeaks startDrill={(filter) => {
-        setView("drills");
+        onViewChange("drills");
         setCategory(filter);
         void start(filter);
       }} /> : <>
