@@ -185,7 +185,7 @@ The quick preview matched the full action and size on 75/144 (52.08%) postflop s
 
 ### Persistent exact solves across restarts
 
-The default Coach keeps up to 160 MiB of solve records in a SQLite sidecar alongside the configured hand store. The database stores exact policies and the inputs needed to reconstruct action EVs. It uses the full in-memory key, namespaced by the solver source and numerical environment. The Coach can compute a fresh answer when the sidecar is unavailable. Set `POKER_COACH_SOLVE_DISK_CACHE=0` to measure the in-memory cache alone.
+The default Coach keeps up to 160 MiB of postflop payloads in a SQLite sidecar alongside the configured hand store. SQLite pages, table indexes, and preflop payloads add to that on-disk footprint. The database stores exact policies and the inputs needed to reconstruct action EVs. It uses the full in-memory key, namespaced by the solver source and numerical environment. The Coach can compute a fresh answer when the sidecar is unavailable. Set `POKER_COACH_SOLVE_DISK_CACHE=0` to measure the in-memory cache alone.
 
 Each pass used a fresh Python process with one BLAS worker. Six fixed spots per street were drawn from the reference set, so p95 within each street is its maximum. The restart kept only the exact-solve database. The separate hand-history database was rebuilt with the same synthetic rows and preflop policies started cold. The learning diagnostic was running during this comparison.
 
@@ -248,6 +248,22 @@ Separate fresh processes primed and reopened one 24-spot cache per arm. Both arm
 | All postflop | 4,086 | 711 |
 
 The processes shared the host with two development replays. These timings describe repeated spots on a populated cache. Individual cold timings varied considerably. The disk sidecar retains up to 32 locked preflop policies in a separate table from its bounded postflop entries.
+
+### Cache retention and recovery
+
+A scaled scratch run exercised the normal SQLite writer and eviction query
+with an 8 MiB postflop payload cap. It wrote 360 varying payloads between
+125,000 and 2,900,000 bytes and 360 synthetic preflop policies. At writes
+120, 240, and 360, postflop retained 8 rows and 7,125,000 payload bytes, and
+preflop retained the latest 32 rows and 138,432 payload bytes. The file
+held at 10,625,024 bytes across all three checkpoints. SQLite reported about
+810 reusable pages and passed its integrity check at each checkpoint.
+
+Replacing a single policy blob with invalid data caused one recomputation.
+The same test with an actual full flop answer caused one recomputation with
+an identical normalized response. Both returned from disk again on the next
+read. The scratch result measures page reuse at a reduced cap, with the
+production cap and exact advice logic unchanged.
 
 ### Two simultaneous clients
 
