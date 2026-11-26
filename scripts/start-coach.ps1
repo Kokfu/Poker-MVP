@@ -187,7 +187,7 @@ Write-Step "Serving the built Coach page and API (web port $WebPort)"
 $api = Start-Process -FilePath $CoachPython -WorkingDirectory $CoachBackend -WindowStyle Hidden -PassThru `
     -ArgumentList $coachArguments -RedirectStandardOutput $log.apiOut -RedirectStandardError $log.apiErr
 
-@{ api = $api.Id; apiPort = $ApiPort; webPort = $WebPort; started = (Get-Date).ToString('s') } |
+@{ api = $api.Id; apiStartedUtcTicks = $api.StartTime.ToUniversalTime().Ticks; apiPort = $ApiPort; webPort = $WebPort } |
     ConvertTo-Json | Set-Content -Path $CoachPidFile -Encoding UTF8
 
 $ok = (Wait-ForUrl "http://127.0.0.1:$ApiPort/api/health" 90) -and (Wait-ForUrl "http://127.0.0.1:$WebPort/" 60) -and
