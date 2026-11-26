@@ -4,6 +4,7 @@ from contextlib import closing
 from dataclasses import asdict
 from functools import lru_cache
 from hashlib import sha256
+from importlib.metadata import PackageNotFoundError, version
 from io import BytesIO
 import json
 from os import getenv
@@ -21,7 +22,8 @@ from solver.tree import StreetTree
 
 _LIMIT = 160 * 1024 * 1024
 _PREFLOP_LIMIT = 32
-_THREAD_ENV = ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS")
+_NUMERIC_ENV = ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS",
+                "OPENBLAS_CORETYPE", "NPY_DISABLE_CPU_FEATURES")
 
 
 @lru_cache(maxsize=1)
@@ -44,9 +46,21 @@ def _json_part(value):
     return asdict(value)
 
 
+@lru_cache(maxsize=1)
+def _runtime_revision():
+    try:
+        evaluator_version = version("eval7")
+    except PackageNotFoundError:
+        return None
+    return (platform.python_version(), np.__version__, evaluator_version,
+            platform.system(), platform.machine(), platform.processor())
+
+
 def _key_digest(exact_key):
-    namespace = (_solver_revision(), np.__version__, platform.system(), platform.machine(),
-                 tuple(getenv(name) for name in _THREAD_ENV))
+    runtime = _runtime_revision()
+    if runtime is None:
+        raise OSError("eval7 package version is unavailable")
+    namespace = (_solver_revision(), runtime, tuple(getenv(name) for name in _NUMERIC_ENV))
     payload = json.dumps((namespace, exact_key), default=_json_part, sort_keys=True, separators=(",", ":"))
     return sha256(payload.encode()).hexdigest()
 

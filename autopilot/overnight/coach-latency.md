@@ -273,6 +273,11 @@ an identical normalized response. Both returned from disk again on the next
 read. The scratch result measures page reuse at a reduced cap, with the
 production cap and exact advice logic unchanged.
 
+The disk key distinguishes the Python, NumPy and Eval7 versions, CPU
+identity, and configured BLAS thread and CPU dispatch settings. An upgrade
+therefore repopulates the affected on-disk keys. The usual in-memory solve
+path stays available when package metadata is missing.
+
 ### Two simultaneous clients
 
 Two loopback clients sent different confirmed requests at the same time.

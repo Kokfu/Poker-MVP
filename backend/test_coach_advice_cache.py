@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 import numpy as np
 import pytest
 
+from coach import solve_disk
 from coach.advisor import _SOLVES, CoachAdvisor
 from coach.service import _PROFILES, advise, log_hand, spot_to_dict
 from coach.store import HandStore
@@ -122,6 +123,20 @@ def test_locked_preflop_disk_policy_matches_after_memory_eviction(monkeypatch, t
         assert calls == [initial, changed]
     finally:
         _PREFLOP_CACHE.clear()
+
+
+def test_disk_keys_isolate_numeric_runtime_and_cpu_dispatch(monkeypatch):
+    monkeypatch.setattr(solve_disk, "_runtime_revision", lambda: ("python", "numpy", "eval7-a"))
+    monkeypatch.delenv("OPENBLAS_CORETYPE", raising=False)
+    first = solve_disk._key_digest(("same",))
+    assert solve_disk._key_digest(("same",)) == first
+
+    monkeypatch.setattr(solve_disk, "_runtime_revision", lambda: ("python", "numpy", "eval7-b"))
+    upgraded = solve_disk._key_digest(("same",))
+    assert upgraded != first
+
+    monkeypatch.setenv("OPENBLAS_CORETYPE", "Sandybridge")
+    assert solve_disk._key_digest(("same",)) not in {first, upgraded}
 
 
 def test_startup_warms_both_positions_for_an_existing_coach_profile(monkeypatch, tmp_path):
