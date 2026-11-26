@@ -167,3 +167,18 @@ $env:POKER_COACH_SOLVE_CACHE = '1'
 backend/.venv/Scripts/python.exe autopilot/overnight/time_coach_quick.py river
 backend/.venv/Scripts/python.exe autopilot/overnight/time_coach_quick.py representative
 ```
+
+### November 27 speculative input
+
+Coach can warm the exact solve cache once a manual board draft is complete or a likely opponent action has been entered, highlighted, or focused. A changed draft cancels the browser's speculative request. If the server has already started the solve, it may finish and fill the exact cache. The confirmed action still requests the full answer from the server with the current opponent history. Auto-advance initiates the full request immediately when the last card is picked.
+
+Two fresh host processes replayed 192 fixed decisions with one BLAS worker while the learning diagnostic was running. The candidate started a matching advice request 600 ms before the timed request on each postflop spot. This measures a deliberate pause after entry. It excludes the 600 ms lead from the confirmed request time. Both passes matched the checked-in full advice on all 192 decisions.
+
+| Street | Spots | No speculation p95 (ms) | 600 ms lead p95 (ms) |
+| --- | ---: | ---: | ---: |
+| Flop | 48 | 1,284 | 412 |
+| Turn | 48 | 1,840 | 1,047 |
+| River | 48 | 2,450 | 1,758 |
+| All postflop | 144 | 2,145 | 1,438 |
+
+The quick preview matched the full action and size on 75/144 (52.08%) postflop spots. The overnight target is still open for turns and rivers. From `backend`, reproduce the paired runs with `./.venv/Scripts/python.exe -m coach.reference_spots --prefetch-ms 0` and `./.venv/Scripts/python.exe -m coach.reference_spots --prefetch-ms 600`.

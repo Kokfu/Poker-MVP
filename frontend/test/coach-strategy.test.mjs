@@ -116,3 +116,30 @@ test("Coach publishes quick advice only while the matching full request is pendi
     assert.deepEqual(observed, []);
   });
 });
+
+test("Coach cancels unfinished speculative requests when the expected input changes", async (t) => {
+  const vite = await createServer({ server: { middlewareMode: true, ws: false } });
+  t.after(() => vite.close());
+  const { AdvicePrefetch } = await vite.ssrLoadModule("/src/AdvicePrefetch.ts");
+  const prefetch = new AdvicePrefetch();
+  t.after(() => prefetch.cancel());
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const fetch = t.mock.method(globalThis, "fetch", () => Promise.resolve(Response.json({})));
+
+  prefetch.schedule("draft");
+  prefetch.schedule("updated");
+  t.mock.timers.tick(180);
+  assert.equal(fetch.mock.callCount(), 1);
+  const [path, request] = fetch.mock.calls[0].arguments;
+  assert.equal(path, "/api/coach/advise");
+  assert.equal(request.body, "updated");
+  prefetch.commit("updated");
+  assert.equal(request.signal.aborted, false);
+  prefetch.commit("different");
+  assert.equal(request.signal.aborted, true);
+
+  prefetch.schedule("immediate");
+  prefetch.commit("immediate");
+  t.mock.timers.tick(180);
+  assert.equal(fetch.mock.callCount(), 1);
+});

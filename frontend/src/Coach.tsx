@@ -3,6 +3,7 @@ import CoachReview from "./CoachReview";
 import CoachData from "./CoachData";
 import CoachMultiway from "./CoachMultiway";
 import { CardInput, PlayingCard, isTypingTarget } from "./CardInput";
+import { AdvicePrefetch } from "./AdvicePrefetch";
 
 type Actor = "hero" | "villain";
 type ActionKind = "fold" | "check" | "call" | "bet" | "raise" | "all_in";
@@ -288,6 +289,7 @@ export default function Coach() {
   const opponentsRequest = useRef(0);
   const selectedOpponent = useRef(opponent.trim());
   const adviceRequest = useRef<AbortController | undefined>(undefined);
+  const [prefetch] = useState(() => new AdvicePrefetch());
   const history = loadedHistory?.name === opponent.trim() ? loadedHistory.hands : [];
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
@@ -366,6 +368,7 @@ export default function Coach() {
   }
 
   function cancelAdviceRequest() {
+    prefetch.cancel();
     if (!adviceRequest.current) return;
     adviceRequest.current.abort();
     adviceRequest.current = undefined;
@@ -395,12 +398,18 @@ export default function Coach() {
     setOpponent(name);
   }
 
+  function adviceBody(nextActions: SpotAction[], nextBoard: string[], hero = heroCards) {
+    return JSON.stringify({ ...spot, hero_cards: hero, actions: nextActions, board: nextBoard, opponent: opponent.trim() || null, exploit });
+  }
+
   async function evaluate(nextActions = actions, nextBoard = board, options: { hero?: string[]; remember?: boolean } = {}) {
     setError(""); setNotice("");
+    const payload = adviceBody(nextActions, nextBoard, options.hero);
+    prefetch.commit(payload);
     const request = beginAdviceRequest();
     const input = {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...spot, hero_cards: options.hero ?? heroCards, actions: nextActions, board: nextBoard, opponent: opponent.trim() || null, exploit }),
+      body: payload,
       signal: request.signal,
     };
     try {
@@ -414,6 +423,7 @@ export default function Coach() {
     } catch (requestError) {
       if (!request.signal.aborted) setError(requestError instanceof Error ? requestError.message : "Coach request failed");
     } finally {
+      if (adviceRequest.current === request) prefetch.cancel();
       finishAdviceRequest(request);
     }
   }
@@ -479,18 +489,37 @@ export default function Coach() {
     blurFocus();
   }
 
-  function act(actor: Actor, action: ActionKind, size?: number) {
+  function nextAction(actor: Actor, action: ActionKind, size?: number): SpotAction | undefined {
     const sized = action === "bet" || action === "raise";
     const total = size ?? Number(amount);
     if (sized && state) {
       const high = effectiveMaximum(state, actor);
       if ((size === undefined && !amount.trim()) || !Number.isInteger(total) || total < (state.minimum_target ?? 0) || total > high) {
-        setError(`Enter a whole-number total between ${state.minimum_target} and ${high} to ${action}.`);
         return;
       }
     }
+    return { actor, action, amount: sized ? Math.round(total) : null };
+  }
+
+  function warmOpponentAction(actor: Actor, action: ActionKind, size?: number) {
+    if (!loading && !reviewMode && actor === "villain" && result?.status === "villain_to_act" && board.length >= 3 && action !== "fold") {
+      const candidate = nextAction(actor, action, size);
+      if (candidate) prefetch.schedule(adviceBody([...actions, candidate], board));
+      else prefetch.cancel();
+    } else {
+      prefetch.cancel();
+    }
+  }
+
+  function act(actor: Actor, action: ActionKind, size?: number) {
+    const candidate = nextAction(actor, action, size);
+    if (!candidate && state) {
+      setError(`Enter a whole-number total between ${state.minimum_target} and ${effectiveMaximum(state, actor)} to ${action}.`);
+      return;
+    }
+    if (!candidate) return;
     blurFocus();
-    evaluate([...actions, { actor, action, amount: sized ? Math.round(total) : null }], board, { remember: true });
+    evaluate([...actions, candidate], board, { remember: true });
   }
 
   function followAdvice() {
@@ -619,6 +648,18 @@ export default function Coach() {
   const usedForBoard = new Set([...heroCards, ...villainCards, ...board]);
   const usedForVillain = new Set([...heroCards, ...board]);
 
+  useLayoutEffect(() => {
+    if (view === "play" && players === 1 && !reviewMode) {
+      if (!autoContinue && result?.status === "need_board" && board.length + boardDraft.length === result.cards_needed) {
+        prefetch.schedule(adviceBody(actions, [...board, ...boardDraft]));
+      } else if (typed && result?.status === "villain_to_act") {
+        const sized = result.state.legal_actions.find(action => action === "bet" || action === "raise");
+        if (sized) warmOpponentAction("villain", sized);
+      }
+    }
+    return () => prefetch.cancel();
+  }, [prefetch, view, players, reviewMode, autoContinue, result, spot, boardDraft, opponent, exploit, amount, typed]);
+
   // Page-wide keyboard flow. Card typing lives in CardInput (capture phase), so a key it used arrives here already handled.
   useLayoutEffect(() => {
     if (view !== "play" || players > 1) return;
@@ -680,7 +721,9 @@ export default function Coach() {
         )}
         <div className="coach-action-row">
         {state.legal_actions.map((action) => (
-          <button key={action} type="button" className="secondary" disabled={loading} title={`Shortcut: ${KEY_FOR_ACTION[action]}`} onClick={() => act(actor, action)}>
+          <button key={action} type="button" className="secondary" disabled={loading} title={`Shortcut: ${KEY_FOR_ACTION[action]}`}
+            onPointerEnter={() => warmOpponentAction(actor, action)} onFocus={() => warmOpponentAction(actor, action)}
+            onClick={() => act(actor, action)}>
             {ACTION_TEXT[action]}{(action === "bet" || action === "raise") && amount ? ` ${amount}` : ""}{action === "call" ? ` ${state.to_call}` : ""}
             <span className="key-hint" aria-hidden="true">{KEY_FOR_ACTION[action]}</span>
           </button>
@@ -702,12 +745,16 @@ export default function Coach() {
             </label>
             <div className="coach-quick-sizes" role="group" aria-label={`One click: ${ACTION_TEXT[sizedAction].toLowerCase()} this size`}>
               {recent !== undefined && (
-                <button type="button" className="chip" disabled={loading} title="Most recent legal size from this opponent's logged hands" onClick={() => act(actor, sizedAction, recent)}>
+                <button type="button" className="chip" disabled={loading} title="Most recent legal size from this opponent's logged hands"
+                  onPointerEnter={() => warmOpponentAction(actor, sizedAction, recent)} onFocus={() => warmOpponentAction(actor, sizedAction, recent)}
+                  onClick={() => act(actor, sizedAction, recent)}>
                   Recent <b>{recent}</b>
                 </button>
               )}
               {quickSizes(state, actor).map((size) => (
-                <button key={size.label} type="button" className="chip" disabled={loading} title={`${ACTION_TEXT[sizedAction]} ${size.amount}`} onClick={() => act(actor, sizedAction, size.amount)}>
+                <button key={size.label} type="button" className="chip" disabled={loading} title={`${ACTION_TEXT[sizedAction]} ${size.amount}`}
+                  onPointerEnter={() => warmOpponentAction(actor, sizedAction, size.amount)} onFocus={() => warmOpponentAction(actor, sizedAction, size.amount)}
+                  onClick={() => act(actor, sizedAction, size.amount)}>
                   {size.label} <b>{size.amount}</b>
                 </button>
               ))}

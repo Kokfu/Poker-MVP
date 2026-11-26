@@ -6,6 +6,7 @@ after an approved advice change, pass --record to review the resulting diff.
 
 import argparse
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 import math
@@ -14,7 +15,7 @@ from pathlib import Path
 from statistics import median
 import sys
 from tempfile import TemporaryDirectory
-from time import perf_counter
+from time import perf_counter, sleep
 from unittest.mock import patch
 
 REFERENCE = Path(__file__).with_suffix(".json")
@@ -33,7 +34,7 @@ def fingerprint(body):
     }
 
 
-def run(fixture, *, progress=False):
+def run(fixture, *, progress=False, prefetch_ms=0):
     from fastapi.testclient import TestClient
 
     from coach.store import HandStore
@@ -52,14 +53,20 @@ def run(fixture, *, progress=False):
             for opponent, hands in fixture["histories"].items():
                 for hand in hands:
                     store.add(opponent, hand)
-            with TestClient(app) as client:
+            with TestClient(app) as client, ThreadPoolExecutor(max_workers=1) as warm:
                 for index, spot in enumerate(fixture["spots"], start=1):
+                    street = spot["id"].split("-", 1)[0]
+                    speculative = None
+                    if prefetch_ms and street != "preflop":
+                        speculative = warm.submit(client.post, "/api/coach/advise", json=spot["request"])
+                        sleep(prefetch_ms / 1000)
                     start = perf_counter()
                     response = client.post("/api/coach/advise", json=spot["request"])
                     elapsed = 1_000 * (perf_counter() - start)
                     response.raise_for_status()
+                    if speculative is not None:
+                        speculative.result().raise_for_status()
                     body = response.json()
-                    street = spot["id"].split("-", 1)[0]
                     if body["status"] != "hero_to_act" or body["state"]["street"] != street:
                         raise ValueError(f"{spot['id']} did not reach the expected hero decision")
                     advice = fingerprint(body)
@@ -114,7 +121,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--record", action="store_true", help="explicitly replace the checked-in expectations")
     parser.add_argument("--progress", action="store_true", help="log checkpoints to stderr")
+    parser.add_argument("--prefetch-ms", type=int, default=0, help="lead time for a matching speculative API call")
     args = parser.parse_args()
+    if args.prefetch_ms < 0 or (args.record and args.prefetch_ms):
+        parser.error("use a non-negative prefetch lead for verification only")
     # Set before importing FastAPI's Coach modules, which can load NumPy.
     for variable in ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS"):
         os.environ[variable] = "1"
@@ -122,7 +132,7 @@ def main():
     ids = [spot["id"] for spot in fixture["spots"]]
     if len(ids) != 192 or len(set(ids)) != len(ids):
         parser.exit(1, "Expected 192 distinct reference spot IDs\n")
-    results = run(fixture, progress=args.progress)
+    results = run(fixture, progress=args.progress, prefetch_ms=args.prefetch_ms)
     summary = summarize(results)
     if args.record:
         for spot, _, advice, _, _ in results:
