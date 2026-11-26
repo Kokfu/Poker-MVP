@@ -1,0 +1,25 @@
+.drill-views { display: flex; gap: 8px; margin: 0; }
+.leaks-report, .leak-top, .leak-breakdown { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.leaks-report { gap: 20px; }
+.leak-summary, .leak-groups { display: grid; gap: 12px; }
+.leak-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.leak-summary > div { display: grid; align-content: start; gap: 4px; padding: 12px; background: var(--surface-2); border-radius: 8px; }
+.leak-summary strong { color: var(--accent-strong); font-size: clamp(1rem, 4vw, 1.5rem); }
+.leak-summary span, .leak-coverage { color: var(--text-2); font-size: 0.85rem; }
+.leak-coverage, .leak-card-heading { display: flex; gap: 8px 12px; flex-wrap: wrap; }
+.leak-card { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+.leak-card-heading { align-items: center; justify-content: space-between; }
+.leak-card-heading p { color: var(--text-2); font-size: 0.9rem; margin-top: 3px; }
+.leak-card details .drill-history { margin-top: 8px; }
+.leak-card summary { cursor: pointer; color: var(--accent-strong); }
+.leak-breakdown table { width: 100%; min-width: 0; border-collapse: collapse; font-size: 0.85rem; }
+.leak-breakdown :is(th, td) { padding: 6px 4px; text-align: left; white-space: normal; border-bottom: 1px solid var(--line); }
+.leak-breakdown td { font-variant-numeric: tabular-nums; }
+.leak-breakdown th small { display: block; font-weight: 400; }
+.leak-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+
+@media (max-width: 660px) {
+  .leak-groups { grid-template-columns: minmax(0, 1fr); }
+  .leak-summary { gap: 6px; }
+  .leak-summary > div { padding: 8px; }
+}

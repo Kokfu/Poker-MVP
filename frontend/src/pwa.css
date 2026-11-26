@@ -1,0 +1,9 @@
+.offline-shell {
+  padding: 10px 16px;
+  text-align: center;
+  background: var(--surface-raised);
+  color: var(--text);
+  border-bottom: 1px solid var(--line);
+}
+.offline-shell p { margin: 0; }
+.offline-shell a { color: var(--accent-strong); margin-inline-start: 10px; }

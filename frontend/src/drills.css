@@ -1,0 +1,44 @@
+.drills-panel { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.drills-panel :is(h2, h3, h4, p) { margin: 0; }
+.drill-toolbar, .drill-spot-heading, .drill-table, .drill-pot, .drill-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.drill-toolbar label, .drill-size { display: grid; gap: 4px; color: var(--text-2); }
+.drill-toolbar { align-items: end; }
+.drill-toolbar input, .drill-size input { width: 8rem; max-width: 100%; margin: 0; }
+.drill-status { color: var(--text-2); font-size: 0.9rem; }
+.drill-restore { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.drill-spot { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; border-top: 1px solid var(--line); padding-top: 14px; }
+.drill-spot-heading { justify-content: space-between; }
+.drill-clock { color: var(--accent-strong); font-variant-numeric: tabular-nums; }
+.drill-clock-low { color: var(--danger); }
+.drill-table { align-items: start; padding: 12px; background: var(--surface-2); border-radius: 8px; }
+.drill-cards { display: grid; gap: 5px; }
+.drill-cards h3, .drill-history h3 { font-size: 0.9rem; color: var(--text-2); }
+.drill-cards > div { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.drill-pot { flex-basis: 100%; font-size: 0.9rem; color: var(--text-2); }
+.drill-pot b { color: var(--text); }
+.drill-history ol { margin: 5px 0 0; padding-left: 20px; }
+.drill-history li span { color: var(--text-2); text-transform: capitalize; }
+.drill-controls { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; }
+.drill-buttons kbd { color: var(--text-2); margin-left: 4px; }
+.drill-size { display: block; }
+.drill-size input { display: block; }
+.drill-feedback { display: grid; gap: 8px; background: var(--accent-soft); padding: 12px; border-radius: 8px; }
+.drill-feedback ul { list-style: none; display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0; padding: 0; }
+.drill-stats { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; border-top: 1px solid var(--line); padding-top: 14px; }
+.drill-stats table { width: 100%; min-width: 0; border-collapse: collapse; font-size: 0.9rem; }
+.drill-stats :is(th, td) { padding: 6px 4px; text-align: left; white-space: normal; border-bottom: 1px solid var(--line); }
+.drill-stats td { font-variant-numeric: tabular-nums; }
+
+@media (max-width: 520px) {
+  .drills-panel { padding: 12px; }
+  .drill-toolbar { gap: 8px; }
+  .drill-toolbar button { width: 100%; }
+  .drill-spot-heading { gap: 6px; }
+  .drill-buttons { gap: 6px; }
+  .drill-buttons button { padding-inline: 9px; }
+}

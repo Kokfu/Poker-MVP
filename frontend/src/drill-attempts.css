@@ -1,0 +1,8 @@
+.drill-attempts { border-top: 1px solid var(--line); padding-top: 12px; }
+.drill-attempts > summary { cursor: pointer; color: var(--accent-strong); font-weight: 600; }
+.drill-attempt-list, .attempt-review-content { display: grid; gap: 8px; margin-top: 10px; }
+.attempt-review { background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; }
+.attempt-review > summary { padding: 9px 12px; cursor: pointer; }
+.attempt-review > summary > :is(span, time) { display: inline-block; margin-inline-start: 10px; }
+.attempt-review-content { padding: 0 12px 12px; }
+.attempt-review-content .drill-table { background: var(--surface); }

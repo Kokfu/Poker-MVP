@@ -1,0 +1,16 @@
+{
+  "name": "Poker Coach",
+  "short_name": "Poker Coach",
+  "description": "Texas Hold’em study, timed drills, and play-chip practice.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0a1014",
+  "theme_color": "#0a1014",
+  "icons": [
+    { "src": "/icons/poker-coach-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/poker-coach-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/poker-coach-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
