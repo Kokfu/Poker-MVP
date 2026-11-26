@@ -267,3 +267,12 @@ development replays shared the host during this comparison.
 A speculative request can compete with unrelated confirmations. The smaller
 street cohorts each have eight observations, with the maximum as their
 nearest-rank p95.
+
+A candidate cancelled unrelated speculative work at the next solve boundary
+when two confirmed requests were in flight. All 192 reference checks and all
+48 live confirmed fingerprints passed. Under development replay load, its
+two-client control and competing arms measured 4,645 ms and 6,278 ms pooled
+p95. Turn improved in the competing arm, while flop and river were slower.
+The baseline control also shifted from 3,510 to 4,645 ms between rounds.
+The boundary cancellation candidate was dropped. An already running solve
+can still consume CPU, and these timings leave the size of that effect open.
