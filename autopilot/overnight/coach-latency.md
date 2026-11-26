@@ -209,3 +209,16 @@ The retained equity change counts legal completions directly when all runouts ar
 The opt-in API used the installed Eval7 evaluator, 20,000 draws per request, and a clean scratch database. The 64 requests covered preflop, flop, turn, and river with eight fixtures per street and per opponent count. Each active opponent had public actions. Pooled p95 was 565 ms for two opponents and 804 ms for three. The slowest observed three-opponent sample was a turn at 927 ms. Both cohorts met the 1.5 s target and the feature remains opt-in pending the owner decision.
 
 Run `backend/.venv/Scripts/python.exe autopilot/overnight/time_coach_multiway.py` from the repository root.
+
+### Quiet first-use reference measurements
+
+Two fresh processes with the normal disk cache and separate synthetic databases each matched 192/192 answers. No other overnight benchmark or regression ran alongside either process. The speculative column measures the confirmed full request after a matching request started 600 ms earlier.
+
+| Street | First-use p95 (ms) | 600 ms speculative lead p95 (ms) |
+| --- | ---: | ---: |
+| Flop | 1,058 | 708 |
+| Turn | 1,957 | 1,286 |
+| River | 2,423 | 1,610 |
+| All postflop | 2,094 | 1,494 |
+
+The first-use cohort still exceeds the 1,000 ms target on all three streets.
