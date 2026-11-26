@@ -204,6 +204,14 @@ Across 24 postflop inputs, cProfile attributed 8.38 s of internal time to comput
 
 The retained equity change counts legal completions directly when all runouts are enumerated. Six alternating runs matched every control matrix and compatibility mask byte for byte. Median matrix times were 87 vs. 88 ms for a sampled flop, 161 vs. 132 ms for an exact turn, and 21 vs. 19 ms for a river. Two focused solver runs each passed 35 tests. The equity-only API pass matched all 192 reference hashes, with first-use p95 of 1,037 ms flop, 1,714 ms turn, 2,367 ms river, and 1,805 ms pooled. The learning job was still running. The sub-second target remains open and the quiet-machine run is pending.
 
+A later fitter experiment reused the fitted policy and scaling buffers.
+All 480 combinations of simulated inputs, sizes and array layouts matched
+the current output exactly. Eight alternating timing passes per case
+showed mixed results. The 1,100-combo row-major batch fell from 204 to
+174 ms, while the 600-combo row-major batch rose from 92 to 99 ms and all
+three column-major batches slowed. The host was running development replays
+and a reference check. The candidate stayed out of the solver.
+
 ### Multiway public-action ranges
 
 The opt-in API used the installed Eval7 evaluator, 20,000 draws per request, and a clean scratch database. The 64 requests covered preflop, flop, turn, and river with eight fixtures per street and per opponent count. Each active opponent had public actions. Pooled p95 was 565 ms for two opponents and 804 ms for three. The slowest observed three-opponent sample was a turn at 927 ms. Both cohorts met the 1.5 s target and the feature remains opt-in pending the owner decision.
