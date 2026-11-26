@@ -222,3 +222,18 @@ Two fresh processes with the normal disk cache and separate synthetic databases 
 | All postflop | 2,094 | 1,494 |
 
 The first-use cohort still exceeds the 1,000 ms target on all three streets.
+
+### Requests in hand order
+
+Two fresh processes replayed the same 48 reference targets in separate synthetic databases. The first requested the target spot directly. The second requested the 111 earlier legal hero decisions with the board visible at each decision. Both used the default exact caches. Both matched all 48 full fingerprints. The development replays ran in the background during these samples.
+
+| Measured target | First-use p95 (ms) | After earlier advice p95 (ms) |
+| --- | ---: | ---: |
+| Flop | 3,009 | 1,627 |
+| Turn | 2,997 | 1,943 |
+| River | 4,194 | 991 |
+| All postflop | 3,162 | 1,493 |
+
+Each street contains 16 observations, so the stated nearest-rank p95 is its maximum. The ordered cohort's pooled median was 777 ms. The 1 s target remains open for the pooled p95 in this run.
+
+From the repository root run `backend/.venv/Scripts/python.exe autopilot/overnight/time_coach_sequence.py first-use` and repeat with `sequence`.
