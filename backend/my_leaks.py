@@ -14,14 +14,14 @@ from starlette.concurrency import run_in_threadpool
 
 from coach.service import HERO, _replay, advise, spot_from_dict
 from coach.store import HandStore, default_path
-from drill_spots import LINES, classify, grade, legal_options
+from drill_spots import LINES, classify, grade, has_three_bet, legal_options
 from drills import STUDY_SOLVER_LOCK, DrillStore, app_lifespan as drills_lifespan
 from poker_analyzer import EVALUATOR
 
 
 ROUTER = APIRouter(prefix="/api/drills", tags=["drills"])
 LOG = logging.getLogger(__name__)
-REVIEW_VERSION = 1
+REVIEW_VERSION = 2
 SESSION_GAP = timedelta(minutes=30)
 
 
@@ -62,7 +62,7 @@ def review_saved_hand(hand: SavedHand, store: HandStore, stop: Event) -> list[di
                 bluff = (event.street == "river" and EVALUATOR.category(prefix.hero_cards, prefix.board) == "High Card"
                          and any(o["action"] in {"bet", "all_in"} and o["frequency"] >= 0.05 for o in options))
                 category = classify(event.street, [(e["street"], e["actor"], e["action"]) for e in history],
-                                    event.amount_to_call_before, can_bluff=bluff)
+                                    event.amount_to_call_before, can_bluff=bluff, can_three_bet=has_three_bet(options))
                 decisions.append({
                     "category": category, "street": event.street, "position": full.hero_position,
                     "spot": {"hero_cards": full.hero_cards, "board": list(event.board), "history": list(history),

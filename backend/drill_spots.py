@@ -6,37 +6,19 @@ from random import Random
 from types import SimpleNamespace
 
 from coach.explain import concretize
-from simulation.actions import Action
+from drill_lines import LINES
 from simulation.bots import BOT_TYPES
 from simulation.engine import HandEngine
 
 
-# Each line ends immediately before the decision to drill. Seat a is Hero.
-OPEN = Action("raise", 250)
-CALL = Action("call")
-CHECK = Action("check")
-FLOP_BET = Action("bet", 165)
-CHECKED_TURN = (OPEN, CALL, CHECK, FLOP_BET, CALL, CHECK)
-LINES = {
-    "preflop_open": ("a", ()),
-    "preflop_defend": ("b", (OPEN,)),
-    "preflop_three_bet": ("a", (OPEN, Action("raise", 750))),
-    "flop_cbet": ("a", (OPEN, CALL, CHECK)),
-    "flop_defend": ("b", (OPEN, CALL, CHECK, FLOP_BET)),
-    "turn": ("a", CHECKED_TURN),
-    "river_call": ("a", (*CHECKED_TURN, CHECK, Action("bet", 410))),
-    "river_bluff": ("a", (*CHECKED_TURN, CHECK, CHECK)),
-}
-
-
-def classify(street: str, actions, to_call: int, *, can_bluff: bool = False) -> str | None:
+def classify(street: str, actions, to_call: int, *, can_bluff: bool = False, can_three_bet: bool = False) -> str | None:
     """Classify a decision using (street, actor, action) rows before it."""
     aggression = {"bet", "raise", "all_in"}
     if street == "preflop":
         raises = [actor for _, actor, action in actions if action in aggression]
         if not actions:
             return "preflop_open"
-        return "preflop_three_bet" if len(raises) >= 2 else "preflop_defend"
+        return "preflop_three_bet" if len(raises) >= 2 or (len(raises) == 1 and can_three_bet) else "preflop_defend"
     if street == "flop":
         if to_call:
             return "flop_defend"
@@ -59,8 +41,7 @@ class _AtDecision(Exception):
         self.observation = observation
 
 
-def make_spot(category: str, seed: int) -> tuple[dict, dict] | None:
-    button, line = LINES[category]
+def simulate_line(button, line, seed, stack):
     actions = iter(line)
 
     def play(seat, observation):
@@ -68,38 +49,43 @@ def make_spot(category: str, seed: int) -> tuple[dict, dict] | None:
         state = observation.decision_state
         if action is None:
             if seat != "a":
-                raise ValueError(f"{category} line did not end at Hero's decision")
+                raise ValueError("Drill line did not end at Hero's decision")
             raise _AtDecision(observation)
         if action.type not in state.legal_actions or (
             action.amount is not None
             and not state.minimum_legal_target <= action.amount <= state.maximum_legal_target
         ):
-            raise ValueError(f"illegal action in {category} line")
+            raise ValueError("Illegal action in drill line")
         return action
 
     hero = SimpleNamespace(decide_decision=lambda o: play("a", o))
     villain = SimpleNamespace(decide_decision=lambda o: play("b", o))
-    # Mix stack depths and deals while keeping each line on a tested legal path.
-    engine = HandEngine(hero, villain, button=button, seed=seed, stack=Random(seed).choice((5000, 7500, 10000)))
+    engine = HandEngine(hero, villain, button=button, seed=seed, stack=stack)
     try:
         engine.play()
     except _AtDecision as stop:
         observation = stop.observation
     else:
-        raise ValueError(f"{category} line finished before Hero's decision")
+        raise ValueError("Drill line finished before Hero's decision")
 
-    state = observation.decision_state
     history = [
         {"street": event.street, "actor": "hero" if event.actor == "a" else "villain",
          "action": event.applied_action, "amount": event.target_total}
         for event in engine.history.events if event.event_type == "action_taken"
     ]
+    return observation, history
+
+
+def make_spot(category: str, seed: int, *, line_index: int | None = None) -> tuple[dict, dict] | None:
+    random = Random(seed)
+    stack = random.choice((5000, 7500, 10000))
+    lines = LINES[category]
+    button, line = random.choice(lines) if line_index is None else lines[line_index]
+    observation, history = simulate_line(button, line, seed, stack)
+    state = observation.decision_state
     can_bluff = observation.poker_features.made_hand == "high_card"
     if category == "river_bluff" and not can_bluff:
         return None
-    if classify(state.street, [(e["street"], e["actor"], e["action"]) for e in history], state.amount_to_call,
-                can_bluff=can_bluff) != category:
-        raise ValueError(f"{category} line reached the wrong decision")
 
     advisor = BOT_TYPES["solver_adaptive"](seed=seed)
     advisor.explain_ev = True
@@ -110,6 +96,10 @@ def make_spot(category: str, seed: int) -> tuple[dict, dict] | None:
         return None
     options = legal_options(explanation, state.legal_actions, state.minimum_legal_target, state.maximum_legal_target)
     if not options or not any(option["ev"] is not None for option in options):
+        return None
+    classified = classify(state.street, [(e["street"], e["actor"], e["action"]) for e in history],
+                          state.amount_to_call, can_bluff=can_bluff, can_three_bet=has_three_bet(options))
+    if classified != category:
         return None
     # Keep river bluff drills to weak holdings with a meaningful bet in the mix.
     # This uses only Hero's cards, public board, and the answer to this decision.
@@ -127,6 +117,10 @@ def make_spot(category: str, seed: int) -> tuple[dict, dict] | None:
         "maximum_target": state.maximum_legal_target,
     }
     return spot, {"source": explanation["source"], "options": options}
+
+
+def has_three_bet(options) -> bool:
+    return any(option["action"] == "raise" and option["frequency"] >= 0.05 for option in options)
 
 
 def legal_options(explanation, legal_actions, minimum, maximum):

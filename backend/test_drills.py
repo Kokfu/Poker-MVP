@@ -22,7 +22,7 @@ def preflop():
 
 @pytest.mark.parametrize("category", LINES)
 def test_categories_use_legal_public_simulator_decisions(category):
-    spot, advice = make_spot(category, 54 if category == "river_bluff" else 41)
+    spot, advice = make_spot(category, 54 if category == "river_bluff" else 41, line_index=0)
     assert spot["category"] == category
     assert len(spot["hero_cards"]) == 2
     assert len(spot["board"]) == (0 if category.startswith("preflop") else 3 if category.startswith("flop") else 4 if category == "turn" else 5)

@@ -3,7 +3,7 @@ import { PlayingCard } from "./CardInput";
 export const CATEGORIES = {
   preflop_open: "Preflop open",
   preflop_defend: "Preflop defend",
-  preflop_three_bet: "Facing a 3-bet",
+  preflop_three_bet: "Preflop 3-bet",
   flop_cbet: "Flop c-bet",
   flop_defend: "Flop defend",
   turn: "Turn",
