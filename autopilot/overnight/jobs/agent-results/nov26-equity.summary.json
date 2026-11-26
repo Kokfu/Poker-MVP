@@ -1,0 +1,168 @@
+{
+  "agent": "solver_adaptive",
+  "bb_per_100": 530.9548611111111,
+  "by_session": [
+    {
+      "bb_per_100": 487.2916666666667,
+      "hands": 120,
+      "session": 1
+    },
+    {
+      "bb_per_100": 582.5,
+      "hands": 120,
+      "session": 2
+    },
+    {
+      "bb_per_100": 726.0416666666666,
+      "hands": 120,
+      "session": 3
+    },
+    {
+      "bb_per_100": 867.2916666666666,
+      "hands": 120,
+      "session": 4
+    },
+    {
+      "bb_per_100": 879.5833333333334,
+      "hands": 120,
+      "session": 5
+    },
+    {
+      "bb_per_100": 407.0833333333333,
+      "hands": 120,
+      "session": 6
+    },
+    {
+      "bb_per_100": 755.0,
+      "hands": 120,
+      "session": 7
+    },
+    {
+      "bb_per_100": 402.0833333333333,
+      "hands": 120,
+      "session": 8
+    },
+    {
+      "bb_per_100": 579.7916666666666,
+      "hands": 120,
+      "session": 9
+    },
+    {
+      "bb_per_100": 345.0,
+      "hands": 120,
+      "session": 10
+    },
+    {
+      "bb_per_100": 743.9583333333334,
+      "hands": 120,
+      "session": 11
+    },
+    {
+      "bb_per_100": 409.375,
+      "hands": 120,
+      "session": 12
+    },
+    {
+      "bb_per_100": 516.0416666666666,
+      "hands": 120,
+      "session": 13
+    },
+    {
+      "bb_per_100": 627.9166666666666,
+      "hands": 120,
+      "session": 14
+    },
+    {
+      "bb_per_100": 278.5416666666667,
+      "hands": 120,
+      "session": 15
+    },
+    {
+      "bb_per_100": 778.9583333333334,
+      "hands": 120,
+      "session": 16
+    },
+    {
+      "bb_per_100": 562.9166666666666,
+      "hands": 120,
+      "session": 17
+    },
+    {
+      "bb_per_100": 859.375,
+      "hands": 120,
+      "session": 18
+    },
+    {
+      "bb_per_100": 444.375,
+      "hands": 120,
+      "session": 19
+    },
+    {
+      "bb_per_100": 157.08333333333334,
+      "hands": 120,
+      "session": 20
+    },
+    {
+      "bb_per_100": 118.33333333333333,
+      "hands": 120,
+      "session": 21
+    },
+    {
+      "bb_per_100": 94.58333333333333,
+      "hands": 120,
+      "session": 22
+    },
+    {
+      "bb_per_100": 463.125,
+      "hands": 120,
+      "session": 23
+    },
+    {
+      "bb_per_100": 656.6666666666666,
+      "hands": 120,
+      "session": 24
+    }
+  ],
+  "confidence_interval": {
+    "confidence_level": 0.95,
+    "lower": 442.04361979166686,
+    "upper": 621.0946180555555
+  },
+  "configuration": {
+    "big_blind": 100,
+    "bootstrap_resamples": 2000,
+    "confidence_level": 0.95,
+    "equity_iterations": 100,
+    "pairs": 24,
+    "seed_offset": 44000,
+    "seed_set": "development",
+    "session_hands": 60,
+    "small_blind": 50,
+    "starting_stack": 10000,
+    "statistics_seed": 91002,
+    "workers": 1
+  },
+  "deal_mismatches": 0,
+  "early_vs_late": {
+    "early_bb_per_100": 598.75,
+    "early_sessions": 12,
+    "late_bb_per_100": 463.15972222222223,
+    "late_sessions": 12
+  },
+  "fallback_actions": 0,
+  "format_version": 1,
+  "hands": 2880,
+  "illegal_actions": 0,
+  "interpretation": "positive_estimate_supported",
+  "ledger": "nov26-equity.jsonl",
+  "opponent": "equity",
+  "pairs": 24,
+  "seat_a_bb_per_100": 670.4861111111111,
+  "seat_b_bb_per_100": 391.4236111111111,
+  "sessions": 24,
+  "solver_fallback_actions": 0,
+  "solver_fallback_coverage_sessions": 24,
+  "standard_error_bb_per_100": 47.1781926945179,
+  "unpaired_standard_error_bb_per_100": 65.18801628549201,
+  "variance_reduction": 0.47622222188932783
+}

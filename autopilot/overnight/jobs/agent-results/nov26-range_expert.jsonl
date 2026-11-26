@@ -1,0 +1,25 @@
+{"agent": "solver_adaptive", "configuration": {"big_blind": 100, "bootstrap_resamples": 2000, "confidence_level": 0.95, "equity_iterations": 100, "pairs": 24, "seed_offset": 50000, "seed_set": "development", "session_hands": 60, "small_blind": 50, "starting_stack": 10000, "statistics_seed": 91002, "workers": 1}, "format_version": 1, "opponent": "range_expert"}
+{"deal_verified": true, "fallback_actions": 0, "hands_per_seat": 60, "illegal_actions": 0, "net_seat_a": -6452, "net_seat_b": 9435, "seed": 1050000, "session": 1, "solver_fallback_actions": 0}
+{"deal_verified": true, "fallback_actions": 0, "hands_per_seat": 60, "illegal_actions": 0, "net_seat_a": -10984, "net_seat_b": 29591, "seed": 1050060, "session": 2, "solver_fallback_actions": 0}
+{"deal_verified": true, "fallback_actions": 0, "hands_per_seat": 60, "illegal_actions": 0, "net_seat_a": -4786, "net_seat_b": 52678, "seed": 1050120, "session": 3, "solver_fallback_actions": 0}
+{"deal_verified": true, "fallback_actions": 0, "hands_per_seat": 60, "illegal_actions": 0, "net_seat_a": -23273, "net_seat_b": 7387, "seed": 1050180, "session": 4, "solver_fallback_actions": 0}
+{"deal_verified": true, "fallback_actions": 0, "hands_per_seat": 60, "illegal_actions": 0, "net_seat_a": 15736, "net_seat_b": 212, "seed": 1050240, "session": 5, "solver_fallback_actions": 0}
+{"deal_verified": true, "fallback_actions": 0, "hands_per_seat": 60, "illegal_actions": 0, "net_seat_a": 37298, "net_seat_b": -12922, "seed": 1050300, "session": 6, "solver_fallback_actions": 0}
+{"deal_verified": true, "fallback_actions": 0, "hands_per_seat": 60, "illegal_actions": 0, "net_seat_a": 11205, "net_seat_b": 14055, "seed": 1050360, "session": 7, "solver_fallback_actions": 0}
+{"deal_verified": true, "fallback_actions": 0, "hands_per_seat": 60, "illegal_actions": 0, "net_seat_a": -8902, "net_seat_b": 28870, "seed": 1050420, "session": 8, "solver_fallback_actions": 0}
+{"deal_verified": true, "fallback_actions": 0, "hands_per_seat": 60, "illegal_actions": 0, "net_seat_a": 24384, "net_seat_b": 91470, "seed": 1050480, "session": 9, "solver_fallback_actions": 0}
+{"deal_verified": true, "fallback_actions": 0, "hands_per_seat": 60, "illegal_actions": 0, "net_seat_a": 3480, "net_seat_b": -17454, "seed": 1050540, "session": 10, "solver_fallback_actions": 0}
+{"deal_verified": true, "fallback_actions": 0, "hands_per_seat": 60, "illegal_actions": 0, "net_seat_a": -1701, "net_seat_b": 10336, "seed": 1050600, "session": 11, "solver_fallback_actions": 0}
+{"deal_verified": true, "fallback_actions": 0, "hands_per_seat": 60, "illegal_actions": 0, "net_seat_a": 18818, "net_seat_b": 13138, "seed": 1050660, "session": 12, "solver_fallback_actions": 0}
+{"deal_verified": true, "fallback_actions": 0, "hands_per_seat": 60, "illegal_actions": 0, "net_seat_a": 11926, "net_seat_b": 11720, "seed": 1050720, "session": 13, "solver_fallback_actions": 0}
+{"deal_verified": true, "fallback_actions": 0, "hands_per_seat": 60, "illegal_actions": 0, "net_seat_a": -17264, "net_seat_b": -16178, "seed": 1050780, "session": 14, "solver_fallback_actions": 0}
+{"deal_verified": true, "fallback_actions": 0, "hands_per_seat": 60, "illegal_actions": 0, "net_seat_a": 14024, "net_seat_b": 46463, "seed": 1050840, "session": 15, "solver_fallback_actions": 0}
+{"deal_verified": true, "fallback_actions": 0, "hands_per_seat": 60, "illegal_actions": 0, "net_seat_a": -17306, "net_seat_b": 8341, "seed": 1050900, "session": 16, "solver_fallback_actions": 0}
+{"deal_verified": true, "fallback_actions": 0, "hands_per_seat": 60, "illegal_actions": 0, "net_seat_a": 8048, "net_seat_b": -4765, "seed": 1050960, "session": 17, "solver_fallback_actions": 0}
+{"deal_verified": true, "fallback_actions": 0, "hands_per_seat": 60, "illegal_actions": 0, "net_seat_a": -20206, "net_seat_b": -7777, "seed": 1051020, "session": 18, "solver_fallback_actions": 0}
+{"deal_verified": true, "fallback_actions": 0, "hands_per_seat": 60, "illegal_actions": 0, "net_seat_a": 13329, "net_seat_b": 30407, "seed": 1051080, "session": 19, "solver_fallback_actions": 0}
+{"deal_verified": true, "fallback_actions": 0, "hands_per_seat": 60, "illegal_actions": 0, "net_seat_a": -10234, "net_seat_b": 10823, "seed": 1051140, "session": 20, "solver_fallback_actions": 0}
+{"deal_verified": true, "fallback_actions": 0, "hands_per_seat": 60, "illegal_actions": 0, "net_seat_a": 1552, "net_seat_b": -4116, "seed": 1051200, "session": 21, "solver_fallback_actions": 0}
+{"deal_verified": true, "fallback_actions": 0, "hands_per_seat": 60, "illegal_actions": 0, "net_seat_a": 17431, "net_seat_b": -17848, "seed": 1051260, "session": 22, "solver_fallback_actions": 0}
+{"deal_verified": true, "fallback_actions": 0, "hands_per_seat": 60, "illegal_actions": 0, "net_seat_a": -1219, "net_seat_b": -368, "seed": 1051320, "session": 23, "solver_fallback_actions": 0}
+{"deal_verified": true, "fallback_actions": 0, "hands_per_seat": 60, "illegal_actions": 0, "net_seat_a": 44177, "net_seat_b": 20424, "seed": 1051380, "session": 24, "solver_fallback_actions": 0}
