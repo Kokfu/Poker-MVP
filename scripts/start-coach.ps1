@@ -50,6 +50,15 @@ function Get-PathDigest([string]$path) {
     } finally { $sha.Dispose() }
 }
 
+function Test-BuiltCoach([string]$directory, [string]$manifest) {
+    $files = @(Get-Content -LiteralPath $manifest -ErrorAction SilentlyContinue)
+    if ('index.html' -notin $files -or 'service-worker.js' -notin $files) { return $false }
+    foreach ($file in $files) {
+        if (-not (Test-Path -LiteralPath (Join-Path $directory $file) -PathType Leaf)) { return $false }
+    }
+    return $true
+}
+
 function Wait-ForUrl([string]$url, [int]$seconds) {
     $deadline = (Get-Date).AddSeconds($seconds)
     while ((Get-Date) -lt $deadline) {
@@ -101,6 +110,8 @@ if (-not $npm) { Stop-WithMessage "Node.js is not installed. Install the LTS ver
 New-Item -ItemType Directory -Force -Path $CoachRunDir | Out-Null
 $installStamp = Join-Path $CoachRunDir 'frontend-install.sha256'
 $buildStamp = Join-Path $CoachRunDir 'frontend-build.sha256'
+$buildManifest = Join-Path $CoachRunDir 'frontend-built-files.txt'
+$dist = Join-Path $CoachFrontend 'dist'
 $lockHash = Get-PathDigest (Join-Path $CoachFrontend 'package-lock.json')
 $installed = Get-Content -LiteralPath $installStamp -ErrorAction SilentlyContinue
 if (-not (Test-Path (Join-Path $CoachFrontend 'node_modules/.bin/vite.cmd')) -or $installed -ne $lockHash) {
@@ -119,12 +130,15 @@ $buildInputs = @(
 )
 $stamp = ($buildInputs | Sort-Object FullName | ForEach-Object { Get-PathDigest $_.FullName }) -join ':'
 $built = Get-Content -LiteralPath $buildStamp -ErrorAction SilentlyContinue
-if ($built -ne $stamp -or -not (Test-Path (Join-Path $CoachFrontend 'dist/index.html')) -or
-    -not (Test-Path (Join-Path $CoachFrontend 'dist/service-worker.js'))) {
+if ($built -ne $stamp -or -not (Test-BuiltCoach $dist $buildManifest)) {
     Write-Step "Building Poker Coach"
     Push-Location $CoachFrontend
     try { & npm.cmd run build } finally { Pop-Location }
     if ($LASTEXITCODE -ne 0) { Stop-WithMessage "The Poker Coach web build failed." }
+    $prefixLength = $dist.Length + 1
+    Get-ChildItem -LiteralPath $dist -File -Recurse | Sort-Object FullName |
+        ForEach-Object { $_.FullName.Substring($prefixLength) } |
+        Set-Content -LiteralPath $buildManifest -Encoding UTF8
     Set-Content -LiteralPath $buildStamp -Value $stamp
 }
 
