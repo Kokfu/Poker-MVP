@@ -66,7 +66,8 @@ def run(fixture, *, progress=False, prefetch_ms=0, use_disk=True, cache_dir=None
                     street = spot["id"].split("-", 1)[0]
                     speculative = None
                     if prefetch_ms and street != "preflop":
-                        speculative = warm.submit(client.post, "/api/coach/advise", json=spot["request"])
+                        speculative = warm.submit(client.post, "/api/coach/advise", json=spot["request"],
+                                                  headers={"X-Coach-Speculative": "1"})
                         sleep(prefetch_ms / 1000)
                     start = perf_counter()
                     response = client.post("/api/coach/advise", json=spot["request"])

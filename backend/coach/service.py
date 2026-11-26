@@ -264,7 +264,8 @@ def quick_advice(spot: Spot) -> dict[str, Any] | None:
 
 
 def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store: HandStore | None = None,
-           seed: int = 0, *, through_id: int | None = None, include_preflop_ev: bool = False) -> dict[str, Any]:
+           seed: int = 0, *, through_id: int | None = None, include_preflop_ev: bool = False,
+           cancelled=None) -> dict[str, Any]:
     from solver.bot import AdaptiveSolverBot, SolverBot
 
     shadow = getenv("POKER_COACH_RIVER_SHADOW") == "1"
@@ -282,7 +283,7 @@ def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store:
             database = store.path if store is not None else default_path()
             if database.name:
                 disk_path = database.with_suffix(".exact-solves.sqlite")
-        advisor = CoachAdvisor(seed=seed, exploit=use_exploit, cache_solves=True, disk_path=disk_path)
+        advisor = CoachAdvisor(seed=seed, exploit=use_exploit, cache_solves=True, disk_path=disk_path, cancelled=cancelled)
     else:
         advisor = AdaptiveSolverBot(seed=seed) if use_exploit else SolverBot(seed=seed)
     if opponent:
@@ -290,7 +291,7 @@ def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store:
         model = profile_for(store or HandStore(), opponent, advisor if advisor.exploit else None, **history_options)
         profile_snapshot = model.snapshot() if model.hands_observed else None
     if advisor.exploit and profile_snapshot is None:
-        advisor = (CoachAdvisor(seed=seed, exploit=False, cache_solves=True, disk_path=disk_path)
+        advisor = (CoachAdvisor(seed=seed, exploit=False, cache_solves=True, disk_path=disk_path, cancelled=cancelled)
                    if cache_solves else SolverBot(seed=seed))
     advisor.persistent_ranges = getenv("POKER_COACH_PERSISTENT_RANGES") == "1"
     advisor.explain_ev = True

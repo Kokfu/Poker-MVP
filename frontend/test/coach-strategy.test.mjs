@@ -133,6 +133,7 @@ test("Coach cancels unfinished speculative requests when the expected input chan
   const [path, request] = fetch.mock.calls[0].arguments;
   assert.equal(path, "/api/coach/advise");
   assert.equal(request.body, "updated");
+  assert.equal(request.headers["X-Coach-Speculative"], "1");
   prefetch.commit("updated");
   assert.equal(request.signal.aborted, false);
   prefetch.commit("different");

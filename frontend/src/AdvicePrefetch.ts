@@ -10,7 +10,8 @@ export class AdvicePrefetch {
     candidate.timer = setTimeout(() => {
       candidate.timer = undefined;
       void fetch("/api/coach/advise", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body, signal: candidate.controller.signal,
+        method: "POST", headers: { "Content-Type": "application/json", "X-Coach-Speculative": "1" },
+        body, signal: candidate.controller.signal,
       }).then(response => response.body?.cancel()).catch(() => { /* A speculative request has no UI result. */ });
     }, 180);
     this.candidate = candidate;
