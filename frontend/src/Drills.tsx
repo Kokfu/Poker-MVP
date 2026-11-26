@@ -1,22 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { isTypingTarget, PlayingCard } from "./CardInput";
+import { isTypingTarget } from "./CardInput";
+import { ACTION_NAMES, actionName, CATEGORIES, DrillCards, DrillHistory, drillRequest, type Action, type Category, type Choice, type HistoryEntry } from "./DrillDisplay";
+import MyLeaks from "./MyLeaks";
 import "./drills.css";
 
-export const CATEGORIES = {
-  preflop_open: "Preflop open",
-  preflop_defend: "Preflop defend",
-  preflop_three_bet: "Facing a 3-bet",
-  flop_cbet: "Flop c-bet",
-  flop_defend: "Flop defend",
-  turn: "Turn",
-  river_call: "River call",
-  river_bluff: "River bluff",
-} as const;
-
-export type Category = keyof typeof CATEGORIES;
-type Action = "fold" | "check" | "call" | "bet" | "raise" | "all_in";
-type Choice = Action | "timeout";
-export type HistoryEntry = { street: string; actor: string; action: Action; amount: number | null };
 type Spot = {
   id: string;
   category: Category;
@@ -54,50 +41,15 @@ type Stats = {
 };
 
 const SECONDS_KEY = "drills.seconds";
-const ACTION_NAMES = { fold: "Fold", check: "Check", call: "Call", bet: "Bet", raise: "Raise", all_in: "All-in", timeout: "Time expired" };
 const ACTION_KEYS = { fold: "F", check: "C", call: "C", bet: "B", raise: "B", all_in: "A" };
-
-export function actionName(action: Choice, amount?: number | null) {
-  return `${ACTION_NAMES[action]}${amount == null ? "" : ` to ${amount.toLocaleString()}`}`;
-}
-
-export async function drillRequest<T>(path: string, body?: object): Promise<T> {
-  const response = await fetch(`/api/drills/${path}`, body === undefined ? { cache: "no-store" } : {
-    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
-  });
-  const value = await response.json();
-  if (!response.ok) throw new Error(typeof value.detail === "string" ? value.detail : "The drill request failed.");
-  return value;
-}
 
 function savedSeconds() {
   const seconds = Number(localStorage.getItem(SECONDS_KEY));
   return Number.isInteger(seconds) && seconds >= 3 && seconds <= 120 ? seconds : 15;
 }
 
-export function DrillCards({ label, cards }: { label: string; cards: string[] }) {
-  return (
-    <div className="drill-cards">
-      <h3>{label}</h3>
-      <div>{cards.length === 0 ? <small>Preflop</small> : cards.map((card) => <PlayingCard card={card} key={card} />)}</div>
-    </div>
-  );
-}
-
-export function DrillHistory({ history }: { history: HistoryEntry[] }) {
-  return (
-    <div className="drill-history">
-      <h3>Action so far</h3>
-      {history.length === 0 ? <p>Blinds posted.</p> : (
-        <ol>{history.map((entry, index) => (
-          <li key={index}><span>{entry.street}</span> {entry.actor === "hero" ? "You" : "Opponent"} · {actionName(entry.action, entry.amount)}</li>
-        ))}</ol>
-      )}
-    </div>
-  );
-}
-
 export default function Drills() {
+  const [view, setView] = useState<"drills" | "leaks">("drills");
   const [category, setCategory] = useState<Category | "">("");
   const [seconds, setSeconds] = useState(() => String(savedSeconds()));
   const [spot, setSpot] = useState<Spot | null>(null);
@@ -120,7 +72,7 @@ export default function Drills() {
   }, []);
 
   useEffect(() => {
-    if (active) return;
+    if (active || view === "leaks") return;
     let mounted = true;
     const refresh = () => refreshStats().catch(() => {
       if (mounted) setStats(undefined);
@@ -128,14 +80,14 @@ export default function Drills() {
     void refresh();
     const id = window.setInterval(refresh, 3500);
     return () => { mounted = false; window.clearInterval(id); };
-  }, [active, refreshStats]);
+  }, [active, refreshStats, view]);
 
   function updateAmount(value: string) {
     amountValue.current = value.replace(/[^0-9]/g, "").slice(0, 10);
     setAmount(amountValue.current);
   }
 
-  async function start() {
+  async function start(filter = category) {
     if (request.current) return;
     const limit = Number(seconds);
     if (!Number.isInteger(limit) || limit < 3 || limit > 120) {
@@ -146,7 +98,7 @@ export default function Drills() {
     setBusy(true);
     setError("");
     try {
-      const next = await drillRequest<Spot | null>("start", { category: category || null, seconds: limit });
+      const next = await drillRequest<Spot | null>("start", { category: filter || null, seconds: limit });
       if (!next) {
         setError("This category is being prepared. Try again when a spot is ready.");
         await refreshStats();
@@ -235,7 +187,16 @@ export default function Drills() {
 
   return (
     <section className="drills-panel" aria-labelledby="drills-heading">
-      <h2 id="drills-heading">Timed drills</h2>
+      <h2 id="drills-heading">{view === "leaks" ? "My leaks" : "Timed drills"}</h2>
+      <nav className="drill-views" aria-label="Study views">
+        <button type="button" aria-pressed={view === "drills"} onClick={() => setView("drills")}>Trainer</button>
+        <button type="button" aria-pressed={view === "leaks"} disabled={active || busy} onClick={() => setView("leaks")}>My leaks</button>
+      </nav>
+      {view === "leaks" ? <MyLeaks startDrill={(filter) => {
+        setView("drills");
+        setCategory(filter);
+        void start(filter);
+      }} /> : <>
       <div className="drill-toolbar">
         <label>Spot category<select value={category} disabled={active || busy} onChange={(event) => setCategory(event.target.value as Category | "")}>
           <option value="">All categories</option>
@@ -303,6 +264,7 @@ export default function Drills() {
           </tr>)}</tbody>
         </table> : <p>Finish a drill to see your score.</p>}
       </div>
+      </>}
     </section>
   );
 }

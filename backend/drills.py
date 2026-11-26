@@ -7,7 +7,7 @@ import json
 import logging
 from secrets import randbits, token_urlsafe
 import sqlite3
-from threading import Event, Thread
+from threading import Event, Lock, Thread
 from time import time
 from typing import Literal
 
@@ -25,6 +25,7 @@ Action = Literal["fold", "check", "call", "bet", "raise", "all_in", "timeout"]
 router = APIRouter(prefix="/api/drills", tags=["drills"])
 LOG = logging.getLogger(__name__)
 BUFFER_SIZE = 3
+STUDY_SOLVER_LOCK = Lock()
 
 
 class Start(BaseModel):
@@ -153,7 +154,10 @@ class DrillBuffer:
                 for category in needed:
                     if self.stop.is_set():
                         return
-                    candidate = make_spot(category, randbits(63))
+                    with STUDY_SOLVER_LOCK:
+                        if self.stop.is_set():
+                            return
+                        candidate = make_spot(category, randbits(63))
                     if candidate is not None:
                         store.add(*candidate)
                 if not needed:

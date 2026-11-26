@@ -29,12 +29,12 @@ LINES = {
 }
 
 
-def classify(street: str, actions, to_call: int) -> str | None:
+def classify(street: str, actions, to_call: int, *, can_bluff: bool = False) -> str | None:
     """Classify a decision using (street, actor, action) rows before it."""
     aggression = {"bet", "raise", "all_in"}
     if street == "preflop":
         raises = [actor for _, actor, action in actions if action in aggression]
-        if not raises:
+        if not actions:
             return "preflop_open"
         return "preflop_three_bet" if len(raises) >= 2 else "preflop_defend"
     if street == "flop":
@@ -47,8 +47,10 @@ def classify(street: str, actions, to_call: int) -> str | None:
             return "flop_cbet"
     if street == "turn":
         return "turn"
-    if street == "river":
-        return "river_call" if to_call else "river_bluff"
+    if street == "river" and to_call:
+        return "river_call"
+    if street == "river" and can_bluff:
+        return "river_bluff"
     return None
 
 
@@ -92,11 +94,12 @@ def make_spot(category: str, seed: int) -> tuple[dict, dict] | None:
          "action": event.applied_action, "amount": event.target_total}
         for event in engine.history.events if event.event_type == "action_taken"
     ]
-    if classify(state.street, [(e["street"], e["actor"], e["action"]) for e in history], state.amount_to_call) != category:
-        raise ValueError(f"{category} line reached the wrong decision")
-
-    if category == "river_bluff" and observation.poker_features.made_hand != "high_card":
+    can_bluff = observation.poker_features.made_hand == "high_card"
+    if category == "river_bluff" and not can_bluff:
         return None
+    if classify(state.street, [(e["street"], e["actor"], e["action"]) for e in history], state.amount_to_call,
+                can_bluff=can_bluff) != category:
+        raise ValueError(f"{category} line reached the wrong decision")
 
     advisor = BOT_TYPES["solver_adaptive"](seed=seed)
     advisor.explain_ev = True
