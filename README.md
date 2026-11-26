@@ -82,12 +82,13 @@ Phase 3 adds a separate persistent match mode: settled stacks carry between hand
 
 Double-click **`Start Poker Coach.cmd`** in this folder.
 
-- The first run sets everything up (Python 3.11 and Node.js must be installed; it creates `backend/.venv` and installs the web packages).
-- It starts the Coach engine on this computer only and the web page on your home network, opens the page, and prints the address for friends, e.g. `http://192.168.1.20:5173`. Friends open that address in a phone or laptop browser on the same Wi-Fi.
+- The first run creates `backend/.venv`, installs the locked web packages, and builds the frontend. Later starts reuse the build while its inputs stay the same.
+- Coach serves the built frontend and API from one process. It opens the local page and prints the address friends can use on the same Wi-Fi, such as `http://192.168.1.20:5173`.
 - Press **Enter** in the window to stop. If you closed the window instead, double-click **`Stop Poker Coach.cmd`** (the next start also cleans up).
 - The page is shared only when Windows marks the network **Private**. On a Public network (cafe, hotspot) it stays on this computer.
 - Everyone shares one saved-hands file, and anyone who can open the page can delete hands, so share the address only on a network you trust.
 - Different ports: set `POKER_API_PORT` / `POKER_WEB_PORT` before starting. Logs are in `.run/`.
+- For a phone home-screen install, see the [HTTPS setup options](docs/https-options.md).
 
 ## Timed practice table
 
@@ -102,6 +103,11 @@ $env:COACH_DB_PATH = Join-Path $env:TEMP ('poker-practice-' + [guid]::NewGuid() 
 2. The clock starts at 20 seconds on each turn. Set **Seconds per action** before starting to choose a different limit, from 1 to 120 seconds. At expiry, the table checks if possible and otherwise folds. Sized actions use the total committed on the current street.
 3. After each hand, Coach shows what it would have played and saves the hand under the opponent's name. **Review last session** lists differences and the estimated chip cost where the solver provides comparable EVs. Postflop custom sizes can show cost unavailable.
 4. Use **New table** to open a second table. Refresh in the same browser tab to reconnect to the selected seat while the server is running. Each table's clock continues while the other table is selected.
+
+Use **F** to fold, **C** to check or call, **B** to bet or raise, and **A** to
+go all-in. With focus outside text fields and buttons, type the total for
+this street and press **Enter**. **Enter** on a focused button activates that
+button. Press **N** after the hand to deal the next one.
 
 To test on a second device, follow the [LAN checklist](docs/practice-table-lan-checklist.md).
 
@@ -138,7 +144,7 @@ Learning reports include early and late bb/100 and the numbers of hands in each 
 ## Requirements
 
 - Python 3.11; the accepted Windows environment uses Python 3.11.9.
-- Node.js 20 or newer and npm for local frontend development.
+- Node.js 20.19 or later on the 20.x line, or 22.12 or later, plus npm.
 - Docker Desktop with Docker Compose for the containerized workflow.
 
 ## Local development
@@ -154,6 +160,16 @@ cd ..\frontend
 npm.cmd ci
 npm.cmd run build
 ```
+
+From `backend`, run `./.venv/Scripts/python.exe -m pytest -q -p no:cacheprovider -m "not slow"`
+for the fast test selection. The command without `-m` runs the full suite.
+[Development commands](DEVELOPMENT.md)
+
+The [Coach reference set](backend/coach/reference_spots.json) freezes 192
+heads-up decisions with synthetic histories, expected actions, sizes,
+probabilities, and response hashes. From `backend`, run
+`./.venv/Scripts/python.exe -m coach.reference_spots` to verify every full
+answer and report quick-answer agreement.
 
 Backend:
 

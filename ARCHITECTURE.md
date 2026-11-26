@@ -31,7 +31,7 @@ FastAPI backend
                 +-- JSONL dataset writer/validator
 ```
 
-Docker Compose runs the FastAPI backend and React/Vite frontend as separate services. The configured ports bind to `127.0.0.1`. The Coach hand log is a local SQLite file at `backend/data/coach.sqlite` by default, or the `coach-data` Docker volume. On Windows the LAN launcher can expose the web page through its proxy while the API listens on loopback. The offline runner writes explicitly requested result ledgers and optional learning checkpoints.
+Docker Compose runs the FastAPI backend and React/Vite frontend as separate services. The configured ports bind to `127.0.0.1`. The Coach hand log is a local SQLite file at `backend/data/coach.sqlite` by default, or the `coach-data` Docker volume. On Windows the launcher serves the built frontend and API on the web port from one process. It keeps the separate API port on loopback and shares the web port on a selected Private interface. The offline runner writes explicitly requested result ledgers and optional learning checkpoints.
 
 ## Timed practice tables
 
