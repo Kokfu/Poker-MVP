@@ -1,14 +1,43 @@
 # Status · drills/2026-11-26
-Current task: follow-ups 2 and 3 from the morning checks.
-Completed: timed drills, My leaks, push workflow, phone shell, and drill recovery.
-Validation: 1,150 backend tests and 7 Node tests passed at the recovery checkpoint.
-Next: verify all action-line variants and the recent-attempt review, then record the final checks.
+Current task: final full regression for recent attempts.
+Completed: timed drills, My leaks, push workflow, phone shell, drill recovery, and expanded action lines.
+Validation: 1,173 backend tests at the action-line checkpoint. The final focused run passed 40 backend tests and 8 Node tests, and phone browser QA passed.
+Next: record the final backend count and commit the attempt review.
 
 ## Morning summary
 
 Branch `drills/2026-11-26`, forked from `overnight/2026-11-26` at `fbd5468`. Work resumed after the 07:00 MYT target when the user asked to continue.
 
 Four requested features are committed. The trainer staged 24 spots across 8 categories. My leaks combined all three sources and showed 3 ranked examples. Chromium parsed the standalone manifest, activated the service worker, and opened the app shell with the web server stopped. The GitHub workflow remains unverified on GitHub.
+
+### Decisions for you
+
+- Choose the private HTTPS address for friends and the SQLite file that address should use. A server shares the data in its configured SQLite file with people who can open the app. The local preview below stays on this computer. For installation from a phone, open the HTTPS address and use the browser's install or home-screen menu. [PWA installation requirements](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable) · [Safari on iPhone](https://support.apple.com/en-lb/guide/iphone/iphea86e5236/27/ios/27)
+- Decide when to verify the first GitHub-hosted run and whether to address the four npm advisories in the existing lockfile before sharing the app.
+
+### Exact commands to try
+
+Run the first block in PowerShell for the API. It uses a fresh temporary copy of the Coach database.
+
+```powershell
+$pokerRoot = 'C:\Users\kokfu\OneDrive\Documents\Poker'
+$env:COACH_DB_PATH = Join-Path $env:TEMP ('poker-drills-' + [guid]::NewGuid().ToString('N') + '.sqlite')
+Copy-Item -LiteralPath "$pokerRoot\poker-analyzer-mvp\backend\data\coach.sqlite" -Destination $env:COACH_DB_PATH -ErrorAction Stop
+$env:OPENBLAS_NUM_THREADS = '1'
+$env:OMP_NUM_THREADS = '1'
+Set-Location "$pokerRoot\poker-analyzer-drills\backend"
+& 'C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-mvp\backend\.venv\Scripts\python.exe' -B -m uvicorn main:app --host 127.0.0.1 --port 8013
+```
+
+Run the second block in another PowerShell window. Open [the local trainer](http://127.0.0.1:5177/#drills) after Vite starts. The service worker registers on the production build. The regular development launcher serves the app for coding and testing.
+
+```powershell
+Set-Location 'C:\Users\kokfu\OneDrive\Documents\Poker\poker-analyzer-drills\frontend'
+npm.cmd ci
+npm.cmd run build
+$env:API_PROXY = 'http://127.0.0.1:8013'
+npx.cmd vite preview --host 127.0.0.1 --port 5177 --strictPort
+```
 
 ## Task 1 · Timed drills
 
@@ -40,3 +69,8 @@ Four requested features are committed. The trainer staged 24 spots across 8 cate
 - Commit `f014603`. Reloads and tab switches restore the same spot and its original server deadline. Completed answers reopen with their grade.
 - Focused backend **16 passed** in 30.86 seconds. Full backend **1,150 passed** with 8 dependency warnings in 2,038.38 seconds. Frontend type-check, **7 Node tests**, and build passed.
 - Browser QA restored the same cards after switching tabs and reloading, with the countdown at 28 seconds after a 30-second start. A reload after answering restored the same feedback.
+
+## Follow-up 2 · Expand drill action lines
+
+- Commit `f25d42e`. The pool now uses 22 legal simulator action lines across 8 categories. The 3-bet category includes making a chart-supported 3-bet and responding to one. Later-street spots now vary position, prior actions, and wager size.
+- Focused backend **39 passed** in 11.94 seconds. Full backend at this checkpoint **1,173 passed** with 8 dependency warnings in 945.97 seconds, excluding the next follow-up's draft test. TypeScript, **7 Node tests**, and build passed. Completed a 3-bet round at phone width.
