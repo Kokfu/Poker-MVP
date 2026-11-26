@@ -50,6 +50,14 @@ function Get-PathDigest([string]$path) {
     } finally { $sha.Dispose() }
 }
 
+function Get-BuildStamp([string]$root, [IO.FileInfo[]]$files) {
+    $prefixLength = $root.Length + 1
+    return ($files | Sort-Object FullName | ForEach-Object {
+        $relativePath = $_.FullName.Substring($prefixLength)
+        "$($relativePath):$(Get-PathDigest $_.FullName)"
+    }) -join '|'
+}
+
 function Test-BuiltCoach([string]$directory, [string]$manifest) {
     $files = @(Get-Content -LiteralPath $manifest -ErrorAction SilentlyContinue)
     if ('index.html' -notin $files -or 'service-worker.js' -notin $files) { return $false }
@@ -128,9 +136,9 @@ $buildInputs = @(
         Join-Path $CoachFrontend $_
     })
 )
-$stamp = ($buildInputs | Sort-Object FullName | ForEach-Object { Get-PathDigest $_.FullName }) -join ':'
+$stamp = Get-BuildStamp $CoachFrontend $buildInputs
 $built = Get-Content -LiteralPath $buildStamp -ErrorAction SilentlyContinue
-if ($built -ne $stamp -or -not (Test-BuiltCoach $dist $buildManifest)) {
+if ($built -cne $stamp -or -not (Test-BuiltCoach $dist $buildManifest)) {
     Write-Step "Building Poker Coach"
     Push-Location $CoachFrontend
     try { & npm.cmd run build } finally { Pop-Location }
@@ -139,7 +147,7 @@ if ($built -ne $stamp -or -not (Test-BuiltCoach $dist $buildManifest)) {
     Get-ChildItem -LiteralPath $dist -File -Recurse | Sort-Object FullName |
         ForEach-Object { $_.FullName.Substring($prefixLength) } |
         Set-Content -LiteralPath $buildManifest -Encoding UTF8
-    Set-Content -LiteralPath $buildStamp -Value $stamp
+    Set-Content -LiteralPath $buildStamp -Value $stamp -Encoding UTF8
 }
 
 # ---- Ports -----------------------------------------------------------------
