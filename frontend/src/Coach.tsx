@@ -181,12 +181,36 @@ function quickSizes(state: SpotState, actor: Actor): { label: string; amount: nu
   return [...sized, { label: "All-in", amount: maximum_target }];
 }
 
+const STREET_NAMES = ["preflop", "flop", "turn", "river"];
+
+/** The street of each action in a heads-up hand: a call closes the street (except a preflop limp), as do two checks or a check after a limp. */
+export function actionStreets(actions: SpotAction[]): string[] {
+  let street = 0;
+  let checks = 0;
+  return actions.map((action, index) => {
+    const name = STREET_NAMES[Math.min(street, 3)];
+    if (action.action === "call") {
+      if (!(street === 0 && index === 0)) { street += 1; checks = 0; }
+    } else if (action.action === "check") {
+      checks += 1;
+      if (street === 0 || checks === 2) { street += 1; checks = 0; }
+    } else {
+      checks = 0;
+    }
+    return name;
+  });
+}
+
 export function recentVillainSize(history: HandRecord[], kind: "bet" | "raise", state: SpotState, bigBlind: number): number | undefined {
   if (!state.legal_actions.includes(kind) || state.minimum_target === null || bigBlind <= 0) return;
   const maximum = effectiveMaximum(state, "villain");
   for (const { spot } of history) {
     if (spot.big_blind <= 0) continue;
-    for (const action of [...spot.actions].reverse()) {
+    // Only sizes from the same street: a river raise is no guide to a preflop raise.
+    const streets = actionStreets(spot.actions);
+    for (let index = spot.actions.length - 1; index >= 0; index -= 1) {
+      const action = spot.actions[index];
+      if (state.street && streets[index] !== state.street) continue;
       if (action.actor !== "villain" || action.action !== kind || action.amount == null) continue;
       const amount = Math.round(action.amount * bigBlind / spot.big_blind);
       if (amount >= state.minimum_target && amount <= maximum) return amount;

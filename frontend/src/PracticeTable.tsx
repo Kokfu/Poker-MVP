@@ -71,8 +71,9 @@ export default function PracticeTable() {
     }
   }, [seats, active]);
 
-  const opened = useCallback((seat: Seat) => {
-    setSaved(previous => ({ seats: [...previous.seats, seat], active: seat.key }));
+  // A table that finishes opening after the player switched away is kept, but doesn't take focus.
+  const opened = useCallback((seat: Seat, activate: boolean) => {
+    setSaved(previous => ({ seats: [...previous.seats, seat], active: activate ? seat.key : previous.active }));
   }, []);
   const closed = useCallback((key: string, message?: string) => {
     setNotice(message ?? "");
@@ -104,7 +105,7 @@ export default function PracticeTable() {
 
 function PracticeSeat({ seatKey: key, onOpen, onClose }: {
   seatKey: string;
-  onOpen: (seat: Seat) => void;
+  onOpen: (seat: Seat, activate: boolean) => void;
   onClose: (key: string, message?: string) => void;
 }) {
   const [table, setTable] = useState<Table>();
@@ -121,6 +122,11 @@ function PracticeSeat({ seatKey: key, onOpen, onClose }: {
   const [session, setSession] = useState<SessionReview>();
   const [sessionError, setSessionError] = useState("");
   const pendingRef = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
 
   const update = useCallback((state: Table) => {
     setTable(state);
@@ -160,7 +166,7 @@ function PracticeSeat({ seatKey: key, onOpen, onClose }: {
       }
       const body = await response.json();
       if (!key) {
-        onOpen({ key: body.key, opponent: body.table.opponent });
+        onOpen({ key: body.key, opponent: body.table.opponent }, mounted.current);
       } else {
         update(body);
       }

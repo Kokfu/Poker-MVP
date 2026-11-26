@@ -161,3 +161,17 @@ def test_inspect_reads_complete_sessions_without_repairing_a_partial_line(tmp_pa
     assert report["solver_fallback_coverage_sessions"] == 2 and report["solver_fallback_actions"] == 2
     assert ledger.read_bytes() == before
     assert tuple(tmp_path.iterdir()) == (ledger,)
+
+
+def test_independent_run_cannot_take_the_name_of_an_unfinished_learning_run(monkeypatch, tmp_path):
+    config = DuplicateConfig(pairs=1, session_hands=4)
+
+    def crash(*args, **kwargs):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(agent_cli, "play_duplicate_pair", crash)
+    with pytest.raises(KeyboardInterrupt):
+        agent_cli.run_sessions(tmp_path / "out", "x", "tight", config, resume=False, profile_dir=tmp_path / "profiles")
+    with pytest.raises(ValueError, match="learning run"):
+        agent_cli.run_sessions(tmp_path / "out", "x", "tight", config, resume=False)
+    assert not (tmp_path / "out" / "x.jsonl").exists()

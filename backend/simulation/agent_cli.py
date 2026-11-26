@@ -167,6 +167,9 @@ def _learning_run(profile_dir, output, name, opponent, config, *, resume, progre
     with _exclusive_run(ledger.with_suffix(".lock")), _exclusive_run(output / f"{name}.lock"):
         if (output / f"{name}.jsonl").exists():
             raise ValueError("this name is already used by an independent run")
+        # Reserve the name in the output folder, so an independent run can't take it
+        # while this learning run is unfinished (that would block its resume).
+        (output / f"{name}.learning").touch()
         data = json.loads(ledger.read_text(encoding="utf-8")) if ledger.exists() else {
             **identity, "active_run": None, "runs": {}, "profiles": None,
         }
@@ -239,6 +242,8 @@ def run_sessions(output: Path, name: str, opponent: str, config: DuplicateConfig
     with _exclusive_run(output / f"{name}.lock"):
         if not resume and summary.exists():
             raise FileExistsError("this agent run already exists")
+        if (output / f"{name}.learning").exists():
+            raise ValueError("this name is used by a learning run; resume it with --profile-dir")
         with ledger.open("r+b" if resume else "x+b") as handle:
             sessions = _read_sessions(handle, header, seeds)
             for index, seed in enumerate(seeds[len(sessions):], start=len(sessions) + 1):

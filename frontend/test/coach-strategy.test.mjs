@@ -44,6 +44,28 @@ test("Coach selects the newest same-kind villain size within the current total l
   assert.equal(recentVillainSize(history, "bet", state, 100), undefined);
 });
 
+test("Coach offers a recent villain size only from the same street", async (t) => {
+  const vite = await createServer({ server: { middlewareMode: true, ws: false } });
+  t.after(() => vite.close());
+  const { actionStreets, recentVillainSize } = await vite.ssrLoadModule("/src/Coach.tsx");
+  const actions = [
+    { actor: "hero", action: "raise", amount: 250 }, { actor: "villain", action: "raise", amount: 800 },
+    { actor: "hero", action: "call" },
+    { actor: "villain", action: "check" }, { actor: "hero", action: "check" },
+    { actor: "villain", action: "bet", amount: 500 }, { actor: "hero", action: "call" },
+    { actor: "villain", action: "bet", amount: 1200 },
+  ];
+  assert.deepEqual(actionStreets(actions), ["preflop", "preflop", "preflop", "flop", "flop", "turn", "turn", "river"]);
+  assert.deepEqual(actionStreets([{ actor: "hero", action: "call" }, { actor: "villain", action: "check" },
+    { actor: "villain", action: "bet", amount: 100 }]), ["preflop", "preflop", "flop"]);
+  const history = [{ spot: { big_blind: 100, actions } }];
+  const base = { minimum_target: 200, maximum_target: 5000, villain_stack: 5000, hero_stack: 5000, to_call: 0 };
+  assert.equal(recentVillainSize(history, "bet", { ...base, legal_actions: ["bet"], street: "river" }, 100), 1200);
+  assert.equal(recentVillainSize(history, "bet", { ...base, legal_actions: ["bet"], street: "turn" }, 100), 500);
+  assert.equal(recentVillainSize(history, "bet", { ...base, legal_actions: ["bet"], street: "flop" }, 100), undefined);
+  assert.equal(recentVillainSize(history, "raise", { ...base, legal_actions: ["raise"], street: "preflop" }, 100), 800);
+});
+
 test("Coach publishes quick advice only while the matching full request is pending", async (t) => {
   const vite = await createServer({ server: { middlewareMode: true, ws: false } });
   t.after(() => vite.close());

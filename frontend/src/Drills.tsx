@@ -45,13 +45,25 @@ const SECONDS_KEY = "drills.seconds";
 const TURN_KEY = "drills.turn";
 const ACTION_KEYS = { fold: "F", check: "C", call: "C", bet: "B", raise: "B", all_in: "A" };
 
+// Browser storage can throw (blocked site data, private windows); drills must still work without it.
+function readStorage(storage: () => Storage, key: string): string | null {
+  try { return storage().getItem(key); } catch { return null; }
+}
+
+function writeStorage(storage: () => Storage, key: string, value: string | null) {
+  try {
+    if (value === null) storage().removeItem(key);
+    else storage().setItem(key, value);
+  } catch { /* the drill continues without remembering it */ }
+}
+
 function savedSeconds() {
-  const seconds = Number(localStorage.getItem(SECONDS_KEY));
+  const seconds = Number(readStorage(() => localStorage, SECONDS_KEY));
   return Number.isInteger(seconds) && seconds >= 3 && seconds <= 120 ? seconds : 15;
 }
 
 function savedTurn(): { id: string; filter: Category | "" } | null {
-  const saved = sessionStorage.getItem(TURN_KEY);
+  const saved = readStorage(() => sessionStorage, TURN_KEY);
   if (!saved) return null;
   try {
     const { id, filter } = JSON.parse(saved);
@@ -99,7 +111,7 @@ export default function Drills() {
         setSpot(round.spot);
         setFeedback(round.feedback);
       } else {
-        sessionStorage.removeItem(TURN_KEY);
+        writeStorage(() => sessionStorage, TURN_KEY, null);
       }
       setRestoring(false);
     }).catch(() => {
@@ -141,8 +153,8 @@ export default function Drills() {
         await refreshStats();
         return;
       }
-      localStorage.setItem(SECONDS_KEY, String(limit));
-      sessionStorage.setItem(TURN_KEY, JSON.stringify({ id: next.id, filter }));
+      writeStorage(() => localStorage, SECONDS_KEY, String(limit));
+      writeStorage(() => sessionStorage, TURN_KEY, JSON.stringify({ id: next.id, filter }));
       deadline.current = performance.now() + next.remaining_ms;
       expired.current = false;
       setRemaining(next.remaining_ms);
@@ -204,6 +216,8 @@ export default function Drills() {
     const onKey = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || isTypingTarget(event.target)) return;
       const key = event.key.toUpperCase();
+      // Enter on a focused button presses that button, as in the Coach.
+      if (key === "ENTER" && (event.target as HTMLElement | null)?.tagName === "BUTTON") return;
       if (sizedAction && /^[0-9]$/.test(key)) {
         event.preventDefault();
         updateAmount(amountValue.current + key);
