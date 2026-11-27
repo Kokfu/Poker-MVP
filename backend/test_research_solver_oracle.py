@@ -81,7 +81,9 @@ def test_river_betting_oracle_converges_and_has_nonnegative_gap():
 def test_analyse_spot_reports_gaps_and_a_zero_sum_head_to_head():
     result = analyse_spot(spot(seed=5), oracle_iterations=30, production_iterations=30, river_iterations=30)
     assert result["river_subgames"] > 0 and result["production_gap"] >= -1e-6 and result["oracle_gap"] >= -1e-6
-    assert result["root_labels"] and abs(sum(result["root_mix_oracle"]) - 1.0) < 1e-6
+    # The report rounds each probability to 4 decimals (error <= 5e-5 each).
+    rounding = 5e-5 * len(result["root_mix_oracle"]) + 1e-9
+    assert result["root_labels"] and abs(sum(result["root_mix_oracle"]) - 1.0) <= rounding
     assert 0.0 <= result["root_strategy_distance"] <= 1.0
     values = result["h2h_seat_values_chips"]
     for name in ("production_vs_production", "oracle_vs_oracle"):
