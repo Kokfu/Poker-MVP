@@ -201,6 +201,10 @@ expert and range-expert commands read the local profile ledgers in
 `autopilot/overnight/jobs/profiles/`. The adaptive command reads the
 existing development tournament in `benchmark-results/phase-5/`.
 Choose new output names if these files already exist.
+The independent-ledger option matched all recorded fields for the first
+archived expert session, covering 120 hands and no illegal actions,
+fallbacks, or deal mismatches. This was a replay-tool smoke check.
+The full independent replays remain queued.
 
 ```powershell
 backend/.venv/Scripts/python.exe autopilot/overnight/replay_expert_family.py expert --output autopilot/overnight/jobs/expert-check.summary.json

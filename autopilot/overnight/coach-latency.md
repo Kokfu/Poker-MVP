@@ -181,7 +181,13 @@ Two fresh host processes replayed 192 fixed decisions with one BLAS worker while
 | River | 48 | 2,450 | 1,758 |
 | All postflop | 144 | 2,145 | 1,438 |
 
-The quick preview matched the full action and size on 75/144 (52.08%) postflop spots. The overnight target is still open for turns and rivers. From `backend`, reproduce the paired runs with `./.venv/Scripts/python.exe -m coach.reference_spots --prefetch-ms 0` and `./.venv/Scripts/python.exe -m coach.reference_spots --prefetch-ms 600`.
+The quick preview matched the full action on 75/144 (52.08%) postflop
+spots, and the action and size agreed on the same 75. Flop was 26/48,
+turn was 29/48 and river was 20/48. The later quiet first-use measurement
+below still exceeded 1 s p95 on all three streets. From `backend`,
+reproduce the paired runs with
+`./.venv/Scripts/python.exe -m coach.reference_spots --prefetch-ms 0` and
+`./.venv/Scripts/python.exe -m coach.reference_spots --prefetch-ms 600`.
 
 ### Persistent exact solves across restarts
 
