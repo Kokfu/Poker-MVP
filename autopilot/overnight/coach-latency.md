@@ -330,3 +330,17 @@ p95. Turn improved in the competing arm, while flop and river were slower.
 The baseline control also shifted from 3,510 to 4,645 ms between rounds.
 The boundary cancellation candidate was dropped. An already running solve
 can still consume CPU, and these timings leave the size of that effect open.
+
+### Coach states without an advice decision
+
+The Coach now replays the entered actions before loading an opponent profile
+or constructing a solver. When it is the opponent's turn, the board needs
+more cards, or the hand is complete, the response can use the replayed state
+directly. The first hero decision still builds any required cold profile.
+
+With a 192-hand synthetic profile, the same 48 status responses matched
+before and after. The direct service call's cold-profile p95 fell from
+576.14 to 1.59 ms, and repeat p95 fell from 11.96 to 1.73 ms. The two
+cohorts each contained 24 observations. These timings exclude HTTP and
+measure the non-decision responses. The midnight full suite covered
+the hero path with all 192 reference answers.

@@ -8,7 +8,7 @@ target semantics), and board cards are entered as the streets are reached.
 from __future__ import annotations
 
 from collections import OrderedDict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from hashlib import sha256
 import json
 from os import getenv
@@ -266,10 +266,16 @@ def quick_advice(spot: Spot) -> dict[str, Any] | None:
 def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store: HandStore | None = None,
            seed: int = 0, *, through_id: int | None = None, include_preflop_ev: bool = False,
            cancelled=None) -> dict[str, Any]:
-    from solver.bot import AdaptiveSolverBot, SolverBot
-
     shadow = getenv("POKER_COACH_RIVER_SHADOW") == "1"
     started = perf_counter() if shadow else None
+    status, payload, engine = _replay(spot)
+    if status == "hand_complete":
+        return _hand_complete_payload(spot, payload)
+    if status != "hero_to_act":
+        return {"status": status, **payload}
+
+    from solver.bot import AdaptiveSolverBot, SolverBot
+
     profile_snapshot = None
     # Custom history providers, including research fixtures, expose hands()
     # and may instrument individual solves. Use the original path for them.
@@ -298,20 +304,19 @@ def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store:
     advisor.explain_preflop_ev = include_preflop_ev
     if shadow:
         advisor.capture_river_shadow = True
-    status, payload, engine = _replay(spot, advisor, profile_snapshot)
-    if status == "hand_complete":
-        return _hand_complete_payload(spot, payload)
-    response: dict[str, Any] = {"status": status, **payload}
-    if status == "hero_to_act":
-        response["explanation"] = explain.concretize(response.get("explanation"))
-        response["explain"] = explain.build(response["advice"], response.get("explanation")) if "advice" in response else None
-        response["state"] = _state(engine.observe(HERO), engine)
-        response["exploiting"] = advisor.exploit
-        # exploiting = the opponent model is on; adjusted = it actually changed the strategy (locked nodes).
-        response["adjusted"] = bool(((response["explanation"] or {}).get("exploit") or {}).get("locked_nodes"))
-        response["opponent_profile"] = profile_summary(profile_snapshot)
-        if shadow and response["state"]["street"] == "river":
-            _observe_river(advisor, engine, profile_snapshot, started)
+    observation = replace(engine.decision_observation(HERO), opponent_profile=profile_snapshot)
+    action = advisor.decide_decision(observation)
+    advice = {"action": action.type, "amount": action.amount}
+    explanation = explain.concretize(advisor.last_explanation)
+    response = {
+        "status": status, **payload, "advice": advice, "explanation": explanation,
+        "explain": explain.build(advice, explanation), "exploiting": advisor.exploit,
+        # A profile can be present without locking any nodes.
+        "adjusted": bool(((explanation or {}).get("exploit") or {}).get("locked_nodes")),
+        "opponent_profile": profile_summary(profile_snapshot),
+    }
+    if shadow and response["state"]["street"] == "river":
+        _observe_river(advisor, engine, profile_snapshot, started)
     return response
 
 

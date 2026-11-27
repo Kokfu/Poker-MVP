@@ -139,6 +139,20 @@ def test_disk_keys_isolate_numeric_runtime_and_cpu_dispatch(monkeypatch):
     assert solve_disk._key_digest(("same",)) not in {first, upgraded}
 
 
+def test_profile_is_only_loaded_for_hero_advice(monkeypatch, tmp_path):
+    def unexpected_profile(*args, **kwargs):
+        pytest.fail("this hand state needs no opponent profile")
+
+    monkeypatch.setattr("coach.service.profile_for", unexpected_profile)
+    store = HandStore(tmp_path / "reference.sqlite")
+    for case, status in (
+        (spot(position="big_blind"), "villain_to_act"),
+        (spot(("hero", "raise", 250), ("villain", "call")), "need_board"),
+        (spot(("hero", "fold")), "hand_complete"),
+    ):
+        assert advise(case, opponent="Synthetic", store=store)["status"] == status
+
+
 def test_startup_warms_both_positions_for_an_existing_coach_profile(monkeypatch, tmp_path):
     monkeypatch.setenv("COACH_DB_PATH", str(tmp_path / "warm.sqlite"))
     monkeypatch.setenv("POKER_COACH_WARMUP", "1")
