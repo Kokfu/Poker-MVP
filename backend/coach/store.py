@@ -17,6 +17,38 @@ def default_path() -> Path:
     return Path(os.environ.get("COACH_DB_PATH", DEFAULT_PATH))
 
 
+def solve_cache_path(database: Path) -> Path:
+    """Where the disposable exact-solve cache for this database lives.
+
+    The default database sits in the project folder, which may be synced
+    (OneDrive). Its cache churns, so on Windows it goes to local app data.
+    Other databases (tests, scratch copies) keep the cache beside them.
+    """
+    database = Path(database)
+    local = os.environ.get("LOCALAPPDATA")
+    if local and database.resolve() == DEFAULT_PATH:
+        return Path(local) / "PokerCoach" / "coach.exact-solves.sqlite"
+    return database.with_suffix(".exact-solves.sqlite")
+
+
+def clear_solve_cache(database: Path) -> None:
+    """Remove the exact-solve cache; it holds strategies derived from saved hands."""
+    path = solve_cache_path(database)
+    try:
+        path.unlink(missing_ok=True)
+        return
+    except OSError:
+        pass  # Windows keeps a file open by another request; empty it instead.
+    try:
+        with closing(sqlite3.connect(path, timeout=5)) as connection:
+            for table in ("exact_solves", "preflop_policies"):
+                connection.execute(f"DROP TABLE IF EXISTS {table}")
+            connection.commit()
+            connection.execute("VACUUM")
+    except sqlite3.Error:
+        pass
+
+
 def normalize_name(name: str) -> str:
     cleaned = " ".join(str(name).split())
     if not cleaned or len(cleaned) > MAX_NAME_LENGTH:
@@ -154,6 +186,7 @@ class HandStore:
             connection.execute("VACUUM")
         finally:
             connection.close()
+        clear_solve_cache(self.path)
         return removed
 
     def summary(self) -> dict[str, Any]:

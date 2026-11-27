@@ -22,7 +22,7 @@ from simulation.engine import HandEngine
 from simulation.opponent_model import OpponentModel, confidence_for
 
 from . import explain
-from .store import HandStore, default_path
+from .store import HandStore, default_path, solve_cache_path
 
 Actor = Literal["hero", "villain"]
 HERO, VILLAIN = "a", "b"
@@ -288,7 +288,7 @@ def advise(spot: Spot, opponent: str | None = None, exploit: bool = True, store:
         if getenv("POKER_COACH_SOLVE_DISK_CACHE") != "0":
             database = store.path if store is not None else default_path()
             if database.name:
-                disk_path = database.with_suffix(".exact-solves.sqlite")
+                disk_path = solve_cache_path(database)
         advisor = CoachAdvisor(seed=seed, exploit=use_exploit, cache_solves=True, disk_path=disk_path, cancelled=cancelled)
     else:
         advisor = AdaptiveSolverBot(seed=seed) if use_exploit else SolverBot(seed=seed)

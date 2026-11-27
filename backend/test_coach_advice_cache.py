@@ -317,3 +317,25 @@ def test_coach_store_closes_sqlite_connections_after_each_operation(monkeypatch,
     assert store.hands("practice") == [payload]
     assert store.delete_all() == 1
     assert len(opened) == 5 and closed == opened
+
+
+def test_default_solve_cache_lives_outside_the_synced_project_folder(monkeypatch, tmp_path):
+    from coach.store import DEFAULT_PATH, solve_cache_path
+
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "local"))
+    assert solve_cache_path(DEFAULT_PATH) == tmp_path / "local" / "PokerCoach" / "coach.exact-solves.sqlite"
+    scratch = tmp_path / "scratch.sqlite"
+    assert solve_cache_path(scratch) == tmp_path / "scratch.exact-solves.sqlite"
+    monkeypatch.delenv("LOCALAPPDATA")
+    assert solve_cache_path(DEFAULT_PATH) == DEFAULT_PATH.with_suffix(".exact-solves.sqlite")
+
+
+def test_delete_all_also_removes_the_solve_cache(tmp_path):
+    from coach.store import solve_cache_path
+
+    store = HandStore(tmp_path / "coach.sqlite")
+    store.summary()
+    cache = solve_cache_path(store.path)
+    cache.write_bytes(b"cached strategies")
+    store.delete_all()
+    assert not cache.exists()

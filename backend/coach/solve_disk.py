@@ -20,7 +20,7 @@ from solver.cfr import RangeSolver
 from solver.tree import StreetTree
 
 
-_LIMIT = 160 * 1024 * 1024
+_LIMIT = 32 * 1024 * 1024  # disposable; oldest solves go first
 _PREFLOP_LIMIT = 32
 _NUMERIC_ENV = ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS",
                 "OPENBLAS_CORETYPE", "NPY_DISABLE_CPU_FEATURES")
