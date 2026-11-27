@@ -21,6 +21,7 @@ def collapse():
     return replay_trace(PriorTrace(), case, profile), replay_trace(SupportReplay(), case, profile)
 
 
+@pytest.mark.machine_exact
 def test_replay_cutoff_eliminates_the_turn_tail_before_check(collapse):
     baseline, candidate = collapse
     assert baseline["explanation"] == {"source": "fallback", "reason": "ReplayError: empty range"}

@@ -9,6 +9,11 @@ import pytest
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "slow: multi-second end-to-end tests (all run by default; deselect with -m \"not slow\")")
+    config.addinivalue_line(
+        "markers",
+        "machine_exact: compares bit-exact numbers recorded on the owner's PC; other CPUs "
+        "(for example AVX-512 CI runners) round differently, so CI runs these separately",
+    )
 
 
 @pytest.fixture(scope="session")

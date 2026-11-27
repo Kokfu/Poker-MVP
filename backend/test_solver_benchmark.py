@@ -41,6 +41,7 @@ def solver_benchmark_report(tmp_path_factory):
 
 
 @pytest.mark.slow
+@pytest.mark.machine_exact
 def test_fixed_size_run_matches_saved_fixture(solver_benchmark_report):
     baseline = json.loads(FIXTURE.read_text())
     assert solver_benchmark_report["config"] == baseline["config"] == CONFIG

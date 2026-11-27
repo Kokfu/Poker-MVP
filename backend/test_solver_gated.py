@@ -27,6 +27,7 @@ def test_default_bots_are_not_gated():
 
 
 @pytest.mark.slow
+@pytest.mark.machine_exact
 def test_ungated_learning_session_matches_phase_4h_reference(adaptive_learning_reference):
     """Compare every decision and result after the unopened SB lock correction."""
     expected, actual = adaptive_learning_reference

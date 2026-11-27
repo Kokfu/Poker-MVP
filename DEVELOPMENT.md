@@ -27,8 +27,13 @@ Use that interpreter for all backend commands:
 `-p no:cacheprovider` avoids the non-blocking Pytest cache permission warning that can occur under OneDrive.
 
 Use the fast selection for the local edit-and-test cycle. It excludes
-the tests marked `slow`. The full command above runs every test and is
-the command used by GitHub Actions.
+the tests marked `slow`. The full command above runs every test. Run it
+on this PC before merging.
+
+Five tests marked `machine_exact` compare bit-exact numbers recorded on
+this PC (an AVX2 CPU). GitHub's runners have AVX-512, which rounds some
+sums differently, so GitHub Actions runs everything else as the required
+check and runs these five in a separate step that reports without failing.
 
 ```powershell
 $env:OPENBLAS_NUM_THREADS = "1"

@@ -31,6 +31,7 @@ def test_sized_is_off_everywhere_except_its_own_bot():
 
 
 @pytest.mark.slow
+@pytest.mark.machine_exact
 def test_default_path_matches_phase_4h_reference(adaptive_learning_reference):
     expected, actual = adaptive_learning_reference
     assert actual == expected

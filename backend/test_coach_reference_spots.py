@@ -6,6 +6,7 @@ import pytest
 
 
 @pytest.mark.slow
+@pytest.mark.machine_exact
 def test_heads_up_advice_matches_reference_spots():
     result = subprocess.run(
         [sys.executable, "-m", "coach.reference_spots"],
