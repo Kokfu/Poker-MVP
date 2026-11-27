@@ -25,3 +25,22 @@ The profile mode stores completed sessions and aggregate profiles in
 `jobs/nov27-expert.summary.json` and
 `jobs/nov27-range_expert.summary.json`. These local files hold session-level
 results and do not record individual actions or board cards.
+
+## Matched fresh-profile control
+
+The fresh-profile controls are queued. Each would reuse the matching
+development seeds and reset both players' public profiles at the start
+of each session while allowing updates within that session. The analysis
+checks the two arms start identically, verifies the aligned schedule,
+and reports the paired difference across all, first-half, and last-half
+sessions. Its intervals describe variation along the observed schedule.
+
+```powershell
+Push-Location backend
+$env:OPENBLAS_NUM_THREADS = '1'
+.venv/Scripts/python.exe -m simulation.agent_cli --run nov27-carry-control-expert --opponent expert --sessions 24 --session-hands 60 --seed-offset 113700 --output-dir ../autopilot/overnight/jobs --progress
+.venv/Scripts/python.exe -m simulation.agent_cli --run nov27-carry-control-range_expert --opponent range_expert --sessions 24 --session-hands 60 --seed-offset 116700 --output-dir ../autopilot/overnight/jobs --progress
+Pop-Location
+backend/.venv/Scripts/python.exe autopilot/overnight/analyze_learning_carryover.py expert
+backend/.venv/Scripts/python.exe autopilot/overnight/analyze_learning_carryover.py range_expert
+```
