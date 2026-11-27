@@ -206,6 +206,7 @@ def test_convergence_is_materially_less_exploitable():
     assert late_m["exploitability"] < early_m["exploitability"]
     assert abs(late_m["player0_ev"] + 1 / 18) < 0.03
 
+@pytest.mark.slow
 def test_exact_convergence_comparison_is_deterministic_and_cfr_plus_improves_at_a_matched_budget():
     algorithms = {"vanilla-cfr": KuhnCFRTrainer, "cfr-plus": KuhnCFRPlusTrainer}
     metadata = comparison_algorithm_metadata()

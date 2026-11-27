@@ -1,7 +1,8 @@
 from typing import Literal
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, StrictInt, field_validator, model_validator
+from starlette.concurrency import run_in_threadpool
 from coach.multiway import MAX_PUBLIC_ACTIONS, PublicAction, advise_multiway, ranges_enabled
 from drill_attempts import router as drill_attempts_router
 from drills import router as drills_router
@@ -261,10 +262,20 @@ def _coach_call(function, *args, **kwargs):
         raise HTTPException(status_code=422, detail=str(error)) from error
 
 
-@app.post("/api/coach/advise")
-def coach_advise(request: CoachAdviseRequest):
+def coach_advise(request: CoachAdviseRequest, *, cancelled=None):
     from coach.service import advise
-    return _coach_call(advise, request.to_spot(), opponent=request.opponent or None, exploit=request.exploit)
+    options = {"cancelled": cancelled} if cancelled is not None else {}
+    return _coach_call(advise, request.to_spot(), opponent=request.opponent or None, exploit=request.exploit,
+                       **options)
+
+
+@app.post("/api/coach/advise", name="coach_advise")
+async def coach_advise_endpoint(request: CoachAdviseRequest, http: Request):
+    if http.headers.get("X-Coach-Speculative") == "1":
+        from coach.speculation import speculate
+
+        return await speculate(http, lambda cancelled: coach_advise(request, cancelled=cancelled))
+    return await run_in_threadpool(coach_advise, request)
 
 
 @app.post("/api/coach/advise/quick")

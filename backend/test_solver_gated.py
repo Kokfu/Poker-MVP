@@ -26,6 +26,7 @@ def test_default_bots_are_not_gated():
     assert BOT_TYPES["solver_adaptive"](seed=1).gated_locks is False
 
 
+@pytest.mark.slow
 def test_ungated_learning_session_matches_phase_4h_reference(adaptive_learning_reference):
     """Compare every decision and result after the unopened SB lock correction."""
     expected, actual = adaptive_learning_reference
@@ -137,6 +138,7 @@ def _session(bot_class, hands):
     return bots[0]
 
 
+@pytest.mark.slow
 def test_instrumentation_fields_present_and_gated_never_adds_locks():
     base, gated = _session(AdaptiveSolverBot, 30), _session(GatedAdaptiveSolverBot, 30)
     keys = {"street", "gated", "candidate_locks", "locks_applied", "cache_hit", "unlocked_action_differs"}

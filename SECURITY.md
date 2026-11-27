@@ -109,9 +109,17 @@ keeps it in memory for the life of the table. Table responses contain that seat'
 own cards and public state. A legitimate showdown can reveal the other seat's
 cards. Seeds and replay state remain server-side. The server validates bodies,
 actions, revisions and deadlines, and limits creation and per-seat requests.
-The Windows launcher keeps its backend on loopback. Its LAN frontend proxies
-requests and shares the creation quota. Saved Coach data remains accessible to
-people who can reach the shared Coach interface. [LAN checklist](docs/practice-table-lan-checklist.md)
+The Windows launcher serves the built frontend files and the existing API from
+one process. It keeps the separate API port on loopback and exposes the web
+port on the selected Private interface. With a Public or unknown network at
+startup, the web port stays on loopback. The LAN listener serves assets from
+`frontend/dist`. The backend uses each client's socket address for practice
+table creation limits and ignores forwarded address headers. Saved Coach data
+remains accessible to people who can reach the shared Coach interface.
+Exact solves are cached for speed in `%LOCALAPPDATA%\PokerCoach\coach.exact-solves.sqlite`
+(at most 32 MB, outside the synced project folder). The cache holds solver
+strategies, not names or cards. "Delete all" in Saved data removes it too.
+[LAN checklist](docs/practice-table-lan-checklist.md)
 
 **Offline agent checkpoints.** Paired sessions persist performance values,
 synthetic deal seeds and, when enabled, aggregate public opponent profiles and

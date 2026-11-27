@@ -40,6 +40,7 @@ def solver_benchmark_report(tmp_path_factory):
     return json.loads(output.read_text(encoding="utf-8"))
 
 
+@pytest.mark.slow
 def test_fixed_size_run_matches_saved_fixture(solver_benchmark_report):
     baseline = json.loads(FIXTURE.read_text())
     assert solver_benchmark_report["config"] == baseline["config"] == CONFIG
@@ -47,6 +48,7 @@ def test_fixed_size_run_matches_saved_fixture(solver_benchmark_report):
     assert not problems, "\n".join(problems)
 
 
+@pytest.mark.slow
 def test_benchmark_reports_zero_fallbacks_and_illegal_actions(solver_benchmark_report):
     report = solver_benchmark_report
     assert all(hand["fallback_count"] == 0 for hand in report["fixed_hands"])

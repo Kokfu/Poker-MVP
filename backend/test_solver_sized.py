@@ -30,6 +30,7 @@ def test_sized_is_off_everywhere_except_its_own_bot():
     assert isinstance(bot, SizedAdaptiveSolverBot) and bot.sized_reads is True and bot.exploit and not bot.gated_locks
 
 
+@pytest.mark.slow
 def test_default_path_matches_phase_4h_reference(adaptive_learning_reference):
     expected, actual = adaptive_learning_reference
     assert actual == expected
@@ -147,6 +148,7 @@ def test_sized_locks_replace_only_facing_nodes_and_keep_base_locks_elsewhere():
 
 
 # ------------------------------------------------------------ end to end and instrumentation
+@pytest.mark.slow
 def test_instrumentation_has_sized_info_only_for_the_sized_bot():
     base, sized = _session(AdaptiveSolverBot, 30), _session(SizedAdaptiveSolverBot, 30)
     for entry in (t for t in base.decision_trace if t["source"] != "fallback"):

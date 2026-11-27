@@ -1,6 +1,8 @@
 """Reuse exact postflop solves across Coach requests for the same hand."""
 from solver.bot import AdaptiveSolverBot, StreetSolve
 from solver.exact_cache import ExactCache
+from solver.exploit import locks_key
+from .speculation import StaleSpeculation
 
 
 _SOLVES = ExactCache[StreetSolve](4)  # one hand's streets plus an off-tree re-solve
@@ -9,13 +11,44 @@ _SOLVES = ExactCache[StreetSolve](4)  # one hand's streets plus an off-tree re-s
 class CoachAdvisor(AdaptiveSolverBot):
     exact_preflop_cache = True
 
-    def __init__(self, *, seed: int, exploit: bool, cache_solves: bool):
+    def __init__(self, *, seed: int, exploit: bool, cache_solves: bool, disk_path=None, cancelled=None):
         super().__init__(seed=seed)
         self.exploit = exploit
         self.pool_streets = exploit
         self.cache_solves = cache_solves
+        self.disk_path = disk_path
+        self.cancelled = cancelled
+
+    def _check_speculation(self):
+        if self.cancelled is not None and self.cancelled():
+            raise StaleSpeculation
+
+    def _locked_preflop_policy(self, tree, opponent, locks, class_d, class_w, iterations):
+        solve = super()._locked_preflop_policy
+
+        def compute():
+            return solve(tree, opponent, locks, class_d, class_w, iterations)
+
+        if self.disk_path is None or self.capture_river_shadow or self.gated_locks or self.sized_reads:
+            return compute()
+
+        from .solve_disk import load_preflop_policy
+
+        nodes = tuple((node.index, node.kind, node.player, tuple(node.actions), tuple(node.children), node.contribution)
+                      for node in tree.nodes)
+        key = (tree.root, nodes, opponent, iterations,
+               locks_key(locks, exact=True),
+               tuple((matrix.shape, matrix.dtype.str, matrix.tobytes()) for matrix in (class_d, class_w)))
+        return load_preflop_policy(self.disk_path, key, tree, class_d.shape[0], compute)
+
+    def _preflop_policy(self, depth, opponent, locks):
+        # Check before joining an in-flight policy. Cancellation must never
+        # reach the shared Future used by a confirmed request.
+        self._check_speculation()
+        return super()._preflop_policy(depth, opponent, locks)
 
     def _solve(self, root_state, board, ranges, hero_combo, hero, profile=None, *, working_ids=None):
+        self._check_speculation()
         # Persistent-range research supplies its own projection of working IDs.
         if not self.cache_solves or self.capture_river_shadow or working_ids is not None:
             return super()._solve(root_state, board, ranges, hero_combo, hero, profile, working_ids=working_ids)
@@ -32,4 +65,13 @@ class CoachAdvisor(AdaptiveSolverBot):
         solve_street = super()._solve
         # StreetSolve's policy and EV data are read-only after solving. Compute
         # misses outside the lock so one hand cannot stall unrelated cache hits.
-        return _SOLVES.get_or_compute(key, lambda: solve_street(root_state, board, ranges, hero_combo, hero, profile))
+        def compute():
+            return solve_street(root_state, board, ranges, hero_combo, hero, profile)
+
+        if self.disk_path is None or not self.explain_ev or self.gated_locks or self.sized_reads:
+            return _SOLVES.get_or_compute(key, compute)
+        from .solve_disk import load_or_compute
+
+        return _SOLVES.get_or_compute(key, lambda: load_or_compute(
+            self.disk_path, key, root_state, self.postflop_menu, ranges, compute,
+        ))

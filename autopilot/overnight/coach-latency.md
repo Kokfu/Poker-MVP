@@ -167,3 +167,186 @@ $env:POKER_COACH_SOLVE_CACHE = '1'
 backend/.venv/Scripts/python.exe autopilot/overnight/time_coach_quick.py river
 backend/.venv/Scripts/python.exe autopilot/overnight/time_coach_quick.py representative
 ```
+
+### November 27 speculative input
+
+Coach can warm the exact solve cache once a manual board draft is complete or a likely opponent action has been entered, highlighted, or focused. A changed draft cancels the browser's speculative request. If the server has already started the solve, it may finish and fill the exact cache. The confirmed action still requests the full answer from the server with the current opponent history. Auto-advance initiates the full request immediately when the last card is picked.
+
+Two fresh host processes replayed 192 fixed decisions with one BLAS worker while the learning diagnostic was running. The candidate started a matching advice request 600 ms before the timed request on each postflop spot. This measures a deliberate pause after entry. It excludes the 600 ms lead from the confirmed request time. Both passes matched the checked-in full advice on all 192 decisions.
+
+| Street | Spots | No speculation p95 (ms) | 600 ms lead p95 (ms) |
+| --- | ---: | ---: | ---: |
+| Flop | 48 | 1,284 | 412 |
+| Turn | 48 | 1,840 | 1,047 |
+| River | 48 | 2,450 | 1,758 |
+| All postflop | 144 | 2,145 | 1,438 |
+
+The quick preview matched the full action on 75/144 (52.08%) postflop
+spots, and the action and size agreed on the same 75. Flop was 26/48,
+turn was 29/48 and river was 20/48. The later quiet first-use measurement
+below still exceeded 1 s p95 on all three streets. From `backend`,
+reproduce the paired runs with
+`./.venv/Scripts/python.exe -m coach.reference_spots --prefetch-ms 0` and
+`./.venv/Scripts/python.exe -m coach.reference_spots --prefetch-ms 600`.
+
+### Persistent exact solves across restarts
+
+The default Coach keeps up to 160 MiB of postflop payloads in a SQLite sidecar alongside the configured hand store. SQLite pages, table indexes, and preflop payloads add to that on-disk footprint. The database stores exact policies and the inputs needed to reconstruct action EVs. It uses the full in-memory key, namespaced by the solver source and numerical environment. The Coach can compute a fresh answer when the sidecar is unavailable. Set `POKER_COACH_SOLVE_DISK_CACHE=0` to measure the in-memory cache alone.
+
+Each pass used a fresh Python process with one BLAS worker. Six fixed spots per street were drawn from the reference set, so p95 within each street is its maximum. The restart kept only the exact-solve database. The separate hand-history database was rebuilt with the same synthetic rows and preflop policies started cold. The learning diagnostic was running during this comparison.
+
+| Street | Disk disabled p95 (ms) | Empty disk p95 (ms) | Populated disk after restart p95 (ms) |
+| --- | ---: | ---: | ---: |
+| Flop | 1,984 | 1,733 | 1,010 |
+| Turn | 2,664 | 2,688 | 972 |
+| River | 2,504 | 2,809 | 747 |
+| All postflop | 2,664 | 2,809 | 1,010 |
+
+Every sample matched its full reference fingerprint. A separate cold pass with the disk cache enabled matched all 192. The populated disk helped repeats across restarts, with flop and pooled p95 still just over 1 s in the sample. An unreadable sidecar also produced the same full answer in a focused test.
+
+### Exact equity and CFR profiling
+
+Across 24 postflop inputs, cProfile attributed 8.38 s of internal time to computing CFR terminal values, 4.80 s to frequency fitting, 4.05 s to constructing equity matrices, and 2.50 s to the remainder of the CFR iteration loop. Both CFR experiments preserved the policy arrays byte for byte. Reusing buffers for regrets and terminal values raised the median unlocked solve from 661 to 695 ms, and normalizing the current strategy in place raised it from 518 to 534 ms. Both variants were dropped.
+
+The retained equity change counts legal completions directly when all runouts are enumerated. Six alternating runs matched every control matrix and compatibility mask byte for byte. Median matrix times were 87 vs. 88 ms for a sampled flop, 161 vs. 132 ms for an exact turn, and 21 vs. 19 ms for a river. Two focused solver runs each passed 35 tests. The equity-only API pass matched all 192 reference hashes, with first-use p95 of 1,037 ms flop, 1,714 ms turn, 2,367 ms river, and 1,805 ms pooled. The learning job was still running. The sub-second target remains open and the quiet-machine run is pending.
+
+A later fitter experiment reused the fitted policy and scaling buffers.
+All 480 combinations of simulated inputs, sizes and array layouts matched
+the current output exactly. Eight alternating timing passes per case
+showed mixed results. The 1,100-combo row-major batch fell from 204 to
+174 ms, while the 600-combo row-major batch rose from 92 to 99 ms and all
+three column-major batches slowed. The host was running development replays
+and a reference check. The candidate stayed out of the solver.
+
+### Multiway public-action ranges
+
+The opt-in API used the installed Eval7 evaluator, 20,000 draws per request, and a clean scratch database. The 64 requests covered preflop, flop, turn, and river with eight fixtures per street and per opponent count. Each active opponent had public actions. Pooled p95 was 565 ms for two opponents and 804 ms for three. The slowest observed three-opponent sample was a turn at 927 ms. Both cohorts met the 1.5 s target and the feature remains opt-in pending the owner decision.
+
+Run `backend/.venv/Scripts/python.exe autopilot/overnight/time_coach_multiway.py` from the repository root.
+
+### Maximum-length multiway action histories
+
+A scratch API run sent 32 river requests with the permitted 32 action
+entries. All succeeded, and a 33-entry request returned 422. Before the
+speed change, two-opponent p95 was 1,602 ms and three-opponent p95 was
+3,339 ms in the presence of development replays. The synthetic pressure
+histories include repeated raises to concentrate the candidate ranges.
+
+The sampler skips draws of zero remaining cards and indexes cumulative
+weights directly using the same random number and bounds. Fixed river
+scores are reused within one request. The same seeded comparison matched
+all 64 complete answers and all 300 sample deals. Each sample below has
+16 seeded responses. Both processes shared the host with development jobs.
+
+| Histories | Opponents | Before p95 (ms) | After p95 (ms) |
+| --- | ---: | ---: | ---: |
+| Typical | 2 | 754 | 613 |
+| Typical | 3 | 1,499 | 819 |
+| 32 actions | 2 | 1,377 | 969 |
+| 32 actions | 3 | 1,997 | 1,260 |
+
+The focused suite passed 13 tests, and the separate heads-up HTTP check
+matched all 192 advice hashes. The multiway flag remains opt-in. Run the
+maximum-history API check by adding `--max-history` to the command above.
+
+### Quiet first-use reference measurements
+
+Two fresh processes with the normal disk cache and separate synthetic databases each matched 192/192 answers. No other overnight benchmark or regression ran alongside either process. The speculative column measures the confirmed full request after a matching request started 600 ms earlier.
+
+| Street | First-use p95 (ms) | 600 ms speculative lead p95 (ms) |
+| --- | ---: | ---: |
+| Flop | 1,058 | 708 |
+| Turn | 1,957 | 1,286 |
+| River | 2,423 | 1,610 |
+| All postflop | 2,094 | 1,494 |
+
+The first-use cohort still exceeds the 1,000 ms target on all three streets.
+
+### Requests in hand order
+
+Two fresh processes replayed the same 48 reference targets in separate synthetic databases. The first requested the target spot directly. The second requested the 111 earlier legal hero decisions with the board visible at each decision. Both used the default exact caches. Both matched all 48 full fingerprints. The development replays ran in the background during these samples.
+
+| Measured target | First-use p95 (ms) | After earlier advice p95 (ms) |
+| --- | ---: | ---: |
+| Flop | 3,009 | 1,627 |
+| Turn | 2,997 | 1,943 |
+| River | 4,194 | 991 |
+| All postflop | 3,162 | 1,493 |
+
+Each street contains 16 observations, so the stated nearest-rank p95 is its maximum. The ordered cohort's pooled median was 777 ms. The 1 s target remains open for the pooled p95 in this run.
+
+From the repository root run `backend/.venv/Scripts/python.exe autopilot/overnight/time_coach_sequence.py first-use` and repeat with `sequence`.
+
+### Cached preflop locks across restarts
+
+Separate fresh processes primed and reopened one 24-spot cache per arm. Both arms used the postflop disk cache. The control bypassed only the preflop disk policy lookup. Every pass matched all 24 hashes, including both warm restarts.
+
+| Restart p95 | Preflop disk bypassed (ms) | Preflop disk enabled (ms) |
+| --- | ---: | ---: |
+| Preflop | 3,621 | 599 |
+| All postflop | 4,086 | 711 |
+
+The processes shared the host with two development replays. These timings describe repeated spots on a populated cache. Individual cold timings varied considerably. The disk sidecar retains up to 32 locked preflop policies in a separate table from its bounded postflop entries.
+
+### Cache retention and recovery
+
+A scaled scratch run exercised the normal SQLite writer and eviction query
+with an 8 MiB postflop payload cap. It wrote 360 varying payloads between
+125,000 and 2,900,000 bytes and 360 synthetic preflop policies. At writes
+120, 240, and 360, postflop retained 8 rows and 7,125,000 payload bytes, and
+preflop retained the latest 32 rows and 138,432 payload bytes. The file
+held at 10,625,024 bytes across all three checkpoints. SQLite reported about
+810 reusable pages and passed its integrity check at each checkpoint.
+
+Replacing a single policy blob with invalid data caused one recomputation.
+The same test with an actual full flop answer caused one recomputation with
+an identical normalized response. Both returned from disk again on the next
+read. The scratch result measures page reuse at a reduced cap, with the
+production cap and exact advice logic unchanged.
+
+The disk key distinguishes the Python, NumPy and Eval7 versions, CPU
+identity, and configured BLAS thread and CPU dispatch settings. An upgrade
+therefore repopulates the affected on-disk keys. The usual in-memory solve
+path stays available when package metadata is missing.
+
+### Two simultaneous clients
+
+Two loopback clients sent different confirmed requests at the same time.
+The competition arm started a third client on an unrelated speculative
+request 50 ms earlier. Each fresh process served 24 confirmed decisions
+across flop, turn, and river. All 48 confirmed answers matched. The
+development replays shared the host during this comparison.
+
+| Street | Two confirmed p95 (ms) | With competing speculation p95 (ms) |
+| --- | ---: | ---: |
+| Flop | 2,264 | 2,286 |
+| Turn | 3,412 | 4,010 |
+| River | 3,587 | 4,344 |
+| All postflop | 3,510 | 4,343 |
+
+A speculative request can compete with unrelated confirmations. The smaller
+street cohorts each have eight observations, with the maximum as their
+nearest-rank p95.
+
+A candidate cancelled unrelated speculative work at the next solve boundary
+when two confirmed requests were in flight. All 192 reference checks and all
+48 live confirmed fingerprints passed. Under development replay load, its
+two-client control and competing arms measured 4,645 ms and 6,278 ms pooled
+p95. Turn improved in the competing arm, while flop and river were slower.
+The baseline control also shifted from 3,510 to 4,645 ms between rounds.
+The boundary cancellation candidate was dropped. An already running solve
+can still consume CPU, and these timings leave the size of that effect open.
+
+### Coach states without an advice decision
+
+The Coach now replays the entered actions before loading an opponent profile
+or constructing a solver. When it is the opponent's turn, the board needs
+more cards, or the hand is complete, the response can use the replayed state
+directly. The first hero decision still builds any required cold profile.
+
+With a 192-hand synthetic profile, the same 48 status responses matched
+before and after. The direct service call's cold-profile p95 fell from
+576.14 to 1.59 ms, and repeat p95 fell from 11.96 to 1.73 ms. The two
+cohorts each contained 24 observations. These timings exclude HTTP and
+measure the non-decision responses. The midnight full suite covered
+the hero path with all 192 reference answers.

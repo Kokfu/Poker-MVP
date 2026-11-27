@@ -26,6 +26,17 @@ Use that interpreter for all backend commands:
 
 `-p no:cacheprovider` avoids the non-blocking Pytest cache permission warning that can occur under OneDrive.
 
+Use the fast selection for the local edit-and-test cycle. It excludes
+the tests marked `slow`. The full command above runs every test and is
+the command used by GitHub Actions.
+
+```powershell
+$env:OPENBLAS_NUM_THREADS = "1"
+$env:OMP_NUM_THREADS = "1"
+$env:MKL_NUM_THREADS = "1"
+.\.venv\Scripts\python.exe -m pytest -q -p no:cacheprovider -m "not slow"
+```
+
 ## Kuhn CFR research CLI
 
 Run from `backend`; this is not part of the simulator CLI:

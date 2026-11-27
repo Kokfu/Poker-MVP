@@ -503,6 +503,11 @@ class SolverBot(PokerBot):
         return StreetSolve(tree, (combos[0], combos[1]), result.average, None, time.perf_counter() - started, len(locks),
                            solver if self.explain_ev else None, candidates, unlocked_average, sized_info)
 
+    def _locked_preflop_policy(self, tree, opponent, locks, class_d, class_w, iterations):
+        counts = CLASS_COMBO_COUNT.astype(float)
+        solver = RangeSolver(tree, (counts, counts), class_d, class_w, locks=locks)
+        return solver.solve(iterations).average
+
     def _preflop_policy(self, depth: int, opponent: int, locks: dict):
         """Node -> (actions, 1326) strategy: the chart, or a locked re-solve."""
         if not locks:
@@ -527,9 +532,7 @@ class SolverBot(PokerBot):
         elif policy is None:
             try:
                 class_d, class_w = load_class_equity()
-                counts = CLASS_COMBO_COUNT.astype(float)
-                solver = RangeSolver(tree, (counts, counts), class_d, class_w, locks=locks)
-                policy = solver.solve(PREFLOP_LOCKED_ITERATIONS).average
+                policy = self._locked_preflop_policy(tree, opponent, locks, class_d, class_w, PREFLOP_LOCKED_ITERATIONS)
             except BaseException as error:
                 if leader is not None:
                     with _PREFLOP_CACHE_LOCK:

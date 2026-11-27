@@ -89,6 +89,7 @@ def test_coach_converts_postflop_call_for_hero_entire_stack_to_all_in():
     assert result["advice"]["action"] in result["state"]["legal_actions"]
 
 
+@pytest.mark.slow
 def test_deterministic_for_equal_seeds():
     config = DuplicateConfig(pairs=4, equity_iterations=50)
     assert run_duplicate_pairs(config, "solver", "equity") == run_duplicate_pairs(config, "solver", "equity")

@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 import numpy as np
 import pytest
 
+from coach import solve_disk
 from coach.advisor import _SOLVES, CoachAdvisor
 from coach.service import _PROFILES, advise, log_hand, spot_to_dict
 from coach.store import HandStore
@@ -62,6 +63,94 @@ def test_cached_advice_matches_uncached_across_requests_and_profile_mutations(mo
     assert after_delete["opponent_profile"] is None and not after_delete["exploiting"]
     monkeypatch.setenv("POKER_COACH_SOLVE_CACHE", "0")
     assert comparable(advise(turn, opponent=opponent, store=store)) == comparable(after_delete)
+
+
+def test_disk_advice_survives_memory_eviction_and_disposable_cache_damage(monkeypatch, tmp_path):
+    store = HandStore(tmp_path / "reference.sqlite")
+    cache = tmp_path / "reference.exact-solves.sqlite"
+    flop = spot(("villain", "raise", 250), ("hero", "call"), board=("7h", "8d", "2c"), position="big_blind")
+    calls = []
+    solve = SolverBot._solve
+
+    def counted(self, state, *args, **kwargs):
+        calls.append(state.street)
+        return solve(self, state, *args, **kwargs)
+
+    monkeypatch.setattr(SolverBot, "_solve", counted)
+    monkeypatch.setenv("POKER_COACH_SOLVE_CACHE", "1")
+    monkeypatch.setenv("POKER_COACH_SOLVE_DISK_CACHE", "1")
+    _SOLVES.clear()
+    try:
+        expected = comparable(advise(flop, store=store))
+        assert calls == ["flop"]
+        assert cache.is_file()
+        _SOLVES.clear()
+        assert comparable(advise(flop, store=store)) == expected
+        assert calls == ["flop"]
+
+        cache.write_bytes(b"unreadable SQLite cache")
+        _SOLVES.clear()
+        assert comparable(advise(flop, store=store)) == expected
+        assert calls == ["flop", "flop"]
+    finally:
+        _SOLVES.clear()
+
+
+def test_locked_preflop_disk_policy_matches_after_memory_eviction(monkeypatch, tmp_path):
+    advisor = CoachAdvisor(seed=0, exploit=True, cache_solves=True, disk_path=tmp_path / "solves.sqlite")
+    tree = advisor.charts.trees[100]
+    root = tree.root
+    groups = (((0,), 0.2), (tuple(range(1, len(tree.nodes[root].actions))), 0.8))
+    solve = SolverBot._locked_preflop_policy
+    calls = []
+
+    def counted(self, *args):
+        calls.append(args[2])
+        return solve(self, *args)
+
+    monkeypatch.setattr("solver.bot.PREFLOP_LOCKED_ITERATIONS", 3)
+    monkeypatch.setattr(SolverBot, "_locked_preflop_policy", counted)
+    initial = {root: (0.3, groups)}
+    changed = {root: (0.3001, groups)}
+    _PREFLOP_CACHE.clear()
+    try:
+        expected = advisor._preflop_policy(100, 0, initial)(root)
+        assert advisor.disk_path.is_file()
+        _PREFLOP_CACHE.clear()
+        np.testing.assert_array_equal(advisor._preflop_policy(100, 0, initial)(root), expected)
+        assert calls == [initial]
+        advisor._preflop_policy(100, 0, changed)(root)
+        assert calls == [initial, changed]
+    finally:
+        _PREFLOP_CACHE.clear()
+
+
+def test_disk_keys_isolate_numeric_runtime_and_cpu_dispatch(monkeypatch):
+    monkeypatch.setattr(solve_disk, "_runtime_revision", lambda: ("python", "numpy", "eval7-a"))
+    monkeypatch.delenv("OPENBLAS_CORETYPE", raising=False)
+    first = solve_disk._key_digest(("same",))
+    assert solve_disk._key_digest(("same",)) == first
+
+    monkeypatch.setattr(solve_disk, "_runtime_revision", lambda: ("python", "numpy", "eval7-b"))
+    upgraded = solve_disk._key_digest(("same",))
+    assert upgraded != first
+
+    monkeypatch.setenv("OPENBLAS_CORETYPE", "Sandybridge")
+    assert solve_disk._key_digest(("same",)) not in {first, upgraded}
+
+
+def test_profile_is_only_loaded_for_hero_advice(monkeypatch, tmp_path):
+    def unexpected_profile(*args, **kwargs):
+        pytest.fail("this hand state needs no opponent profile")
+
+    monkeypatch.setattr("coach.service.profile_for", unexpected_profile)
+    store = HandStore(tmp_path / "reference.sqlite")
+    for case, status in (
+        (spot(position="big_blind"), "villain_to_act"),
+        (spot(("hero", "raise", 250), ("villain", "call")), "need_board"),
+        (spot(("hero", "fold")), "hand_complete"),
+    ):
+        assert advise(case, opponent="Synthetic", store=store)["status"] == status
 
 
 def test_startup_warms_both_positions_for_an_existing_coach_profile(monkeypatch, tmp_path):
@@ -228,3 +317,25 @@ def test_coach_store_closes_sqlite_connections_after_each_operation(monkeypatch,
     assert store.hands("practice") == [payload]
     assert store.delete_all() == 1
     assert len(opened) == 5 and closed == opened
+
+
+def test_default_solve_cache_lives_outside_the_synced_project_folder(monkeypatch, tmp_path):
+    from coach.store import DEFAULT_PATH, solve_cache_path
+
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "local"))
+    assert solve_cache_path(DEFAULT_PATH) == tmp_path / "local" / "PokerCoach" / "coach.exact-solves.sqlite"
+    scratch = tmp_path / "scratch.sqlite"
+    assert solve_cache_path(scratch) == tmp_path / "scratch.exact-solves.sqlite"
+    monkeypatch.delenv("LOCALAPPDATA")
+    assert solve_cache_path(DEFAULT_PATH) == DEFAULT_PATH.with_suffix(".exact-solves.sqlite")
+
+
+def test_delete_all_also_removes_the_solve_cache(tmp_path):
+    from coach.store import solve_cache_path
+
+    store = HandStore(tmp_path / "coach.sqlite")
+    store.summary()
+    cache = solve_cache_path(store.path)
+    cache.write_bytes(b"cached strategies")
+    store.delete_all()
+    assert not cache.exists()

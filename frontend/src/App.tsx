@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnalysisResults } from "./components/AnalysisResults";
 import { CardSelector } from "./components/CardSelector";
 import { DeckVisualizer } from "./components/DeckVisualizer";
@@ -14,14 +14,30 @@ import type { Analysis } from "./types";
 type Tab = "analyzer" | "coach" | "drills" | "practice" | "simulator" | "match" | "replay";
 const TABS: [Tab, string][] = [["coach", "Coach"], ["drills", "Drills"], ["practice", "Practice table"], ["analyzer", "Equity calculator"], ["simulator", "Bot simulator"], ["match", "Bot match"], ["replay", "Replay"]];
 
-function linkedTab(): "practice" | "drills" | undefined {
-  const hash = window.location.hash;
-  if (hash === "#practice") return "practice";
-  if (hash === "#drills") return "drills";
+type Route = Tab | "drills/leaks";
+
+export function routeFromHash(hash: string): Route {
+  if (hash === "#drills/leaks") return "drills/leaks";
+  return TABS.find(([item]) => hash === `#${item}`)?.[0] ?? "coach";
+}
+
+export function hashForRoute(route: Route): string {
+  return route === "coach" ? "" : `#${route}`;
 }
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>(() => linkedTab() ?? "coach");
+  const [route, setRoute] = useState(() => routeFromHash(window.location.hash));
+  const tab: Tab = route === "drills/leaks" ? "drills" : route;
+  useEffect(() => {
+    const syncRoute = () => setRoute(routeFromHash(window.location.hash));
+    window.addEventListener("hashchange", syncRoute);
+    window.addEventListener("popstate", syncRoute);
+    syncRoute();
+    return () => {
+      window.removeEventListener("hashchange", syncRoute);
+      window.removeEventListener("popstate", syncRoute);
+    };
+  }, []);
   const [cards, setCards] = useState<(string | null)[]>(Array(7).fill(null));
   const [form, setForm] = useState({
     pot: "100",
@@ -35,14 +51,14 @@ export default function App() {
   const [result, setResult] = useState<Analysis>();
   const [error, setError] = useState("");
 
-  function chooseTab(item: Tab) {
-    const linked = item === "practice" || item === "drills";
-    if (linked || linkedTab()) {
-      const url = new URL(window.location.href);
-      url.hash = linked ? item : "";
-      window.history.replaceState(null, "", url);
+  function navigate(next: Route) {
+    const url = new URL(window.location.href);
+    const hash = hashForRoute(next);
+    if (url.hash !== hash) {
+      url.hash = hash;
+      window.history.pushState(null, "", url);
     }
-    setTab(item);
+    setRoute(next);
   }
 
   async function analyze() {
@@ -95,13 +111,15 @@ export default function App() {
       </header>
       <nav className="app-nav" aria-label="Poker tools">
         {TABS.map(([item, label]) => (
-          <button key={item} type="button" aria-current={tab === item ? "page" : undefined} className={tab === item ? "is-on" : ""} onClick={() => chooseTab(item)}>
+          <button key={item} type="button" aria-current={tab === item ? "page" : undefined} className={tab === item ? "is-on" : ""} onClick={() => navigate(item)}>
             {label}
           </button>
         ))}
       </nav>
 
-      {tab === "coach" ? <Coach /> : tab === "drills" ? <Drills /> : tab === "practice" ? <PracticeTable /> : tab === "replay" ? <Replay /> : tab === "match" ? (
+      {tab === "coach" ? <Coach /> : tab === "drills" ? (
+        <Drills view={route === "drills/leaks" ? "leaks" : "drills"} onViewChange={(view) => navigate(view === "leaks" ? "drills/leaks" : "drills")} />
+      ) : tab === "practice" ? <PracticeTable /> : tab === "replay" ? <Replay /> : tab === "match" ? (
         <Match />
       ) : tab === "simulator" ? (
         <Simulator />
